@@ -1,0 +1,32 @@
+{
+	"name": "wanderer",
+	"version": "1.0.0",
+	"author": {
+		"name": "Aleksei Chichenkov",
+		"email": "cublakhan257@gmail.com"
+	},
+	"license": "MIT",
+	"description": "A mapper - tool for navigation in w-space",
+	"main": "js/main.js",
+	"private": true,
+	"keywords": [
+		"wanderer",
+		"eve",
+		"mapper",
+		"eve-mapper",
+		"eve-online"
+	],
+	"scripts": {
+		"dev": "node --inspect js/main.js",
+		"start": "node js/main.js",
+		"clear": "node js/clear.js",
+		"install": "node js/install.js"
+	},
+	"dependencies": {
+		"md5": "^2.3.0",
+		"pg": "^8.3.2",
+		"request": "^2.88.2",
+		"superagent": "^6.0.0",
+		"websocket": "^1.0.31"
+	}
+}

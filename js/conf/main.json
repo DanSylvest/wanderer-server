@@ -1,0 +1,39 @@
+{
+	"app": {
+		"solt": ""
+	},
+    "connection": {
+        "port": 1400
+    },
+    "product": {
+        "version": "1.0.0",
+        "state": "beta",
+        "name": "wanderer"
+    },
+    "eve": {
+        "app": {
+            "client_id": "",
+            "secret_key": ""
+        },
+        "datasource": "tranquility",
+        "sso": {
+            "server": {
+                "host": "login.eveonline.com",
+                "proto": "https:",
+                "content_type": "application/x-www-form-urlencoded"
+            }
+        }
+    },
+    "db": {
+        "names" : {
+            "eveSde": "eveStaticData",
+            "eveManual": "eveManualData",
+            "mapper": "mapper"
+        },
+        "user": "postgres",
+        "host": "localhost",
+        "password": "",
+        "port": 5432,
+        "name": "mapper"
+    }
+}

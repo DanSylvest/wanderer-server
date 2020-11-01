@@ -9,7 +9,9 @@ var ConfReader = classCreator("ConfReader", Emitter, {
     constructor: function ConfReader(_folder) {
         Emitter.prototype.constructor.call(this);
 
-        this.path = Path.fromBackSlash(global.projectPath)["+"](_folder.split("/"));
+        let path = Path.fromBackSlash(__dirname);
+        path.pop();
+        this.path = path["+"](_folder.split("/"));
     },
     build: function () {
         var file = fs.readFileSync(this.path["+"]("main.json").toString(), "utf8");

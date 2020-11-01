@@ -19,10 +19,13 @@
 	"scripts": {
 		"dev": "node --inspect js/main.js",
 		"start": "node js/main.js",
-		"clear": "node js/clear.js",
-		"install": "node js/install.js"
+		"dropAll": "node js/scripts/installer.js clear all",
+		"dropMapperDb": "node js/scripts/installer.js clear mapper",
+		"updateEveDb": "node js/scripts/installer.js clear eve",
+		"install": "node js/scripts/installer.js install"
 	},
 	"dependencies": {
+		"args": "^5.0.1",
 		"md5": "^2.3.0",
 		"pg": "^8.3.2",
 		"request": "^2.88.2",

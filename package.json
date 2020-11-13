@@ -22,6 +22,7 @@
 		"dropAll": "node js/scripts/installer.js clear all",
 		"dropMapperDb": "node js/scripts/installer.js clear mapper",
 		"updateEveDb": "node js/scripts/installer.js clear eve",
+		"updateManualDb": "node js/scripts/installer.js clear other",
 		"install": "node js/scripts/installer.js install"
 	},
 	"dependencies": {

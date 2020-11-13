@@ -133,8 +133,9 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "location",           type: String},
                 {name: "ship",               type: String},
                 {name: "images",             type: Object},
-                {name: "infoExpiresIn",      type: Number},    // in milliseconds
+                {name: "infoExpiresIn",      type: Number}, // in milliseconds
                 {name: "info",               type: Object},
+                {name: "addDate",            type: Date,    defaultValue: () => new Date},
             ]
         });
     },

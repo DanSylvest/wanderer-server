@@ -4,6 +4,7 @@
 
 module.exports = {
     add                   : require("./map/add"),
+    addFast               : require("./map/addFast"),
     edit                  : require("./map/edit"),
     remove                : require("./map/remove"),
     list                  : require("./map/list"),

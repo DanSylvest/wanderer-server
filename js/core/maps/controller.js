@@ -259,7 +259,11 @@ const MapController = classCreator("MapController", Emitter, {
     /**
      *
      * @param _owner - is mapper user id
-     * @param _data
+     * @param _data {{}}
+     * @param _data.name {string}
+     * @param _data.description {string}
+     * @param _data.private {boolean}
+     * @param _data.groups {Array<string>}
      * @returns {Promise<any> | Promise<unknown>}
      */
     createMap: async function (_owner, _data) {
@@ -308,6 +312,76 @@ const MapController = classCreator("MapController", Emitter, {
                 sub: _err,
                 message: "Error on edit in mapsDB - update groups"
             });
+        }
+
+        return pr.native;
+    },
+    /**
+     * @param {string} userId
+     * @param {Object} data
+     * @param {String} data.name
+     * @param {String} data.description
+     * @param {Boolean} data.shareForCorporation
+     * @param {Boolean} data.shareForAlliance
+     * @param {Number} data.characterId
+     * @returns {*}
+     */
+    createMapFast: async function (userId, data) {
+        let pr = new CustomPromise();
+        /**
+         * Итак, идем с конца
+         *
+         * Необходимо создать группу
+         *  - проверить что такой группы нет
+         *  - если такая группа есть, то переименовать эту
+         *
+         * В группу необходимо добавить персонажа, корпу, альянс
+         *
+         * После создания группы, необходимо персонажа создавшего эту группу, поставить на отслеживание
+         *
+         * После создания группы, необходимо создать карту.
+         *
+         * После создания карты, необходимо прикрепить группу к карте.
+         *
+         * После вернуть все необходимые данные, что бы добавить карту в список карт
+         */
+
+
+        try {
+            let charInfo = await core.charactersController.get(data.characterId).getInfo();
+            let groupOptions = {
+                name: `group_${data.name}`,
+                description: `Automatically generated group for map ${data.name}`,
+                characters: [data.characterId]
+            }
+
+            if(data.shareForCorporation) {
+                groupOptions.corporations = [charInfo.corporationId];
+            }
+
+            if(data.shareForAlliance) {
+                groupOptions.alliances = [charInfo.allianceId];
+            }
+
+            let lastCreatedGroupId = await core.groupsController.createGroup(userId, groupOptions);
+            await core.groupsController.updateCharacterTrack(lastCreatedGroupId, data.characterId, true);
+
+            let lastCreatedMapId = await this.createMap(userId, {
+                name: data.name,
+                description: data.description,
+                private: false,
+                groups: [lastCreatedGroupId]
+            })
+
+            pr.resolve({
+                id: lastCreatedMapId,
+                groups: [lastCreatedGroupId],
+                description: data.description,
+                name: data.name,
+                isPrivate: false
+            })
+        } catch (_err) {
+            pr.reject(_err);
         }
 
         return pr.native;

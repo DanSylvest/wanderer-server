@@ -73,7 +73,6 @@ var Character = classCreator("Character", Emitter, {
     _add: function (_attribute, _instance) {
         this._attributes[_attribute] = _instance;
     },
-
     _attributesFactory: function (_attribute) {
         switch (_attribute) {
             case "online":
@@ -84,17 +83,13 @@ var Character = classCreator("Character", Emitter, {
                 return ShipAttribute;
         }
     },
-
     connectionBreak: function (_connectionId) {
         for(var id in this._attributes) {
             this._attributes[id].connectionBreak(_connectionId);
         }
     },
-
-
      getInfo: async function () {
-         let attrs = ["name", "images", "online", "ship", "info"];
-        //getShipTypeInfo
+         let attrs = ["name", "images", "online", "ship", "info", "addDate"];
 
         let result = await core.dbController.charactersDB.get(this.options.characterId, attrs);
 
@@ -104,14 +99,25 @@ var Character = classCreator("Character", Emitter, {
             shipName = shipInfo.typeName;
         }
 
-        return {
+        let out = {
             name: result.name,
             images: result.images,
             online: result.online,
             ship: shipName,
-            corporation: result.info.corporation.name,
-            alliance: result.info.alliance.name,
+            addDate: result.addDate
         }
+
+        if(result.info.corporationId) {
+            out.corporation = result.info.corporation.name;
+            out.corporationId = result.info.corporationId;
+        }
+
+        if(result.info.allianceId) {
+            out.alliance = result.info.alliance.name;
+            out.allianceId = result.info.allianceId;
+        }
+
+        return out;
     },
     getCorporationId: function () {
         var pr = new CustomPromise();

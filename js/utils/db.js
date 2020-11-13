@@ -165,7 +165,7 @@ var Table = classCreator("Table", Emitter, {
 
         log(log.DEBUG, print_f("Table [%s] loading...", this._name));
 
-        this._exists().then(function(_exists){
+        this._exists().then(async function(_exists){
             if(!_exists) {
                 this._create().then(function(){
                     log(log.DEBUG, print_f("Table [%s] loaded.", this._name));
@@ -177,6 +177,7 @@ var Table = classCreator("Table", Emitter, {
                     })
                 }.bind(this))
             } else {
+                await this.checkAndUpgradeColumns();
                 log(log.DEBUG, print_f("Table [%s] loaded.", this._name));
                 pr.resolve();
             }
@@ -189,12 +190,50 @@ var Table = classCreator("Table", Emitter, {
 
         return pr.native;
     },
+    checkAndUpgradeColumns: async function () {
+        for (let a = 0; a < this._properties.length; a++) {
+            let prop = this._properties[a];
+
+            let checkQuery = `SELECT column_name
+                FROM information_schema.columns 
+                WHERE table_name='${this._name}' and column_name='${prop.name}';`;
+
+            try {
+                let result = await this._client.query(checkQuery);
+
+                if (result.rows.length === 0) {
+                    let query = `ALTER TABLE ${this._name} ADD COLUMN "${prop.name}" ${getDBTypeByJsType(prop.type)} ${getOptionsForType(prop.type)}`;
+                    await this._client.query(query);
+                    console.log(query);
+                }
+            } catch (_err) {
+                console.error(_err);
+                process.exit(1);
+            }
+
+        }
+    },
     getPropertyInfo: function (_name) {
         var index = this._propsMap[_name];
         return this._properties[index];
     },
     attributes: function () {
         return this._properties.map(_prop => _prop.name)
+    },
+    getPropValue (_prop, _value) {
+        let value = null;
+        var propDesc = this.getPropertyInfo(_prop);
+
+        if(exist(_value)) {
+            value = _value;
+        } else if(exist(propDesc.defaultValue) && typeof propDesc.defaultValue === "function"){
+            value = propDesc.defaultValue();
+        } else if(exist(propDesc.defaultValue)) {
+            value = propDesc.defaultValue;
+        } else {
+            value = getDefaultValueByType(propDesc.type);
+        }
+        return value;
     },
     _create: function () {
         var pr = new CustomPromise();
@@ -261,7 +300,7 @@ var Table = classCreator("Table", Emitter, {
                     var row = _result.rows[a];
                     var newRow = Object.create(null);
                     for(var attr in row) {
-                        newRow[attr] = extractFromDbType(this.getPropertyInfo(attr).type, row[attr]);
+                        newRow[attr] = exist(row[attr]) ? extractFromDbType(this.getPropertyInfo(attr).type, row[attr]) : this.getPropValue(attr, row[attr]);
                     }
                     out.push(newRow);
                 }

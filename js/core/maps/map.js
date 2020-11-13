@@ -175,7 +175,7 @@ var Map = classCreator("Map", Emitter, {
                 }
             }
 
-            if (this._notifySystems) {
+            if (this._notifySystems && this._systemsSubscriber) {
                 this._systemsSubscriber.notify({
                     type: "removed",
                     systemId: _systemId
@@ -351,7 +351,7 @@ var Map = classCreator("Map", Emitter, {
                         let pos = await this.findPosition(_oldSystem, _systemId);
                         await core.dbController.mapSystemsTable.setByCondition(condition, {visible: true, position: pos});
 
-                        if (this._notifySystems) {
+                        if (this._notifySystems && this._systemsSubscriber) {
                             let info = await this.getSystemInfo(_systemId);
                             this._systemsSubscriber.notify({
                                 type: "add",
@@ -383,7 +383,7 @@ var Map = classCreator("Map", Emitter, {
 
                     this._systems[_systemId].loadPromise.resolve();
 
-                    if (this._notifySystems) {
+                    if (this._notifySystems && this._systemsSubscriber) {
                         let info = await this.getSystemInfo(_systemId);
                         this._systemsSubscriber.notify({
                             type: "add",
@@ -506,7 +506,7 @@ var Map = classCreator("Map", Emitter, {
             this._systems[_systemId].onlineCharacters.push(_characterId);
             this._charactersOnSystem[_characterId] = _systemId;
 
-            if (this._notifySystems) {
+            if (this._notifySystems && this._systemsSubscriber) {
                 this._systemsSubscriber.notify({
                     type: "systemUpdatedList",
                     list: [
@@ -679,7 +679,7 @@ var Map = classCreator("Map", Emitter, {
 
             await core.dbController.mapSystemsTable.setByCondition(condition, _data);
 
-            if (this._notifySystems) {
+            if (this._notifySystems && this._systemsSubscriber) {
                 this._systemsSubscriber.notify({
                     type: "systemUpdated",
                     systemId: _systemId,
@@ -754,7 +754,7 @@ var Map = classCreator("Map", Emitter, {
                 }));
             }
 
-            if (this._notifySystems) {
+            if (this._notifySystems && this._systemsSubscriber) {
                 this._systemsSubscriber.notify({
                     type: "updatedSystemsPosition",
                     systemsPosition: _systemsPosition
@@ -804,7 +804,7 @@ var Map = classCreator("Map", Emitter, {
 
             solarSystemInfo.security = solarSystemInfo.security.toFixed(1);
 
-            var typeName = systemTypeInfo.name;
+            var typeName = systemTypeInfo.shortName;
             switch (systemTypeInfo.type) {
                 case 0:
                 case 1:
@@ -819,8 +819,11 @@ var Map = classCreator("Map", Emitter, {
             }
 
             if(exist(additionalSystemInfo) && exist(additionalSystemInfo.effect)) {
+                let effectData = await core.mdController.getSolarSystemEffectInfo(additionalSystemInfo.effect, wormholeClass);
+
                 systemData.effectType = core.fdController.effectNames[additionalSystemInfo.effect];
                 systemData.effectName = additionalSystemInfo.effect;
+                systemData.effectData = effectData;
             }
 
             if(exist(additionalSystemInfo) && exist(additionalSystemInfo.statics)) {

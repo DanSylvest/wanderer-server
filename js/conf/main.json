@@ -35,5 +35,9 @@
         "password": "",
         "port": 5432,
         "name": "mapper"
-    }
+    },
+	"tokens": {
+		"solt": "someSolt",
+		"lifeTime": 86400000
+	}
 }

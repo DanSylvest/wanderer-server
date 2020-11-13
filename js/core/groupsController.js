@@ -47,11 +47,11 @@ const GroupsController = classCreator("GroupsController", Emitter, {
      *
      * @param _owner - is group user id
      * @param _data
-     * @param _data.characters
-     * @param _data.corporations
-     * @param _data.alliances
-     * @param _data.name
-     * @param _data.description
+     * @param _data.characters {Array<string>}
+     * @param _data.corporations {Array<string>}
+     * @param _data.alliances {Array<string>}
+     * @param _data.name {string}
+     * @param _data.description {string}
      * @returns {Promise<any> | Promise<unknown>}
      */
     createGroup: async function (_owner, _data) {

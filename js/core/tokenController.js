@@ -1,8 +1,10 @@
-var Emitter      = require("./../env/tools/emitter");
-var classCreator = require("./../env/tools/class");
-var promise      = require("./../env/promise");
-var md5          = require("md5");
+var Emitter       = require("./../env/tools/emitter");
+var classCreator  = require("./../env/tools/class");
+var CustomPromise = require("./../env/promise");
+var md5           = require("md5");
+const exist       = require("./../env/tools/exist");
 
+// TODO вычищать нафиг все просроченные токены на каждый старт
 var TokenController = classCreator("TokenController", Emitter, {
     constructor: function TokenController() {
         Emitter.prototype.constructor.call(this);
@@ -10,43 +12,56 @@ var TokenController = classCreator("TokenController", Emitter, {
     destructor: function () {
         Emitter.prototype.destructor.call(this);
     },
-    generateToken: function (_value) {
-        var pr = new promise();
+    generateToken: async function (_value, expire) {
+        let pr = new CustomPromise();
+        let tokenId = md5(+new Date + config.tokens.solt);
+        let expireDate = new Date(exist(expire) ? expire : config.tokens.lifeTime);
 
-        var tokenId = md5(+new Date + "kek");
-
-        core.dbController.tokensDB.add({
-            id: tokenId,
-            value: _value,
-            expire: new Date(+new Date + 1000 * 60 * 60 * 24)
-        }).then(function () {
+        try {
+            await core.dbController.tokensDB.add({id: tokenId, value: _value, expire: expireDate});
             pr.resolve(tokenId);
-        }.bind(this), function (_err) {
+        } catch (_err) {
             pr.reject(_err);
-        }.bind(this));
+        }
 
         return pr.native;
     },
-    checkToken: function (_token) {
-        var pr = new promise();
+    checkToken: async function (_token) {
+        let pr = new CustomPromise();
 
-        core.dbController.tokensDB.get(_token, "expire").then(function(_expire) {
-            if(!isExpire(_expire)) {
-                core.dbController.tokensDB.get(_token, "value").then(function(_value) {
-                    pr.resolve(_value)
-                }.bind(this),function(_err) {
-                    pr.reject(_err);
-                }.bind(this));
+        try {
+            let isExists = await core.dbController.tokensDB.existsByCondition([
+                {name: "id", operator: "=", value: _token},
+            ]);
+
+            if(isExists) {
+                let expire = await core.dbController.tokensDB.get(_token, "expire");
+                if (!isExpire(expire)) {
+                    let value = await core.dbController.tokensDB.get(_token, "value");
+                    pr.resolve(value);
+                } else {
+                    await core.dbController.tokensDB.remove(_token);
+                    pr.reject("token is expired");
+                }
             } else {
-                //todo here need remove expired token
+                pr.reject("token is not exists");
             }
-        }.bind(this),function(_err) {
-            pr.reject(_err);
-        }.bind(this));
+        } catch (err) {
+            pr.reject(err);
+        }
 
         return pr.native;
     },
+    removeToken: async function (token) {
+        let isExists = await core.dbController.tokensDB.existsByCondition([
+            {name: "id", operator: "=", value: token},
+        ]);
 
+        if(isExists)
+            await core.dbController.tokensDB.remove(token);
+        else
+            throw "Token already removed";
+    }
 });
 
 var isExpire = function (_date) {

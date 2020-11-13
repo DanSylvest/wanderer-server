@@ -32,6 +32,7 @@ var request = async function (_connection_id, _response_id, _event) {
 
     } catch(_err) {
         api.send(_connection_id, _response_id, {
+            err: _err,
             message: _err.message,
             eventType: "responseRegisterUser",
             success: false

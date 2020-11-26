@@ -19,10 +19,11 @@
 	"scripts": {
 		"dev": "node --inspect js/main.js",
 		"start": "node js/main.js",
-		"dropAll": "node js/scripts/installer.js clear all",
-		"dropMapperDb": "node js/scripts/installer.js clear mapper",
-		"updateEveDb": "node js/scripts/installer.js clear eve",
-		"updateManualDb": "node js/scripts/installer.js clear other",
+		"dropAll": "node js/scripts/installer.js update all",
+		"dropMapperDb": "node js/scripts/installer.js update mapper",
+		"updateEveDb": "node js/scripts/installer.js update eve",
+		"updateManualDb": "node js/scripts/installer.js update other",
+		"updateSwagger": "node js/scripts/installer.js update swagger",
 		"installApp": "node js/scripts/installer.js install"
 	},
 	"dependencies": {
@@ -31,6 +32,7 @@
 		"pg": "^8.5.1",
 		"request": "^2.88.2",
 		"superagent": "^6.1.0",
+		"unzipper": "^0.10.11",
 		"websocket": "^1.0.32"
 	}
 }

@@ -9,10 +9,10 @@ const execProcess = function (_command) {
     var pr = new CustomPromise();
 
     child_process.exec(_command, {shell: true}, function (_err, _in, _out) {
-        if(_err)
+        if (_err)
             pr.reject(_err);
         else
-            pr.resolve();
+            pr.resolve({in: _in, out: _out});
     });
 
     return pr.native;

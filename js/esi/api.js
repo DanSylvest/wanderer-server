@@ -4,10 +4,9 @@
 
 // var Emitter        = require("./../env/tools/emitter");
 // var classCreator   = require("./../env/tools/class");
-var CustomPromise  = require("./../../env/promise");
-var extend         = require("./../../env/tools/extend");
-
-var ESI            = require("./generated/index.js");
+var CustomPromise    = require("./../env/promise");
+var extend           = require("./../env/tools/extend");
+var ESI              = require("./generated/javascript-client/src/index.js");
 
 var locationApi      = new ESI.LocationApi();
 var searchApi        = new ESI.SearchApi();

@@ -3,7 +3,7 @@
  */
 
 var request       = require('request');
-var CustomPromise = require("./../../env/promise");
+var CustomPromise = require("./../env/promise");
 
 
 var CLIENT_ID = config.eve.app.client_id;

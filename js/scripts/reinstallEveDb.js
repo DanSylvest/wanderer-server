@@ -3,6 +3,7 @@ const printf      = require('./../env/tools/print_f');
 const fs          = require('fs');
 const execProcess = require("./../env/execProcess");
 const ConfReader  = require("./../utils/configReader");
+const log         = require("./../utils/log.js");
 
 const config = new ConfReader("conf").build();
 const EVE_SDE_DB_NAME  = config.db.names.eveSde;
@@ -19,14 +20,14 @@ const searchDumpFile = function (_path) {
 };
 
 const installSDE = async function (client, conString) {
-    console.log("Start Loading SDE database...");
+    log(log.INFO, "Start Loading SDE database...");
     var dumpFile = searchDumpFile(dirPath["+"]("db/sdeDump"));
-    console.log(`Install ${EVE_SDE_DB_NAME} db...`);
+    log(log.INFO, `Install ${EVE_SDE_DB_NAME} db...`);
     await client.query(printf("DROP DATABASE IF EXISTS \"%s\";", EVE_SDE_DB_NAME));
     await client.query(printf("CREATE DATABASE \"%s\";", EVE_SDE_DB_NAME));
-    console.log(`Restore dump database ${dumpFile} for ${EVE_SDE_DB_NAME}.`);
+    log(log.INFO, `Restore dump database ${dumpFile} for ${EVE_SDE_DB_NAME}. ~(2-3 min)`);
     await execProcess(printf("pg_restore --no-privileges --dbname=%s/%s %s", conString, EVE_SDE_DB_NAME, dirPath["+"]("db/sdeDump")["+"](dumpFile).toString()));
-    console.log(`Installed ${EVE_SDE_DB_NAME}.`);
+    log(log.INFO, `Installed ${EVE_SDE_DB_NAME}.`);
 }
 
 module.exports = installSDE;

@@ -317,20 +317,24 @@ const UserController = classCreator("UserController", Emitter, {
     },
     /**
      *
-     * @param {string} characterId
+     * @param {Array<String>} characters
      * @returns {Promise<string|null>}
      */
     async getUsersByCharacters (characters) {
-        let condition = {
-            left: {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
-            operator: "AND",
-            right: {
-                operator: "OR",
-                condition: characters.map(characterId => ({name: "second", operator: "=", value: characterId}))
-            }
-        };
-        let result = await core.dbController.linksTable.getByCondition(condition, ["first", "second"]);
-        return result.map(x => ({characterId: x.second, userId: x.first}));
+        let out = [];
+        if (characters.length > 0) {
+            let condition = {
+                left: {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
+                operator: "AND",
+                right: {
+                    operator: "OR",
+                    condition: characters.map(characterId => ({name: "second", operator: "=", value: characterId}))
+                }
+            };
+            let result = await core.dbController.linksTable.getByCondition(condition, ["first", "second"]);
+            out = result.map(x => ({characterId: x.second, userId: x.first}));
+        }
+        return out;
     }
 });
 

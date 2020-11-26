@@ -3,7 +3,9 @@ const ConfReader        = require("./../utils/configReader");
 const reinstallEveDb    = require("./reinstallEveDb");
 const reinstallManualDb = require("./reinstallManualDb");
 const reinstallMapperDb = require("./reinstallMapperDb");
+const generateSwagger   = require("./generateSwagger.js");
 const args              = require("args");
+const log               = require("./../utils/log.js");
 
 const config = new ConfReader("conf").build();
 const conString = `postgres://${config.db.user}:${config.db.password}@${config.db.host}`;
@@ -11,7 +13,7 @@ const client = new pg.Client(conString);
 client.connect();
 
 var installRole = async function () {
-    console.log("Create role yaml (for sde restore)...");
+    log(log.INFO, "Create role yaml (for sde restore)...");
     var queryRole = `DO
     $do$
     BEGIN
@@ -25,15 +27,18 @@ var installRole = async function () {
     $do$;`;
 
     await client.query(queryRole);
-    console.log("Created");
+    log(log.INFO, "Created");
 };
 
-const processClearCommand = async function (_command, _flags) {
+const processUpdateCommand = async function (_command, _flags) {
     if(_flags.length === 0) _flags.push("all");
 
     try {
         for (let a = 0; a < _flags.length; a++) {
             switch (_flags[a]) {
+                case "swagger":
+                    await generateSwagger();
+                    break;
                 case "mapper":
                     await reinstallMapperDb(client, conString);
                     break;
@@ -47,12 +52,13 @@ const processClearCommand = async function (_command, _flags) {
                     await reinstallMapperDb(client, conString);
                     await reinstallEveDb(client, conString);
                     await reinstallManualDb(client, conString);
+                    await generateSwagger();
                     break;
             }
         }
     } catch (_err) {
-        console.log(_err);
-        console.log("Installed with error (check previously message)");
+        log(log.INFO, _err);
+        log(log.INFO, "Installed with error (check previously message)");
     }
 
     process.exit()
@@ -64,16 +70,17 @@ const processInstall = async function () {
         await reinstallManualDb(client, conString);
         await reinstallEveDb(client, conString);
         await reinstallMapperDb(client, conString);
-        console.log("Installed");
+        await generateSwagger(client, conString);
+        log(log.INFO, "Installed");
     } catch (_err) {
-        console.log(_err);
-        console.log("Installed with error (check previously message)");
+        log(log.INFO, _err);
+        log(log.INFO, "Installed with error (check previously message)");
     }
 
     process.exit()
 };
 
-args.command('clear', 'Clear db [mapper/eve/other/all] or [mapper eve] default is all', processClearCommand);
+args.command('update', 'Update [swagger/mapper/eve/other/all] or [mapper eve] default is all', processUpdateCommand);
 args.command('install', 'Will install all', processInstall);
 args.parse(process.argv);
 

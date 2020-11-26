@@ -7,7 +7,7 @@
 var CustomPromise  = require("./../../env/promise");
 var extend         = require("./../../env/tools/extend");
 
-var ESI            = require("./../../external/esiClient/index")
+var ESI            = require("./generated/index.js");
 
 var locationApi      = new ESI.LocationApi();
 var searchApi        = new ESI.SearchApi();

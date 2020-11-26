@@ -10,7 +10,7 @@ var CustomPromise     = require("./../../env/promise");
 var Subscriber        = require("./../../utils/subscriber");
 var log               = require("./../../utils/log");
 
-var OAuth             = require("./../eveSwaggerInterface/oauth");
+var OAuth             = require("./../../esi/oauth.js");
 var OnlineAttribute   = require("./attributes/online");
 var LocationAttribute = require("./attributes/location");
 var ShipAttribute     = require("./attributes/ship");

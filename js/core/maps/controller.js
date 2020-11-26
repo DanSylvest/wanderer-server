@@ -2,16 +2,16 @@
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/21/20.
  */
 
-const Emitter       = require("./../../env/tools/emitter");
-const classCreator  = require("./../../env/tools/class");
-const extend        = require("./../../env/tools/extend");
-const exist         = require("./../../env/tools/exist");
-const CustomPromise = require("./../../env/promise");
-const printf        = require("./../../env/tools/print_f");
-const log           = require("./../../utils/log");
-const DBController  = require("./../dbController");
-const Map           = require("./map");
-const md5           = require("md5");
+const Emitter           = require("./../../env/tools/emitter");
+const classCreator      = require("./../../env/tools/class");
+const log               = require("./../../utils/log");
+const DBController      = require("./../dbController");
+const Map               = require("./map");
+const md5               = require("md5");
+const UserMapWatcher    = require("./userMapWatcher.js");
+const UserSubscriptions = require("./userSubscriptions.js")
+
+const USER_DROP_TIMEOUT = 10000;
 
 const MapController = classCreator("MapController", Emitter, {
     constructor: function MapController() {
@@ -19,19 +19,16 @@ const MapController = classCreator("MapController", Emitter, {
 
         this._maps = Object.create(null);
         this._onlineUsers = Object.create(null);
+        this._umw = new UserMapWatcher();
+        this._us = new UserSubscriptions();
     },
     destructor: function () {
         Emitter.prototype.destructor.call(this);
     },
 
     init: async function () {
-        let pr = new CustomPromise();
-
         let allMaps = await this.getAllMaps();
         await Promise.all(allMaps.map(_map => this.get(_map.id).init()));
-        pr.resolve();
-
-        return pr.native;
     },
 
     // Controller API
@@ -47,214 +44,162 @@ const MapController = classCreator("MapController", Emitter, {
     },
     remove: function (_mapId) {
         if(this.has(_mapId)){
+            this._maps[_mapId].deinit();
             delete this._maps[_mapId];
         }
     },
     _add: function (_mapId, _mapInstance) {
         this._maps[_mapId] = _mapInstance;
     },
-    connectionBreak: function (_connectionId) {
+    async connectionBreak (_connectionId) {
         for(let mapId in this._maps) {
             this._maps[mapId].connectionBreak(_connectionId);
         }
     },
 
-    offlineCharacters: async function (_mapId, _characters) {
-        let pr = new CustomPromise();
-
-        try {
-            if(this._maps[_mapId]) {
-                await this._maps[_mapId].offlineCharacters(_characters);
-                pr.resolve();
-            }
-        } catch (_err) {
-            pr.reject(_err);
+    removeCharactersFromObserve (_mapId, _characters) {
+        if(this._maps[_mapId]) {
+            this._maps[_mapId].removeCharactersFromObserve(_characters);
         }
-
-        return pr.native;
     },
-    userOffline: async function (_userId) {
-        this._onlineUsers[_userId].tid = setTimeout(function (_userId) {
+    userOffline (_userId) {
+        this._onlineUsers[_userId].tid = setTimeout(async function (_userId) {
             this._onlineUsers[_userId].tid = -1;
+            this._onlineUsers[_userId].online = false;
             this._userOffline(_userId);
-        }.bind(this, _userId), 10000);
+            await core.userController.setOnline(_userId, false);
+        }.bind(this, _userId), USER_DROP_TIMEOUT);
     },
-    _userOffline: async function (_userId) {
-        log(log.INFO, "User [%s] now is offline.", _userId);
+    _userOffline (userId) {
+        this._umw.removeUser(userId);
+        this._us.removeUser(userId);
 
-        try {
-            let filteredGroups = await core.groupsController.getGroupWithCharactersByUser(_userId);
-            let filteredMaps = await this.getMapsByGroupsWithCharacters(filteredGroups);
+        delete this._onlineUsers[userId];
 
-            // А вот теперь оповестим карты о добавлении нового персонажа на отслеживание
-            for(let mapId in filteredMaps) {
-                this._maps[mapId] && this._maps[mapId].offlineCharacters(filteredMaps[mapId])
-            }
-        } catch (_err) {
-            debugger;
-        }
+        log(log.INFO, "User [%s] now is offline.", userId);
     },
-    /**
-     * todo
-     * кроме того этот процесс может оборваться, и что тогда делать?
-     * не тестировано - надо протетсировать
-     * сделать несколько групп, несколько карт и несколько персонажей
-     * проерить корректность смешивания
-     * @param _userId
-     * @returns {Promise<void>}
-     */
-    userOnline: async function (_userId) {
+    userOnline (_userId) {
         if(!this._onlineUsers[_userId]) {
             this._onlineUsers[_userId] = {
+                online: true,
                 tid: -1
             }
         } else if(this._onlineUsers[_userId].tid !== -1) {
             clearTimeout(this._onlineUsers[_userId].tid);
             this._onlineUsers[_userId].tid = -1;
+            this._onlineUsers[_userId].online = true;
             return;
         }
         log(log.INFO, "User [%s] now is online.", _userId);
-        try {
-            let filteredGroups = await core.groupsController.getGroupWithCharactersByUser(_userId);
-            let filteredMaps = await this.getMapsByGroupsWithCharacters(filteredGroups);
+    },
+    async updateCharacterTrackStatus (maps, characterId, state) {
+        let userId = await core.userController.getUserByCharacter(characterId);
 
-            // А вот теперь оповестим карты о добавлении нового персонажа на отслеживание
-            for(let mapId in filteredMaps) {
-                let map = this._maps[mapId];
+        // Получаем все группы, на которых персонаж поставлен на отслеживание
+        let groups = await core.groupsController.getGroupsByTrackedCharacterId(characterId);
+        // groups = groups.filter(x => x !== groupId);
 
-                if(map) {
-                    map.addCharactersToObserve(filteredMaps[mapId]);
-                } else {
-                    this.get(mapId).addCharactersToObserve(filteredMaps[mapId]);
+        // Загружаем все карты, для которых данная группа присоеденена
+        // /** @type {Array<Array<mapId>>} */
+        let arr = await Promise.all(groups.map(x => this.getMapsByGroup(x)));
+
+        // Все карты, которые по другим группам отслеживаются
+        // {Array<mapId>}
+        let otherMapsWhereUserTracking = [];
+        arr.map(x => otherMapsWhereUserTracking.merge(x));
+        let mapsObj = otherMapsWhereUserTracking.convertToMap();
+
+        if(state) {
+            for (let a = 0; a < maps.length; a++) {
+                let mapId = maps[a];
+                let isWatchingOnMap = this.has(mapId) && this._umw.isUserWatchOnMap(userId, mapId);
+                isWatchingOnMap && this.get(mapId).addCharactersToObserve([characterId]);
+            }
+        } else if(!state) {
+            for (let a = 0; a < maps.length; a++) {
+                let mapId = maps[a];
+                let isWatchingOnMap = this.has(mapId) && this._umw.isUserWatchOnMap(userId, mapId);
+
+                if(isWatchingOnMap && !mapsObj[mapId]) {
+                    this.get(mapId).removeCharactersFromObserve([characterId]);
                 }
             }
-        } catch (_err) {
-            debugger;
         }
     },
-    updateCharacterStatus: async function (_groupId, _characterId, _track) {
-        let pr = new CustomPromise();
+    async getMapsByGroupsWithCharacters (_input) {
+        let prarr = [];
+        let infoGroups = [];
+        for (let groupId in _input) {
+            infoGroups.push({groupId: groupId, characterIds: _input[groupId]});
+            prarr.push(this.getMapsByGroup(groupId));
+        }
 
-        try {
-            let groups = Object.create(null);
-            groups[_groupId] = [_characterId];
+        // Получаем массив идентификаторов карт
+        let arrMapIds = await Promise.all(prarr);
 
-            let filteredMaps = await this.getMapsByGroupsWithCharacters(groups);
+        // Разложим персонажей по картам
+        let filteredMaps = Object.create(null);
+        for (let a = 0; a < arrMapIds.length; a++) {
+            let mapIds = arrMapIds[a];
+            let groupInfo = infoGroups[a];
 
-            for (let mapId in filteredMaps) {
-                let map = this._maps[mapId];
+            for (let b = 0; b < mapIds.length; b++) {
+                let mapId = mapIds[b];
 
-                if (map) {
-                    if (_track)
-                        map.addCharactersToObserve(filteredMaps[mapId]);
-                    else
-                        map.offlineCharacters(filteredMaps[mapId]);
-                } else if (!map && _track) {
-                    this.get(mapId).addCharactersToObserve(filteredMaps[mapId]);
+                if (!filteredMaps[mapId]) {
+                    filteredMaps[mapId] = []
                 }
+                filteredMaps[mapId].merge(groupInfo.characterIds);
             }
-            pr.resolve();
-        } catch (_err) {
-            pr.reject(_err)
         }
 
-        return pr.native;
+        return filteredMaps;
     },
-    getMapsByGroupsWithCharacters: async function (_input) {
-        let pr = new CustomPromise();
-
-        try {
-            let prarr = [];
-            let infoGroups = [];
-            for (let groupId in _input) {
-                infoGroups.push({groupId: groupId, characterIds: _input[groupId]});
-                prarr.push(this.getMapsByGroup(groupId));
-            }
-
-            // Получаем массив идентификаторов карт
-            let arrMapIds = await Promise.all(prarr);
-
-            // Разложим персонажей по картам
-            let filteredMaps = Object.create(null);
-            for (let a = 0; a < arrMapIds.length; a++) {
-                let mapIds = arrMapIds[a];
-                let groupInfo = infoGroups[a];
-
-                for (let b = 0; b < mapIds.length; b++) {
-                    let mapId = mapIds[b].first;
-
-                    if (!filteredMaps[mapId]) {
-                        filteredMaps[mapId] = []
-                    }
-                    filteredMaps[mapId].merge(groupInfo.characterIds);
-                }
-            }
-
-            pr.resolve(filteredMaps)
-        } catch (_err) {
-            debugger;
-            pr.reject(_err)
-        }
-
-        return pr.native;
-    },
-    _removeGroups: function (_mapId) {
-        let pr = new CustomPromise();
-
-        let condition = [
+    async _unlinkMapGroups (_mapId) {
+        await core.dbController.linksTable.removeByCondition([
             {name: "type",operator: "=",value: DBController.linksTableTypes.mapToGroups},
             {name: "first",operator: "=",value: _mapId}
-        ];
-
-        core.dbController.linksTable.removeByCondition(condition).then(function () {
-            pr.resolve();
-        }.bind(this), function (_err) {
-            pr.reject(_err);
-        }.bind(this));
-
-        return pr.native;
+        ]);
     },
-    _updateGroups: async function (_mapId, _groups) {
-        let pr = new CustomPromise();
-
-        var condition = [
+    async _updateGroups (_mapId, _groups) {
+        let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.mapToGroups},
             {name: "first", operator: "=", value: _mapId}
         ];
 
-        try {
-            let result = await core.dbController.linksTable.getByCondition(condition, ["first", "second"]);
+        let result = await core.dbController.linksTable.getByCondition(condition, ["first", "second"]);
 
-            let added = [], removed = [], transactionArr = [];
-            for (let a = 0; a < _groups.length; a++) {
-                if (result.searchByObjectKey("second", _groups[a]) === null) {
-                    transactionArr.push(core.dbController.linksTable.add({
-                        type: DBController.linksTableTypes.mapToGroups,
-                        first: _mapId,
-                        second: _groups[a]
-                    }, true));
-                    added.push(_groups[a]);
-                }
+        let added = [], removed = [], transactionArr = [];
+        for (let a = 0; a < _groups.length; a++) {
+            if (result.searchByObjectKey("second", _groups[a]) === null) {
+                transactionArr.push(core.dbController.linksTable.add({
+                    type: DBController.linksTableTypes.mapToGroups,
+                    first: _mapId,
+                    second: _groups[a]
+                }, true));
+                added.push(_groups[a]);
             }
-
-            for (let b = 0; b < result.length; b++) {
-                if (_groups.indexOf(result[b].second) === -1) {
-                    transactionArr.push(core.dbController.linksTable.removeByCondition([
-                        {name: "type", operator: "=", value: DBController.linksTableTypes.mapToGroups},
-                        {name: "first", operator: "=", value: _mapId},
-                        {name: "second", operator: "=", value: result[b].second},
-                    ], true));
-                    removed.push(result[b].second);
-                }
-            }
-
-            await core.dbController.db.transaction(transactionArr);
-            pr.resolve({added: added, removed: removed});
-        } catch (_err) {
-            pr.reject(_err);
         }
 
-        return pr.native;
+        for (let b = 0; b < result.length; b++) {
+            if (_groups.indexOf(result[b].second) === -1) {
+                transactionArr.push(core.dbController.linksTable.removeByCondition([
+                    {name: "type", operator: "=", value: DBController.linksTableTypes.mapToGroups},
+                    {name: "first", operator: "=", value: _mapId},
+                    {name: "second", operator: "=", value: result[b].second},
+                ], true));
+                removed.push(result[b].second);
+            }
+        }
+
+        await core.dbController.db.transaction(transactionArr);
+        return {added: added, removed: removed};
+    },
+    async actualizeOfflineCharactersForMaps (maps, characters) {
+        await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus(maps, characterId, false)));
+    },
+    async actualizeOnlineCharactersForMaps (maps, characters) {
+        await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus(maps, characterId, false)));
     },
     /**
      *
@@ -266,9 +211,7 @@ const MapController = classCreator("MapController", Emitter, {
      * @param _data.groups {Array<string>}
      * @returns {Promise<any> | Promise<unknown>}
      */
-    createMap: async function (_owner, _data) {
-        let pr = new CustomPromise();
-
+    async createMap (_owner, _data) {
         let id = md5(config.app.solt + "_" + +new Date);
 
         let props = {
@@ -279,42 +222,81 @@ const MapController = classCreator("MapController", Emitter, {
             private: _data.private
         };
 
-        try {
-            await core.dbController.mapsDB.add(props);
-            await this._updateGroups(id, _data.groups);
-
-            // Поставить на отслеживание всех персонажей, которым выставлен флаг track в true
-            await Promise.all(_data.groups.map(_groupId => this.onlineCharactersByGroup(id, _groupId)));
-            pr.resolve(id);
-        } catch(_err) {
-            pr.reject({
-                sub: _err,
-                message: "Error on add in mapsDB - update groups"
-            });
-        }
-
-        return pr.native;
+        await core.dbController.mapsDB.add(props);
+        await this._updateGroups(id, _data.groups);
+        await this.notifyAllowedMapsByMap(id);
     },
-    editMap: async function (_mapId, _props) {
-        let pr = new CustomPromise();
+    /**
+     *
+     * @param _mapId
+     * @param _props
+     * @returns {Promise<void>}
+     */
+    async editMap (_mapId, _props) {
+        // todo Тут наверно надо сделать очередь на редактирование.
+        // нельзя что бы эдитилось сразу 2 карты...
+        // хз надо об этом подумать
 
-        try {
-            let groups = await this._updateGroups(_mapId, _props.groups);
-            await Promise.all(groups.removed.map(_groupId => this.offlineCharactersByGroup(_mapId, _groupId)));
-            await Promise.all(groups.added.map(_groupId => this.onlineCharactersByGroup(_mapId, _groupId)));
+        let oldGroups = await this.getMapGroups(_mapId);
+        let result = await this._updateGroups(_mapId, _props.groups);
 
-            delete _props.groups;
-            await core.dbController.mapsDB.set(_mapId, _props);
+        // персонажей надо добавлять в онлайн только при условии, что у карты были хотя бы
+        // какие-то группы, т.к. если их не было, то смотреть на карту невозможно
+        if (oldGroups.length !== 0) {
+            if (result.added.length > 0) {
+                let charsArr = await Promise.all(result.added.map(groupId => core.groupsController.getTrackedCharactersByGroup(groupId)));
+                let characters = [];
+                charsArr.map(x => characters.merge(x));
+                await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus([_mapId], characterId, true)));
+            }
 
-            pr.resolve();
-        } catch (_err) {
-            pr.reject({
-                sub: _err,
-                message: "Error on edit in mapsDB - update groups"
-            });
+            if (result.removed.length > 0) {
+                let charsArr = await Promise.all(result.removed.map(groupId => core.groupsController.getTrackedCharactersByGroup(groupId)));
+                let characters = [];
+                charsArr.map(x => characters.merge(x));
+                await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus([_mapId], characterId, false)));
+            }
         }
 
-        return pr.native;
+        delete _props.groups;
+        await core.dbController.mapsDB.set(_mapId, _props);
+
+        await this.notifyAllowedMapsByMap(_mapId);
+    },
+
+
+    /**
+     * А ведь это не так тривиально как кажется, да?
+     *  - удалить все слинкоанные с картой группы
+     *  - удалить сам объект карты (но это просто остановка работы механизма карты)
+     *  - удалить из бд mapLinksTable все линки
+     *  - удалить из бд mapSystemsTable все системы с их параметрами
+     *  - удалить из бд mapSystemToCharacterTable связи персонажей с картой
+     *  - оповестить всех кто смотрит на карту, что она была удалена
+     * @param _mapId
+     * @returns {Promise<unknown>}
+     */
+    async removeMap (_mapId) {
+        let trArr = [];
+        trArr.push(core.dbController.mapLinksTable.removeByCondition([
+            {name: "mapId", operator: "=", value: _mapId}
+        ], true))
+
+        trArr.push(core.dbController.mapSystemsTable.removeByCondition([
+            {name: "mapId", operator: "=", value: _mapId}
+        ], true));
+
+        trArr.push(core.dbController.mapSystemToCharacterTable.removeByCondition([
+            {name: "mapId", operator: "=", value: _mapId}
+        ], true));
+
+        await core.dbController.db.transaction(trArr);
+        await this._unlinkMapGroups(_mapId);
+        await core.dbController.mapsDB.remove(_mapId);
+        this._umw.removeMapFromAllUsers(_mapId);
+        this.remove(_mapId);
+
+        await this.notifyAllowedMapsByMap(_mapId);
     },
     /**
      * @param {string} userId
@@ -326,213 +308,256 @@ const MapController = classCreator("MapController", Emitter, {
      * @param {Number} data.characterId
      * @returns {*}
      */
-    createMapFast: async function (userId, data) {
-        let pr = new CustomPromise();
-        /**
-         * Итак, идем с конца
-         *
-         * Необходимо создать группу
-         *  - проверить что такой группы нет
-         *  - если такая группа есть, то переименовать эту
-         *
-         * В группу необходимо добавить персонажа, корпу, альянс
-         *
-         * После создания группы, необходимо персонажа создавшего эту группу, поставить на отслеживание
-         *
-         * После создания группы, необходимо создать карту.
-         *
-         * После создания карты, необходимо прикрепить группу к карте.
-         *
-         * После вернуть все необходимые данные, что бы добавить карту в список карт
-         */
-
-
-        try {
-            let charInfo = await core.charactersController.get(data.characterId).getInfo();
-            let groupOptions = {
-                name: `group_${data.name}`,
-                description: `Automatically generated group for map ${data.name}`,
-                characters: [data.characterId]
-            }
-
-            if(data.shareForCorporation) {
-                groupOptions.corporations = [charInfo.corporationId];
-            }
-
-            if(data.shareForAlliance) {
-                groupOptions.alliances = [charInfo.allianceId];
-            }
-
-            let lastCreatedGroupId = await core.groupsController.createGroup(userId, groupOptions);
-            await core.groupsController.updateCharacterTrack(lastCreatedGroupId, data.characterId, true);
-
-            let lastCreatedMapId = await this.createMap(userId, {
-                name: data.name,
-                description: data.description,
-                private: false,
-                groups: [lastCreatedGroupId]
-            })
-
-            pr.resolve({
-                id: lastCreatedMapId,
-                groups: [lastCreatedGroupId],
-                description: data.description,
-                name: data.name,
-                isPrivate: false
-            })
-        } catch (_err) {
-            pr.reject(_err);
+    async createMapFast (userId, data) {
+        let charInfo = await core.charactersController.get(data.characterId).getInfo();
+        let groupOptions = {
+            name: `group_${data.name}`,
+            description: `Automatically generated group for map ${data.name}`,
+            characters: [data.characterId]
         }
 
-        return pr.native;
-    },
-    offlineCharactersByGroup: async function (mapId, groupId) {
-        let charactersPr = core.groupsController.getGroupCharacters(groupId);
-        let corporationsPr = core.groupsController.getGroupCorporations(groupId);
-        let alliancesPr = core.groupsController.getGroupAlliances(groupId);
-        let characters = await charactersPr;
-        let corporations = await corporationsPr;
-        let alliances = await alliancesPr;
-        await core.groupsController.actualMapTrackingCharactersOffline(mapId, groupId, characters, corporations, alliances);
-    },
-    onlineCharactersByGroup: async function (mapId, groupId) {
-        let charactersPr = core.groupsController.getGroupCharacters(groupId);
-        let corporationsPr = core.groupsController.getGroupCorporations(groupId);
-        let alliancesPr = core.groupsController.getGroupAlliances(groupId);
-        let characters = await charactersPr;
-        let corporations = await corporationsPr;
-        let alliances = await alliancesPr;
-        await core.groupsController.actualMapTrackingCharactersOnline(mapId, groupId, characters, corporations, alliances);
-    },
-    /**
-     * А ведь это не так тривиально как кажется, да?
-     *  - удалить все слинкоанные с картой группы
-     *  - удалить сам объект карты (но это просто остановка работы механизма карты)
-     *  - удалить из бд mapLinksTable все линки
-     *  - удалить из бд mapSystemsTable все системы с их параметрами
-     *  - удалить из бд mapSystemToCharacterTable связи персонажей с картой
-     * @param _mapId
-     * @returns {Promise<unknown>}
-     */
-    removeMap: async function (_mapId) {
-        let pr = new CustomPromise();
-
-        try {
-            let trArr = [];
-            trArr.push(core.dbController.mapLinksTable.removeByCondition([
-                {name: "mapId", operator: "=", value: _mapId}
-            ], true))
-
-            trArr.push(core.dbController.mapSystemsTable.removeByCondition([
-                {name: "mapId", operator: "=", value: _mapId}
-            ], true));
-
-            trArr.push(core.dbController.mapSystemToCharacterTable.removeByCondition([
-                {name: "mapId", operator: "=", value: _mapId}
-            ], true));
-
-            await core.dbController.db.transaction(trArr);
-            await this._removeGroups(_mapId);
-            await core.dbController.mapsDB.remove(_mapId);
-            this.remove(_mapId);
-            pr.resolve();
-        } catch (_err) {
-            pr.reject(_err);
+        if(data.shareForCorporation) {
+            groupOptions.corporations = [charInfo.corporationId];
         }
 
-        return pr.native;
-    },
-    getMapList: function () {
+        if(data.shareForAlliance) {
+            groupOptions.alliances = [charInfo.allianceId];
+        }
 
-    },
-    getMapListByOwner: async function (_ownerId) {
-        let pr = new CustomPromise();
+        let lastCreatedGroupId = await core.groupsController.createGroup(userId, groupOptions);
+        await core.groupsController.updateCharacterTrack(lastCreatedGroupId, data.characterId, true);
 
+        let lastCreatedMapId = await this.createMap(userId, {
+            name: data.name,
+            description: data.description,
+            private: false,
+            groups: [lastCreatedGroupId]
+        });
+
+        await this.notifyAllowedMapsByMap(lastCreatedMapId);
+
+        return {
+            id: lastCreatedMapId,
+            groups: [lastCreatedGroupId],
+            description: data.description,
+            name: data.name,
+            isPrivate: false
+        };
+    },
+
+    async notifyAllowedMapsByAffectedCharacters (characters) {
+        let usersOnCharacters = await core.userController.getUsersByCharacters(characters);
+        let usersObj = Object.create(null);
+        usersOnCharacters.map(x => usersObj[x.userId] = true);
+        let users = Object.keys(usersObj);
+        await Promise.all(users.map(userId => this.notifyAllowedMapsByUser(userId)));
+    },
+    async notifyAllowedMapsByUser (userId) {
+        if(this._us.getUser(userId).allowedMaps.notify) {
+            let lastUpdatedMaps = this._us.getUser(userId).allowedMaps.getData(); // было
+            let allowedMaps = await this.getMapsWhereCharacterTrackByUser(userId); // стало
+
+            let diff = lastUpdatedMaps.diff(allowedMaps);
+
+            if(diff.added.length > 0) {
+                diff.added.map(x => lastUpdatedMaps.push(x));
+                this._us.getUser(userId).allowedMaps.subscription.notify({
+                    type: "added",
+                    maps: diff.added
+                });
+            }
+
+            if(diff.removed.length > 0) {
+                diff.removed.map(x => lastUpdatedMaps.removeByValue(x));
+                this._us.getUser(userId).allowedMaps.subscription.notify({
+                    type: "removed",
+                    maps: diff.removed
+                });
+            }
+        }
+    },
+    async notifyAllowedMapsByMap (mapId) {
+        let users = this._us.getUsers();
+        users = users.filter(userId => this._us.getUser(userId).allowedMaps.notify);
+
+        let charsArr = await Promise.all(users.map(userId => this.getTrackingCharactersForMapByUser(mapId, userId)));
+
+        users.map((userId, index) => {
+            let hasTrackedCharacters = charsArr[index].length > 0;
+            let lastUpdatedMaps = this._us.getUser(userId).allowedMaps.getData();
+            let hasMap = lastUpdatedMaps.indexOf(mapId) !== -1;
+
+            if(hasMap && !hasTrackedCharacters) {
+                lastUpdatedMaps.removeByValue(mapId);
+                this._us.getUser(userId).allowedMaps.subscription.notify({
+                    type: "removed",
+                    maps: [mapId]
+                });
+            } else if(!hasMap && hasTrackedCharacters) {
+                lastUpdatedMaps.push(mapId);
+                this._us.getUser(userId).allowedMaps.subscription.notify({
+                    type: "added",
+                    maps: [mapId]
+                });
+            }
+        });
+    },
+    async getMapListByOwner (_ownerId) {
         let condition = [{name: "owner", operator: "=", value: _ownerId}];
         let attributes = ["id", "name", "description", "owner", "private"];
 
-        try {
-            let mapListPr = core.dbController.mapsDB.getByCondition(condition, attributes);
-            let userNamePr = core.userController.getUserName(_ownerId);
+        let mapListPr = core.dbController.mapsDB.getByCondition(condition, attributes);
+        let userNamePr = core.userController.getUserName(_ownerId);
 
-            let mapList = await mapListPr;
-            let userName = await userNamePr;
-            let mapsGroups = await Promise.all(mapList.map(_mapInfo => this.getMapGroups(_mapInfo.id)));
+        let mapList = await mapListPr;
+        let userName = await userNamePr;
+        let mapsGroups = await Promise.all(mapList.map(_mapInfo => this.getMapGroups(_mapInfo.id)));
 
-            for (let a = 0; a < mapList.length; a++) {
-                mapList[a].groups = mapsGroups[a];
-                mapList[a].owner = userName;
-            }
-
-            pr.resolve(mapList);
-        } catch (_err) {
-            pr.reject();
+        for (let a = 0; a < mapList.length; a++) {
+            mapList[a].groups = mapsGroups[a];
+            mapList[a].owner = userName;
         }
 
-        return pr.native;
+        return mapList
     },
-
-    getMapInfo: async function (_mapId) {
-        let pr = new CustomPromise();
-
-        try {
-            let info = await core.dbController.mapsDB.get(_mapId, core.dbController.mapsDB.attributes());
-            pr.resolve(info);
-        } catch (_err) {
-            pr.reject(_err);
-        }
-
-        return pr.native;
+    async getMapInfo (_mapId) {
+        return await core.dbController.mapsDB.get(_mapId, core.dbController.mapsDB.attributes());
     },
-
-    getMapGroups: async function (_mapId) {
-        let pr = new CustomPromise();
-
+    async getMapGroups (mapId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.mapToGroups},
-            {name: "first", operator: "=", value: _mapId}
+            {name: "first", operator: "=", value: mapId}
         ];
-
-        try {
-            let resultPr = core.dbController.linksTable.getByCondition(condition, ["second"]);
-            let result = await resultPr;
-            let out = result.map(_res => _res.second);
-
-            pr.resolve(out)
-        } catch (_err) {
-            pr.reject();
-        }
-
-        return pr.native;
+        let result = await core.dbController.linksTable.getByCondition(condition, ["second"]);
+        return result.map(x => x.second);
     },
 
-    getMapsByGroup: async function (_groupId) {
-        let pr = new CustomPromise();
+    async getMapsByGroup (_groupId) {
+        let condition = [
+            {name: "type", operator: "=", value: DBController.linksTableTypes.mapToGroups},
+            {name: "second", operator: "=", value: _groupId}
+        ];
+        let result = await core.dbController.linksTable.getByCondition(condition, ["first"])
+        return result.map(x => x.first);
+    },
+    async getAllMaps () {
+        return await core.dbController.mapsDB.all();
+    },
+    async setMapWatchStatus (connectionId, userId, mapId, status) {
+        // Если текущий статус слежения за картой, выставлен в тру.
+        if(status) {
+            // Если нет слежения по текущему конекшну то создадим новый
+            this._umw.addConnection(userId, connectionId);
 
-        try {
-            let condition = [
-                {name: "type", operator: "=", value: DBController.linksTableTypes.mapToGroups},
-                {name: "second", operator: "=", value: _groupId}
-            ];
-            let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
-            pr.resolve(result);
-        } catch (_err) {
-            pr.resolve(_err);
+            // Для всех карт пройдемся и зададим значение в false
+            let prarr = [];
+            this._umw.eachMap(userId, connectionId, (_mapId, _isWatch) => {
+                if(_isWatch) {
+                    this._umw.set(userId, connectionId, _mapId, false);
+                    prarr.push(this.updateMapWatchStatus(userId, _mapId, false));
+                }
+            });
+            await Promise.all(prarr);
+
+            // теперь зададим текущую карту в тру
+            this._umw.set(userId, connectionId, mapId, true);
+            await this.updateMapWatchStatus(userId, mapId, true);
+        } else if(this._umw.get(userId, connectionId, mapId)) {
+            this._umw.set(userId, connectionId, mapId, false);
+            await this.updateMapWatchStatus(userId, mapId, false);
+        }
+    },
+    async getTrackingCharactersForMapByUser (mapId, userId) {
+        let groupsPr = this.getMapGroups(mapId);
+        let userCharactersPr = core.userController.getUserCharacters(userId);
+        let groups = await groupsPr;
+        let userCharacters = await userCharactersPr;
+
+        let cond = [];
+        for (let a = 0; a < groups.length; a++) {
+            for (let b = 0; b < userCharacters.length; b++) {
+                cond.push([
+                    {name: "characterId", operator: "=", value: userCharacters[b]},
+                    {name: "groupId", operator: "=", value: groups[a]},
+                    {name: "track", operator: "=", value: true},
+                ]);
+            }
         }
 
-        return pr.native;
+        let result = [];
+        if(cond.length > 0) {
+            let dbRes = await core.dbController.groupToCharacterTable.getByCondition({condition: cond, operator: "OR"}, ["characterId", "groupId", "track"]);
+            result = dbRes.map(x => x.characterId);
+        }
+
+        return result;
+    },
+    async getMapsWhereCharacterTrackByUser (userId) {
+        let characters = await core.userController.getUserCharacters(userId);
+        let maps = [];
+
+        if(characters.length > 0) {
+            let condition = {
+                operator: "OR",
+                condition: characters.map(characterId => ({
+                    operator: "AND",
+                    left: {name: "characterId", operator: "=", value: characterId},
+                    right: {name: "track", operator: "=", value: true}
+                }))
+            }
+
+            let dbRes = await core.dbController.groupToCharacterTable.getByCondition(condition, ["groupId"]);
+            let mapsArr = await Promise.all(dbRes.map(x => this.getMapsByGroup(x.groupId)));
+            mapsArr.map(x => maps.merge(x));
+        }
+
+        return maps;
+    },
+    async updateMapWatchStatus (userId, mapId, status) {
+        let characters = await this.getTrackingCharactersForMapByUser(mapId, userId);
+
+        let map = this.get(mapId);
+
+        if(status)
+            map.addCharactersToObserve(characters);
+        else
+            map.removeCharactersFromObserve(characters);
+    },
+    async dropCharsFromMapsByUserAndConnection (userId, connectionId) {
+        if(this._umw.hasUser(userId)) {
+            let prarr = [];
+            this._umw.eachMap(userId, connectionId, (mapId, isWatch) => {
+                if(isWatch) {
+                    this._umw.set(userId, connectionId, mapId, false);
+                    if(!this._umw.isUserWatchOnMap(userId, mapId)) {
+                        prarr.push(this.updateMapWatchStatus(userId, mapId, false));
+                    }
+                }
+            });
+            await Promise.all(prarr);
+        }
     },
 
-    getAllMaps: async function () {
-        let pr = new CustomPromise();
-        let maps = await core.dbController.mapsDB.all();
-        pr.resolve(maps);
-        return pr.native;
+    async subscribeAllowedMaps (userId, connectionId, responseId) {
+        let user = this._us.getUser(userId);
+        let needBulk = !user.allowedMaps.notify;
+
+        user.allowedMaps.subscribe(connectionId, responseId);
+
+        if(needBulk) {
+            let allowedMaps = await this.getMapsWhereCharacterTrackByUser(userId);
+            user.allowedMaps.setData(allowedMaps);
+        }
+
+        this._us.getUser(userId).allowedMaps.subscription.notifyFor(connectionId, responseId, {
+            type: "add",
+            maps: user.allowedMaps.getData()
+        });
+    },
+    async unsubscribeAllowedMaps (userId, connectionId, responseId) {
+        let user = this._us.getUser(userId);
+        user.allowedMaps.unsubscribe(connectionId, responseId);
     }
-
 });
-
-
-
 
 module.exports = MapController;

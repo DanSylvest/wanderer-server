@@ -12,7 +12,7 @@ var _sendError = function (_connectionId, _responseId, _message) {
 
 var request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    var token = core.connectionStorage.get(_connectionId);
+    let token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if(token === undefined) {
@@ -21,9 +21,9 @@ var request = async function (_connectionId, _responseId, _event) {
     }
 
     try {
-        var userId = await core.tokenController.checkToken(token);
+        await core.tokenController.checkToken(token);
 
-        var props = {
+        let props = {
             name: _event.name,
             description: _event.description,
             private: _event.isPrivate,

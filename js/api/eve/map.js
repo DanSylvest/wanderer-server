@@ -12,6 +12,7 @@ module.exports = {
     info                  : require("./map/info"),
     subscribeMapSystems   : require("./map/subscribeMapSystems"),
     subscribeMapLinks     : require("./map/subscribeMapLinks"),
+    subscribeMapExistence : require("./map/subscribeMapExistence"),
     systemInfo            : require("./map/systemInfo"),
     linkInfo              : require("./map/linkInfo"),
     linkRemove            : require("./map/linkRemove"),
@@ -21,4 +22,6 @@ module.exports = {
     updateSystem          : require("./map/updateSystem"),
     updateLink            : require("./map/updateLink"),
     waypoint              : require("./map/waypoint"),
+    userWatchMapStatus    : require("./map/userWatchMapStatus"),
+    subscribeAllowedMaps  : require("./map/subscribeAllowedMaps"),
 };

@@ -214,26 +214,24 @@ var Table = classCreator("Table", Emitter, {
         }
     },
     getPropertyInfo: function (_name) {
-        var index = this._propsMap[_name];
-        return this._properties[index];
+        return this._properties[this._propsMap[_name]];
     },
     attributes: function () {
         return this._properties.map(_prop => _prop.name)
     },
     getPropValue (_prop, _value) {
-        let value = null;
-        var propDesc = this.getPropertyInfo(_prop);
-
-        if(exist(_value)) {
-            value = _value;
-        } else if(exist(propDesc.defaultValue) && typeof propDesc.defaultValue === "function"){
-            value = propDesc.defaultValue();
-        } else if(exist(propDesc.defaultValue)) {
-            value = propDesc.defaultValue;
+        if (exist(_value)) {
+            return _value;
         } else {
-            value = getDefaultValueByType(propDesc.type);
+            let propDesc = this.getPropertyInfo(_prop);
+            if (exist(propDesc.defaultValue) && typeof propDesc.defaultValue === "function") {
+                return propDesc.defaultValue();
+            } else if (exist(propDesc.defaultValue)) {
+                return propDesc.defaultValue;
+            } else {
+                return getDefaultValueByType(propDesc.type);
+            }
         }
-        return value;
     },
     _create: function () {
         var pr = new CustomPromise();
@@ -276,30 +274,22 @@ var Table = classCreator("Table", Emitter, {
     },
 
     _innerGet: function (_condition, _requestFields) {
-        var pr = new CustomPromise();
-
-        var cond = extractCondition(_condition);
-        var fields = updateFields(_requestFields);
-
-        var query = print_f('SELECT %s FROM public.%s WHERE %s;', fields, this._name, cond);
-
+        let pr = new CustomPromise();
+        let cond = extractCondition(_condition);
+        let fields = updateFields(_requestFields);
+        let query = print_f('SELECT %s FROM public.%s WHERE %s;', fields, this._name, cond);
         log(log.DEBUG, query);
 
         this._client.query(query).then(function(_result){
-            var out = [];
+            let out = [];
             if(_result.rowCount === 0){
                 log(log.DEBUG, print_f("Rows count 0 for query - <%s>", query));
             } else {
-                // if we response multiple - we need resolve object key: value
-                // for (var a = 0; a < _requestFields.length; a++) {
-                //     out[_requestFields[a]] = _result.rows[0][_requestFields[a]];
-                // }
-                // out = _result.rows;
                 out = [];
                 for (var a = 0; a < _result.rows.length; a++) {
-                    var row = _result.rows[a];
-                    var newRow = Object.create(null);
-                    for(var attr in row) {
+                    let row = _result.rows[a];
+                    let newRow = Object.create(null);
+                    for(let attr in row) {
                         newRow[attr] = exist(row[attr]) ? extractFromDbType(this.getPropertyInfo(attr).type, row[attr]) : this.getPropValue(attr, row[attr]);
                     }
                     out.push(newRow);
@@ -622,25 +612,74 @@ var extractFromDbType = function (_type, _value) {
     }
 };
 
-var extractCondition = function (_arr) {
-    if(_arr.constructor === Array) {
+const extractCondition = function (condition, operator) {
+    if(typeof condition === "string") {
+        return condition;
+    }
 
-        var arr = [];
-        for (var a = 0; a < _arr.length; a++) {
-            if ((!exist(_arr[a].name) || !exist(_arr[a].operator) || !exist(_arr[a].value)))
-                throw "Exception 'condition without a data'";
+    if(condition.constructor === Object) {
+        // three ways:
+        //  - operator and condition
+        //  - operator and left and right
+        //  - operator and name and value
+        if(exist(condition.condition)) {
+            return "(" + extractCondition(condition.condition, condition.operator) + ")";
+        }
 
-            let val = _arr[a].value;
-            if(typeof val === "string")
+        if(exist(condition.left)) {
+            let left = extractCondition(condition.left);
+            let right = extractCondition(condition.right);
+            return `(${left} ${condition.operator} ${right})`;
+        }
+
+        if(exist(condition.name)) {
+            let val = condition.value;
+            if (typeof val === "string")
                 val = val.replace("'", "''");
 
-            arr.push(print_f("\"%s\" %s '%s'", _arr[a].name, _arr[a].operator, val));
+            return `"${condition.name}" ${condition.operator} '${val}'`;
         }
-        return arr.join(" AND ");
-    } else if(_arr.constructor === String) {
-        return _arr;
+    }
+
+    if(condition.constructor === Array) {
+        operator = !exist(operator) ? "AND" : operator;
+        let arr = condition.map(x => extractCondition(x));
+        return arr.join(" " + operator + " ");
     }
 };
+
+// var test1 = [
+//     {name: "groupId", operator: "=", value: "groupKEK"},
+//     {
+//         operator: "OR",
+//         condition: [
+//             {name: "charId", operator: "=", value: "1"},
+//             {name: "charId", operator: "=", value: "12"},
+//             {name: "charId", operator: "=", value: "13"},
+//             {name: "charId", operator: "=", value: "14"},
+//             {name: "charId", operator: "=", value: "15"}
+//         ]
+//     }
+// ]
+// let test1result = extractCondition(test1)
+//
+// var test2 = {
+//     operator: "AND",
+//     left: {name: "groupId", operator: "=", value: "groupKEK"},
+//     right: {
+//         operator: "OR",
+//         condition: [
+//             {name: "charId", operator: "=", value: "1"},
+//             {name: "charId", operator: "=", value: "12"},
+//             {name: "charId", operator: "=", value: "13"},
+//             {name: "charId", operator: "=", value: "14"},
+//             {name: "charId", operator: "=", value: "15"}
+//         ]
+//     }
+// }
+// let test2result = extractCondition(test2)
+// debugger;
+
 
 var updateFields = function (_fields){
     var arr = [];

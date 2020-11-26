@@ -25,6 +25,11 @@ var SubscriptionsController = classCreator("SubscriptionsController", Emitter, {
         this._subscribers = [];
         this._data = this.options.data;
     },
+    destructor () {
+        this._subscribers = [];
+
+        Emitter.prototype.destructor.call(this);
+    },
     addSubscriber: function (_connectionId, _responseId) {
         log(log.DEBUG, printf("SubscriptionController [%s] add subscriber [%s - %s]", this.options.name, _connectionId, _responseId));
 
@@ -74,6 +79,22 @@ var SubscriptionsController = classCreator("SubscriptionsController", Emitter, {
 
         if(this._subscribers.length > 0) {
             this._notify();
+        }
+    },
+    notifyFor (connectionId, responseId, data) {
+        if(!this.options.changeCheck || this._data !== data){
+            this._data = data;
+            log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
+
+            if(this._subscribers.length > 0) {
+                for (let a = 0; a < this._subscribers.length; a++) {
+                    let subscriber = this._subscribers[a];
+                    if(connectionId === subscriber.connectionId && responseId === subscriber.responseId) {
+                        this._notifySubscriber(subscriber.connectionId, subscriber.responseId);
+                        break;
+                    }
+                }
+            }
         }
     },
     notify: function (_data) {

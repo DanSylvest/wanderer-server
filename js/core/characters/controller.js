@@ -131,7 +131,7 @@ var Controller = classCreator("CharactersController", Emitter, {
 
             var prarr = [];
             for(var mapId in filteredMaps) {
-                prarr.push(core.mapController.offlineCharacters(mapId, filteredMaps[mapId]));
+                prarr.push(core.mapController.removeCharactersFromObserve(mapId, filteredMaps[mapId]));
             }
 
             // дождемся когда все персонажи будут отключены

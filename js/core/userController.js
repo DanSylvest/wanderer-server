@@ -1,24 +1,24 @@
-var Emitter       = require("./../env/tools/emitter");
-var classCreator  = require("./../env/tools/class");
-var extend        = require("./../env/tools/extend");
-var printf       = require("./../env/tools/print_f");
-var CustomPromise = require("./../env/promise");
-var DBController  = require("./dbController");
-var OAuth         = require("./../core/eveSwaggerInterface/oauth");
-var log           = require("./../utils/log");
-var md5           = require("md5");
+const Emitter       = require("./../env/tools/emitter");
+const classCreator  = require("./../env/tools/class");
+const extend        = require("./../env/tools/extend");
+const DBController  = require("./dbController");
+const OAuth         = require("./../core/eveSwaggerInterface/oauth");
+const log           = require("./../utils/log");
+const md5           = require("md5");
+const MultiObject   = require("./../env/multiObject")
 
-var UserController = classCreator("UserController", Emitter, {
+const UserController = classCreator("UserController", Emitter, {
     constructor: function UserController() {
         Emitter.prototype.constructor.call(this);
+
+        this._usersOnline = Object.create(null);
+        this.userAtConnection = new MultiObject();
     },
     destructor: function () {
         Emitter.prototype.destructor.call(this);
     },
-    registerUserByMailAndPassword: async function (_options) {
-        var pr = new CustomPromise();
-
-        var base = extend({
+    async registerUserByMailAndPassword (_options) {
+        let base = extend({
             id: md5(+new Date + config.app.solt),
             mail: "",
             password: ""
@@ -26,123 +26,88 @@ var UserController = classCreator("UserController", Emitter, {
 
         base.password = md5(base.password);
 
-        try {
-            var exists = await core.dbController.userDB.existsByCondition([
-                {name: "type", operator: "=", value: 0},
-                {name: "mail", operator: "=", value: base.mail},
-            ]);
+        let exists = await core.dbController.userDB.existsByCondition([
+            {name: "type", operator: "=", value: 0},
+            {name: "mail", operator: "=", value: base.mail},
+        ]);
 
-            if (exists) {
-                pr.reject({error: 0, message: printf("User %s already exists", base.mail)});
-            } else {
-                await core.dbController.userDB.add({
-                    id: base.id,
-                    mail: base.mail,
-                    password: base.password,
-                    online: false,
-                    type: 0
-                });
-                pr.resolve();
-            }
-
-        } catch (_err) {
-            throw printf("Unknown error when try create [%s] user", base.mail);
+        if (exists) {
+            throw {error: 0, message: `User ${base.mail} already exists`};
+        } else {
+            await core.dbController.userDB.add({
+                id: base.id,
+                mail: base.mail,
+                password: base.password,
+                online: false,
+                type: 0
+            });
         }
-
-        return pr.native;
     },
+    async registerUserByEveSSO (_options) {
+        let data = await this._verifyAuthCode(_options.code);
 
-    registerUserByEveSSO: async function (_options) {
-        var pr = new CustomPromise();
+        let existsInUsers = await core.dbController.userDB.existsByCondition([
+            {name: "type", operator: "=", value: 1},
+            {name: "id", operator: "=", value: data.userData.CharacterID},
+        ]);
+        let existsInCharacters = await core.dbController.charactersDB.existsByCondition([
+            {name: "id", operator: "=", value: data.userData.CharacterID},
+        ]);
 
-        try {
-            var token = null;
-            var data = await this._verifyAuthCode(_options.code);
-
-            var existsInUsers = await core.dbController.userDB.existsByCondition([
-                {name: "type", operator: "=", value: 1},
-                {name: "id", operator: "=", value: data.userData.CharacterID},
-            ]);
-            var existsInCharacters = await core.dbController.charactersDB.existsByCondition([
-                {name: "id", operator: "=", value: data.userData.CharacterID},
-            ]);
-
-            if(!existsInUsers && existsInCharacters) {
-                // по идее так не должно быть. Это значит что, кто-то пытается зарегиться
-                // но уже кто-то этот акк добавил
-                pr.reject({
-                    err: 0,
-                    message: "This character already attached to another User"
-                });
-            } else if(!existsInUsers && !existsInCharacters) {
-                // это значит что ни пользака ни персонажа еще не добавили и надо это сделать
-                await this._addCharacter(data);
-                await core.dbController.userDB.add({
-                    id: data.userData.CharacterID,
-                    name: data.userData.CharacterName,
-                    mail: "",                           // if we register by eve sso, we don't know mail
-                    password: "",                       // if we register by eve sso, we don't know password
-                    online: false,
-                    type: 1
-                });
-                await this._boundUserAndCharacter(data.userData.CharacterID, data.userData.CharacterID);
-                token = await core.tokenController.generateToken(data.userData.CharacterID);
-                pr.resolve(token);
-            } else if(existsInUsers && !existsInCharacters) {
-                // Если пользователь удалил своего персонажа, по которому, он создавал аккаунт
-                await this._addCharacter(data);
-                await this._boundUserAndCharacter(data.userData.CharacterID, data.userData.CharacterID);
-                token = await core.tokenController.generateToken(data.userData.CharacterID);
-                pr.resolve(token);
-            } else if(existsInUsers && existsInCharacters) {
-                // а если этот вариант, то мы просто авторизуем персонажа
-                token = await core.tokenController.generateToken(data.userData.CharacterID);
-                pr.resolve(token);
-            }
-
-        } catch (_err) {
-            pr.reject(_err);
+        if (!existsInUsers && existsInCharacters) {
+            // по идее так не должно быть. Это значит что, кто-то пытается зарегиться
+            // но уже кто-то этот акк добавил
+            throw {
+                err: 0,
+                message: "This character already attached to another User"
+            };
+        } else if (!existsInUsers && !existsInCharacters) {
+            // это значит что ни пользака ни персонажа еще не добавили и надо это сделать
+            await this._addCharacter(data);
+            await core.dbController.userDB.add({
+                id: data.userData.CharacterID,
+                name: data.userData.CharacterName,
+                mail: "",                           // if we register by eve sso, we don't know mail
+                password: "",                       // if we register by eve sso, we don't know password
+                online: false,
+                type: 1
+            });
+            await this._boundUserAndCharacter(data.userData.CharacterID, data.userData.CharacterID);
+            return await core.tokenController.generateToken(data.userData.CharacterID);
+        } else if (existsInUsers && !existsInCharacters) {
+            // Если пользователь удалил своего персонажа, по которому, он создавал аккаунт
+            await this._addCharacter(data);
+            await this._boundUserAndCharacter(data.userData.CharacterID, data.userData.CharacterID);
+            return await core.tokenController.generateToken(data.userData.CharacterID);
+        } else if (existsInUsers && existsInCharacters) {
+            // а если этот вариант, то мы просто авторизуем персонажа
+            return await core.tokenController.generateToken(data.userData.CharacterID);
         }
-
-        return pr.native;
     },
-
-
-    loginUserByMailAndPassword: async function (_options) {
-        var pr = new CustomPromise();
-
-        var base = extend({
+    // todo this is deprecated
+    async loginUserByMailAndPassword (_options) {
+        let base = extend({
             mail: "",
             password: ""
         }, _options);
 
         base.password = md5(base.password);
 
-        try {
-            var result = await core.dbController.userDB.getByCondition([
-                {name: "type", operator: "=", value: 0},
-                {name: "mail", operator: "=", value: base.mail},
-                {name: "password", operator: "=", value: base.password},
-            ], ["id"]);
+        let result = await core.dbController.userDB.getByCondition([
+            {name: "type", operator: "=", value: 0},
+            {name: "mail", operator: "=", value: base.mail},
+            {name: "password", operator: "=", value: base.password},
+        ], ["id"]);
 
-            var existsInUsers = result.length > 0;
-
-            if(existsInUsers) {
-                var token = await core.tokenController.generateToken(result[0].id);
-                pr.resolve(token);
-            } else {
-                pr.reject({
-                    error: 1,
-                    message: printf("User %s not exist or password incorrect", base.mail)
-                });
-            }
-
-        } catch (_err) {
-            debugger;
-            pr.reject(_err);
+        let existsInUsers = result.length > 0;
+        if (existsInUsers) {
+            return await core.tokenController.generateToken(result[0].id);
+        } else {
+            throw {
+                error: 1,
+                message: `User ${base.mail} not exist or password incorrect`
+            };
         }
-
-        return pr.native;
     },
     /**
      * here we must notify client about online state change
@@ -151,65 +116,62 @@ var UserController = classCreator("UserController", Emitter, {
      * @param _bool
      * @returns {*|Promise|Promise<any>|Promise<unknown>}
      */
-    setOnline: function (_userId, _bool) {
-        var pr = new CustomPromise();
-
-        core.dbController.userDB.set(_userId, "online", _bool).then(function(){
-            pr.resolve();
-        }.bind(this), function(_err){
-            pr.reject(_err);
-        }.bind(this));
-
-        return pr.native;
+    setOnline (_userId, _bool) {
+        this._usersOnline[_userId] = _bool;
     },
-    getUserOnline: function (_userId) {
-        var pr = new CustomPromise();
-
-        core.dbController.userDB.get(_userId, "online").then(function(_isOnline){
-            pr.resolve(_isOnline);
-        }.bind(this), function(_err){
-            pr.reject(_err);
-        }.bind(this));
-
-        return pr.native;
+    getUserOnline (_userId) {
+        return this._usersOnline[_userId] || false;
     },
-
-    getUserCharacters: function (_userId) {
-        var pr = new CustomPromise();
-
-        var condition = [
+    async getUserCharacters (_userId) {
+        let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
             {name: "first", operator: "=", value: _userId}
         ];
-
-        core.dbController.linksTable.getByCondition(condition, ["second"]).then(function (_result) {
-            pr.resolve(_result.map(x => x.second));
-        }.bind(this), function (_err) {
-            pr.resolve(_err);
-        }.bind(this));
-
-        return pr.native;
+        let result = await core.dbController.linksTable.getByCondition(condition, ["second"]);
+        return result.map(x => x.second);
     },
-
-    getUserName: function (_userId) {
-        var pr = new CustomPromise();
-
-        core.dbController.userDB.get(_userId, "name").then(function(_name){
-            pr.resolve(_name);
-        }.bind(this), function(_err){
-            pr.reject(_err);
-        }.bind(this));
-
-        return pr.native;
+    async getUserName (_userId) {
+        return await core.dbController.userDB.get(_userId, "name");
     },
+    async _addCharacter (data) {
+        // todo все запросы к евке надо как-то так оборачивать, что бы оно не ломало ничего...
+        // а еще нафиг не нужно запрашивать портреты для персонажей, т.к. можно портрет по иду отображать...
+        // а еще надо проверять что евка вообще жива, а еще может быть разрыв соединения.
+        // а еще может быть таймаут... жопа короче
+        let images = await core.esiApi.characters.portrait(data.userData.CharacterID);
+        let info = await core.charactersController.get(data.userData.CharacterID).loadPublicCharacterInfo();
 
-    _addCharacter: async function (data) {
-        var pr = new CustomPromise();
-        try {
-            var images = await core.esiApi.characters.portrait(data.userData.CharacterID);
-            var info = await core.charactersController.get(data.userData.CharacterID).loadPublicCharacterInfo();
+        let charProps = {
+            id                 : data.userData.CharacterID,
+            name               : data.userData.CharacterName,
+            expiresOn          : data.userData.ExpiresOn,                      // wherefore it?
+            expiresIn          : data.tokenData.expires_in,                    // in seconds
+            realExpiresIn      : +new Date + data.tokenData.expires_in * 1000,
+            scopes             : data.userData.Scopes,
+            characterOwnerHash : data.userData.CharacterOwnerHash,
+            accessToken        : data.tokenData.access_token,
+            refreshToken       : data.tokenData.refresh_token,
+            tokenType          : data.userData.TokenType,
+            online             : false,                                   // todo We need request this parameter from ESI
+            images             : images,
+            infoExpiresIn      : +new Date + (1000 * 60 * 60 * 24),
+            info               : info                                     // todo We need get alliance_id and corporation_id
+                                                                          // and create special attribute for it. Not big object.
+        };
 
-            var charProps = {
+        await core.dbController.charactersDB.add(charProps);
+    },
+    async addCharacter (_userId, _code) {
+        let data = await this._verifyAuthCode(_code);
+
+        if(await this._checkAccountBinding(data.userData.CharacterID)){
+            throw {message: `Character ${data.userData.CharacterID} already attached`};
+        } else {
+            // todo все запросы к евке надо как-то так оборачивать, что бы оно не ломало ничего...
+            let images = await core.esiApi.characters.portrait(data.userData.CharacterID);
+            let info = await core.charactersController.get(data.userData.CharacterID).loadPublicCharacterInfo();
+
+            let charProps = {
                 id                 : data.userData.CharacterID,
                 name               : data.userData.CharacterName,
                 expiresOn          : data.userData.ExpiresOn,                      // wherefore it?
@@ -228,61 +190,10 @@ var UserController = classCreator("UserController", Emitter, {
             };
 
             await core.dbController.charactersDB.add(charProps);
-
-            pr.resolve();
-        } catch (_err) {
-            pr.reject({sub: _err, message: "Error on load characters data"});
+            await this._boundUserAndCharacter(_userId, data.userData.CharacterID);
         }
-
-        return pr.native;
     },
-
-    addCharacter: async function (_userId, _code) {
-        var pr = new CustomPromise();
-
-        var data = await this._verifyAuthCode(_code);
-
-        if(await this._checkAccountBinding(data.userData.CharacterID)){
-            pr.reject({message: printf("Character already attached")});
-        } else {
-            try {
-                var images = await core.esiApi.characters.portrait(data.userData.CharacterID);
-                var info = await core.charactersController.get(data.userData.CharacterID).loadPublicCharacterInfo();
-
-                var charProps = {
-                    id                 : data.userData.CharacterID,
-                    name               : data.userData.CharacterName,
-                    expiresOn          : data.userData.ExpiresOn,                      // wherefore it?
-                    expiresIn          : data.tokenData.expires_in,                    // in seconds
-                    realExpiresIn      : +new Date + data.tokenData.expires_in * 1000,
-                    scopes             : data.userData.Scopes,
-                    characterOwnerHash : data.userData.CharacterOwnerHash,
-                    accessToken        : data.tokenData.access_token,
-                    refreshToken       : data.tokenData.refresh_token,
-                    tokenType          : data.userData.TokenType,
-                    online             : false,                                   // todo We need request this parameter from ESI
-                    images             : images,
-                    infoExpiresIn      : +new Date + (1000 * 60 * 60 * 24),
-                    info               : info                                     // todo We need get alliance_id and corporation_id
-                                                                                  // and create special attribute for it. Not big object.
-                };
-
-                await core.dbController.charactersDB.add(charProps);
-                await this._boundUserAndCharacter(_userId, data.userData.CharacterID);
-
-                pr.resolve();
-            } catch (_err) {
-                pr.reject({sub: _err, message: "Error on load characters data"});
-            }
-
-        }
-
-        return pr.native;
-    },
-
-
-    _verifyAuthCode: function (_code) {
-        var pr = new CustomPromise();
+    async _verifyAuthCode (_code) {
         /**
          *
          * @type {{
@@ -292,7 +203,7 @@ var UserController = classCreator("UserController", Emitter, {
          *     refresh_token: string
          * }}
          */
-        var tokenData = Object.create(null);
+        let tokenData = await OAuth.token(_code);
 
         /**
          *
@@ -306,94 +217,43 @@ var UserController = classCreator("UserController", Emitter, {
          *     IntellectualProperty: string,
          * }}
          */
-        var userData = Object.create(null);
+        let userData = await OAuth.verify(tokenData.access_token);
+        log(log.INFO, `SSO_AUTH[2]: got char data: (${userData.CharacterID})`);
 
-        OAuth.token(_code).then(function(_event){
-            extend(tokenData, _event);
-
-            // Part second - verify token
-            return OAuth.verify(tokenData.access_token);
-        }.bind(this), function(_err){
-            pr.reject(_err);
-        }.bind(this)).then(function(_event){
-            log(log.INFO, printf("SSO_AUTH[2]: got char data: (%s)", _event.CharacterID));
-            extend(userData, _event);
-
-            pr.resolve({
-                tokenData: tokenData,
-                userData: userData,
-            })
-        }.bind(this), function(_err){
-            pr.reject(_err);
-        }.bind(this));
-
-        return pr.native;
+        return {
+            tokenData: tokenData,
+            userData: userData,
+        };
     },
+    async _checkAccountBinding (_characterId) {
+        let condition = {
+            left: {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
+            operator: "AND",
+            right: {name: "second", operator: "=", value: _characterId}
+        }
 
-    _checkAccountBinding: function (_characterId) {
-        var pr = new CustomPromise();
-
-        var condition = [{
-            name: "type",
-            operator: "=",
-            value: DBController.linksTableTypes.userToCharacter
-        }, {
-            name: "second",
-            operator: "=",
-            value: _characterId
-        }];
-
-        var attributes = [
-            "first"
-        ];
-
-        core.dbController.linksTable.getByCondition(condition, attributes).then(function (_result) {
-            pr.resolve(_result.length > 0);
-        }.bind(this), function (_err) {
-            pr.reject(_err);
-        }.bind(this));
-
-        return pr.native;
+        let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
+        return result.length > 0;
     },
-
-    _boundUserAndCharacter : function (_userName, _characterId) {
-        var pr = new CustomPromise();
-
-        var condition = [
+    async _boundUserAndCharacter (_userName, _characterId) {
+        let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
             {name: "first", operator: "=", value: _userName},
             {name: "second", operator: "=", value: _characterId},
         ];
 
-        var attributes = [
-            "first",
-            "second"
-        ];
+        let result = await core.dbController.linksTable.getByCondition(condition, ["first","second"]);
+        if(result.length !== 0) {
+            throw {message: `Character ${_characterId} already attached to user ${_userName}`}
+        }
 
-        core.dbController.linksTable.getByCondition(condition, attributes).then(function (_arr) {
-            if(_arr.length !== 0) {
-                pr.reject({
-                    message: printf("Character %s already attached to user %", _characterId, _userName)
-                });
-                return;
-            }
-
-            return core.dbController.linksTable.add({
-                type: DBController.linksTableTypes.userToCharacter,
-                first: _userName,
-                second: _characterId
-            });
-        }.bind(this), function (_err) {
-            pr.reject(_err);
-        }.bind(this)).then(function() {
-            pr.resolve();
-        }.bind(this),function(_err) {
-            pr.reject(_err);
-        }.bind(this));
-
-        return pr.native;
+        await core.dbController.linksTable.add({
+            type: DBController.linksTableTypes.userToCharacter,
+            first: _userName,
+            second: _characterId
+        });
     },
-    isCharacterAttachedToUser: async function (_characterId, _userId) {
+    async isCharacterAttachedToUser (_characterId, _userId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
             {name: "first", operator: "=", value: _userId},
@@ -401,6 +261,76 @@ var UserController = classCreator("UserController", Emitter, {
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
         return result.length === 1;
+    },
+    async updateUserOnlineStatus (connectionId, token) {
+        // we need check that this user already is online
+        // after...
+        // if user is not online then set online
+        // if user is online then do nothing and add token and connections
+
+        let userId = await core.tokenController.checkToken(token);
+        core.connectionStorage.set(connectionId, token);
+        this.userAtConnection.update(userId, connectionId);
+
+        let isOnline = this.getUserOnline(userId);
+        core.mapController.userOnline(userId);
+
+        // Это происходит, когда мы подключились. Это значит что и конекшн новый
+        // Так же это значит, что пользак все еще онлайн его не надо заного заставлять быть в онлайне
+        // В противном случае, когда пользак не онлайн, никуда ничего не надо переставлять,
+        // В силу того, что дальше должен будет отработать выбор карты, и этот запрос сам всё сделает
+        if(!isOnline) {
+            this.setOnline(userId, true);
+            log(log.INFO, `User [${userId}] was log in on server.`);
+        } else {
+            // await core.mapController.updateAllUserMapWatchStatuses(connectionId, userId);
+        }
+    },
+    async updateUserOfflineStatus (connectionId, token) {
+        let userId = await core.tokenController.checkToken(token);
+        let isOnline = this.getUserOnline(userId);
+
+        if(this.userAtConnection.has(userId, connectionId)) {
+            // todo тут надо сбрасывать тоже
+            await core.mapController.dropCharsFromMapsByUserAndConnection(userId, connectionId);
+
+            let count = this.userAtConnection.delete(userId, connectionId);
+            if (isOnline && count === 0) {
+                core.mapController.userOffline(userId);
+                log(log.INFO, `User [${userId}] was disconnected from server.`);
+            }
+        }
+        core.connectionStorage.del(connectionId);
+    },
+    /**
+     *
+     * @param {string} characterId
+     * @returns {Promise<string|null>}
+     */
+    async getUserByCharacter (characterId) {
+        let condition = [
+            {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
+            {name: "second", operator: "=", value: characterId},
+        ];
+        let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
+        return result.length > 0 ? result[0].first : null;
+    },
+    /**
+     *
+     * @param {string} characterId
+     * @returns {Promise<string|null>}
+     */
+    async getUsersByCharacters (characters) {
+        let condition = {
+            left: {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
+            operator: "AND",
+            right: {
+                operator: "OR",
+                condition: characters.map(characterId => ({name: "second", operator: "=", value: characterId}))
+            }
+        };
+        let result = await core.dbController.linksTable.getByCondition(condition, ["first", "second"]);
+        return result.map(x => ({characterId: x.second, userId: x.first}));
     }
 });
 

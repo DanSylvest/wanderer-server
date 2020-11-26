@@ -2,17 +2,10 @@
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
 
-var log    = require("./../../utils/log");
-var printf = require("./../../env/tools/print_f");
-
-var request = async function (_connection_id, _response_id, _event) {
+const request = async function (_connection_id, _response_id, _event) {
     try {
-        var userId = await core.tokenController.checkToken(_event.token);
-        core.connectionStorage.set(_connection_id, _event.token);
-
-        await core.userController.setOnline(userId, true)
-        log(log.INFO, printf("User [%s] was logged on server.", userId));
-        await core.mapController.userOnline(userId);
+        await core.tokenController.checkToken(_event.token);
+        await core.userController.updateUserOnlineStatus(_connection_id, _event.token);
 
         api.send(_connection_id, _response_id, {
             event_type: "responseCheckToken",

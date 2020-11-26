@@ -44,8 +44,9 @@ var Emitter = classCreator("Emitter", null, {
         var args = Array.prototype.slice.call(arguments, 1);
 
         if(this._types[type]) {
-            for (var a = 0; a < this._types[type].length; a++)
-                this._handlers[this._types[type][a]].func.apply(null, args);
+            let safe = this._types[type].slice(0);
+            for (var a = 0; a < safe.length; a++)
+                this._handlers[safe[a]].func.apply(null, args);
         }
     },
     emitByHandler: function () {

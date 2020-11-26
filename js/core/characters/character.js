@@ -119,56 +119,25 @@ var Character = classCreator("Character", Emitter, {
 
         return out;
     },
-    getCorporationId: function () {
-        var pr = new CustomPromise();
-
-        core.dbController.charactersDB.get(this.options.characterId, ["info"]).then(function(_result) {
-            pr.resolve(_result.info.corporationId || -1)
-        }.bind(this),function(_err) {
-            pr.reject(_err)
-        }.bind(this));
-
-        return pr.native;
+    getCorporationId: async function () {
+        let result = await core.dbController.charactersDB.get(this.options.characterId, ["info"]);
+        return result.info.corporationId || -1;
     },
-    getAllianceId: function () {
-        var pr = new CustomPromise();
-
-        core.dbController.charactersDB.get(this.options.characterId, ["info"]).then(function(_result) {
-            pr.resolve(_result.info.allianceId || -1)
-        }.bind(this),function(_err) {
-            pr.reject(_err)
-        }.bind(this));
-
-        return pr.native;
+    getAllianceId: async function () {
+        let result = await core.dbController.charactersDB.get(this.options.characterId, ["info"]);
+        return result.info.allianceId || -1;
     },
-    getName: function () {
-        var pr = new CustomPromise();
-
-        core.dbController.charactersDB.get(this.options.characterId, ["name"]).then(function(_result){
-            pr.resolve(_result.name);
-        }.bind(this), function(_err){
-            pr.reject(_err)
-        }.bind(this));
-
-        return pr.native;
+    getName: async function () {
+        let result = await core.dbController.charactersDB.get(this.options.characterId, ["name"]);
+        return result.name;
     },
     getOwnerUserOnline: async function () {
-        var pr = new CustomPromise();
-
-        var condition = [
+        let condition = [
             {name: "type",operator: "=",value: DBController.linksTableTypes.userToCharacter },
             {name: "second",operator: "=",value: this.options.characterId}
         ];
-
-        try {
-            var userId = await core.dbController.linksTable.getByCondition(condition, ["first"]);
-            var isOnline = await core.userController.getUserOnline(userId[0].first);
-            pr.resolve(isOnline);
-        } catch (_err) {
-            pr.reject(_err);
-        }
-
-        return pr.native;
+        let userId = await core.dbController.linksTable.getByCondition(condition, ["first"]);
+        return core.userController.getUserOnline(userId[0].first);
     },
     loadPublicCharacterInfo: function () {
         var pr = new CustomPromise();

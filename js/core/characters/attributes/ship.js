@@ -21,7 +21,6 @@ var Ship = classCreator("Ship", Emitter, {
 
         Emitter.prototype.constructor.call(this);
 
-
         /** @type Subscriber */
         this._subscriber = null;
         this.observer = null;
@@ -103,6 +102,7 @@ var Ship = classCreator("Ship", Emitter, {
     },
     _updateShip: function (_value) {
         if(!exist(this._value) || this._value !== _value) {
+            this._value = _value;
             // also we need update database state
             core.dbController.charactersDB.set(this.options.characterId, "ship", _value).then(function () {
                 this._subscriber && this._subscriber.notify(_value);

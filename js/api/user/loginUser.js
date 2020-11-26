@@ -13,7 +13,7 @@ var request = async function (_connection_id, _response_id, _event) {
 
         let userId = await core.tokenController.checkToken(token);
 
-        await core.userController.setOnline(userId, true);
+        core.userController.setOnline(userId, true);
 
         log(log.INFO, printf("User [%s] was logged on server.", userId));
 

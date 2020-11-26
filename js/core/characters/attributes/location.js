@@ -103,6 +103,7 @@ var Location = classCreator("Location", Emitter, {
     },
     _updateLocation: function (_value) {
         if(!exist(this._value) || this._value !== _value) {
+            this._value = _value;
             // also we need update database state
             core.dbController.charactersDB.set(this.options.characterId, "location", _value).then(function () {
                 this._subscriber && this._subscriber.notify(_value);

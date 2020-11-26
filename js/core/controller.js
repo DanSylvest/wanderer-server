@@ -1,22 +1,22 @@
-var Emitter                = require("./../env/tools/emitter");
-var classCreator           = require("./../env/tools/class");
-var printf                 = require("./../env/tools/print_f");
-var CustomPromise          = require("./../env/promise");
-var log                    = require("./../utils/log");
+const Emitter                = require("./../env/tools/emitter");
+const classCreator           = require("./../env/tools/class");
+const printf                 = require("./../env/tools/print_f");
+const CustomPromise          = require("./../env/promise");
+const log                    = require("./../utils/log");
 
-var DbController           = require("./dbController");
-var UserController         = require("./userController");
-var CharactersController   = require("./characters/controller");
-var CorporationsController = require("./corporations/controller");
-var AlliancesController    = require("./alliances/controller");
-var MapController          = require("./maps/controller");
-var GroupsController       = require("./groupsController");
-var TokenController        = require("./tokenController");
-var SDEController          = require("./sdeController");
-var MDController           = require("./mdController");
-var FDController           = require("./fdController");
-var TempStorage            = require("./storage");
-var ESI_API                = require("./../core/eveSwaggerInterface/api");
+const DbController           = require("./dbController");
+const UserController         = require("./userController");
+const CharactersController   = require("./characters/controller");
+const CorporationsController = require("./corporations/controller");
+const AlliancesController    = require("./alliances/controller");
+const MapController          = require("./maps/controller");
+const GroupsController       = require("./groupsController");
+const TokenController        = require("./tokenController");
+const SDEController          = require("./sdeController");
+const MDController           = require("./mdController");
+const FDController           = require("./fdController");
+const TempStorage            = require("./storage");
+const ESI_API                = require("./../core/eveSwaggerInterface/api");
 
 var Controller = classCreator("Controller", Emitter, {
     constructor: function Controller() {
@@ -34,7 +34,6 @@ var Controller = classCreator("Controller", Emitter, {
         this.sdeController          = new SDEController();
         this.mdController           = new MDController();
         this.fdController           = new FDController();
-
         this.connectionStorage      = new TempStorage();
     },
     destructor: function () {
@@ -42,7 +41,7 @@ var Controller = classCreator("Controller", Emitter, {
     },
     init: async function () {
         var pr = new CustomPromise();
-        log(log.DEBUG, printf("start controller loading..."));
+        log(log.DEBUG, "start controller loading...");
 
         // try {
             await this.dbController.init();
@@ -64,24 +63,15 @@ var Controller = classCreator("Controller", Emitter, {
     },
     _onConnectionClosed: async function (_connectionId) {
         if(this.connectionStorage.has(_connectionId)) {
-            var token = this.connectionStorage.get(_connectionId);
+            let token = this.connectionStorage.get(_connectionId);
 
-            // notify controllers
+            await this.userController.updateUserOfflineStatus(_connectionId, token);
+
+            // if(isOffline) {
             this.charactersController.connectionBreak(_connectionId);
             this.mapController.connectionBreak(_connectionId);
-
-            try {
-                // SET USER OFFLINE
-                var userId = await this.tokenController.checkToken(token);
-                await this.userController.setOnline(userId, false);
-
-                this.mapController.userOffline(userId);
-
-                log(log.INFO, printf("User [%s] was disconnected from server.", userId));
-                this.connectionStorage.del(_connectionId);
-            } catch (_err) {
-                debugger;
-            }
+            // }
+            // notify controllers
         }
     }
 });

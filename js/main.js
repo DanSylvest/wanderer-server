@@ -2,7 +2,6 @@
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 4/11/20.
  */
 
-
 global.projectPath = __dirname;
 require("./env/tools/standardTypeExtend");
 

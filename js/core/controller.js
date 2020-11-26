@@ -16,7 +16,7 @@ const SDEController          = require("./sdeController");
 const MDController           = require("./mdController");
 const FDController           = require("./fdController");
 const TempStorage            = require("./storage");
-const ESI_API                = require("./../core/eveSwaggerInterface/api");
+const ESI_API                = require("./../esi/api");
 
 var Controller = classCreator("Controller", Emitter, {
     constructor: function Controller() {

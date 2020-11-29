@@ -7,7 +7,7 @@ var _sendError = function (_connectionId, _responseId, _message, _data) {
         errData: _data,
         success: false,
         message: _message,
-        eventType: "responseEveMapLinkRemove",
+        eventType: "responseEveCharacterCharInfo",
     });
 };
 
@@ -17,23 +17,22 @@ var request = async function (_connectionId, _responseId, _event) {
     var token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
-    if (token === undefined) {
+    if(token === undefined) {
         _sendError(_connectionId, _responseId, "You not authorized or token was expired");
         return;
     }
 
     try {
-        // todo
-        var userId = await core.tokenController.checkToken(token);
-
-        await core.mapController.get(_event.mapId).linkRemove(_event.linkId);
+        await core.tokenController.checkToken(token);
+        let result = await core.charactersController.getCharacterName(_event.characterId);
 
         api.send(_connectionId, _responseId, {
+            data: result,
             success: true,
-            eventType: "responseEveMapLinkRemove"
-        });
+            eventType: "responseEveCharacterCharInfo"
+        })
     } catch (_err) {
-        _sendError(_connectionId, _responseId, "Error on linkRemove", _err);
+        _sendError(_connectionId, _responseId, "Error on load char info", _err);
     }
 };
 

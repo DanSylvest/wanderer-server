@@ -1,6 +1,7 @@
 var Emitter       = require("./../env/tools/emitter");
 var classCreator  = require("./../env/tools/class");
 var CustomPromise = require("./../env/promise");
+const counterLog  = require("./../utils/counterLog");
 
 var SdeController = classCreator("SdeController", Emitter, {
     constructor: function SdeController() {
@@ -17,6 +18,7 @@ var SdeController = classCreator("SdeController", Emitter, {
             FROM public."mapSolarSystems"
             WHERE "solarSystemID"='` + _solarSystemId + `';`;
 
+            counterLog("SQL", query);
             var result = await core.dbController.sdeDB.custom(query);
 
             pr.resolve(result.rowCount > 0 ? result.rows[0] : null);
@@ -36,6 +38,7 @@ var SdeController = classCreator("SdeController", Emitter, {
             FROM public."mapConstellations"
             WHERE "constellationID"='` + _constellationId + `';`;
 
+            counterLog("SQL", query);
             var result = await core.dbController.sdeDB.custom(query);
 
             pr.resolve(result.rowCount > 0 ? result.rows[0] : null);
@@ -55,6 +58,7 @@ var SdeController = classCreator("SdeController", Emitter, {
             FROM public."mapRegions"
             WHERE "regionID"='` + _regionId + `';`;
 
+            counterLog("SQL", query);
             var result = await core.dbController.sdeDB.custom(query);
 
             pr.resolve(result.rowCount > 0 ? result.rows[0] : null);
@@ -71,6 +75,7 @@ var SdeController = classCreator("SdeController", Emitter, {
             FROM public."invTypes"
             WHERE "typeID"='` + _shipTypeId + `';`;
 
+        counterLog("SQL", query);
         var result = await core.dbController.sdeDB.custom(query);
         return result.rowCount > 0 ? result.rows[0] : null;
     },
@@ -128,6 +133,7 @@ var SdeController = classCreator("SdeController", Emitter, {
 
             var result = await core.dbController.sdeDB.custom(query);
 
+            counterLog("SQL", query);
             pr.resolve(result.rowCount > 0 ? result.rows[0].wormholeClassID : null);
 
         } catch (_err) {
@@ -153,6 +159,7 @@ var SdeController = classCreator("SdeController", Emitter, {
             ORDER BY t."fromSolarSystemID"
                 , t."toSolarSystemID"`;
 
+            counterLog("SQL", query);
             var result = await core.dbController.sdeDB.custom(query);
 
             pr.resolve(result.rowCount > 0);

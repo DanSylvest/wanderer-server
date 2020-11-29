@@ -207,7 +207,6 @@ const MapController = classCreator("MapController", Emitter, {
      * @param _data {{}}
      * @param _data.name {string}
      * @param _data.description {string}
-     * @param _data.private {boolean}
      * @param _data.groups {Array<string>}
      * @returns {Promise<any> | Promise<unknown>}
      */
@@ -218,13 +217,14 @@ const MapController = classCreator("MapController", Emitter, {
             id: id,
             owner: _owner,
             name: _data.name,
-            description: _data.description,
-            private: _data.private
+            description: _data.description
         };
 
         await core.dbController.mapsDB.add(props);
         await this._updateGroups(id, _data.groups);
         await this.notifyAllowedMapsByMap(id);
+
+        return id;
     },
     /**
      *
@@ -330,18 +330,16 @@ const MapController = classCreator("MapController", Emitter, {
         let lastCreatedMapId = await this.createMap(userId, {
             name: data.name,
             description: data.description,
-            private: false,
             groups: [lastCreatedGroupId]
         });
 
         await this.notifyAllowedMapsByMap(lastCreatedMapId);
 
         return {
-            id: lastCreatedMapId,
+            mapId: lastCreatedMapId,
             groups: [lastCreatedGroupId],
             description: data.description,
-            name: data.name,
-            isPrivate: false
+            name: data.name
         };
     },
 
@@ -404,7 +402,7 @@ const MapController = classCreator("MapController", Emitter, {
     },
     async getMapListByOwner (_ownerId) {
         let condition = [{name: "owner", operator: "=", value: _ownerId}];
-        let attributes = ["id", "name", "description", "owner", "private"];
+        let attributes = ["id", "name", "description", "owner"];
 
         let mapListPr = core.dbController.mapsDB.getByCondition(condition, attributes);
         let userNamePr = core.userController.getUserName(_ownerId);
@@ -557,6 +555,7 @@ const MapController = classCreator("MapController", Emitter, {
     async unsubscribeAllowedMaps (userId, connectionId, responseId) {
         let user = this._us.getUser(userId);
         user.allowedMaps.unsubscribe(connectionId, responseId);
+        this._us.removeUser(userId);
     }
 });
 

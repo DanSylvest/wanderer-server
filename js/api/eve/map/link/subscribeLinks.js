@@ -1,5 +1,3 @@
-var printf  = require("./../../../env/tools/print_f");
-
 var _sendError = function (_connectionId, _responseId, _message) {
     api.send(_connectionId, _responseId, {
         success: false,
@@ -18,27 +16,24 @@ var subscriber = async function (_connectionId, _responseId, _event) {
         return;
     }
 
-    //todo
-    var userId = await core.tokenController.checkToken(token);
-
-    var systems = await core.mapController.get(_event.mapId).getSystems();
-
-    core.mapController.get(_event.mapId).subscribeSystems(_connectionId, _responseId);
+    await core.tokenController.checkToken(token);
+    var linkIds = await core.mapController.get(_event.mapId).getLinks();
+    core.mapController.get(_event.mapId).subscribeLinks(_connectionId, _responseId);
 
     api.send(_connectionId, _responseId, {
         data: {
             type: "bulk",
-            list: systems
+            list: linkIds
         },
         success: true,
-        eventType: "responseEveMapSystems"
+        eventType: "responseEveMapLinks"
     });
 };
 
 subscriber.unsubscribe = function (_connectionId, _responseId, _event) {
     // TODO - maybe we need check all (token, characters e.t., but i thing it not need now.
 
-    core.mapController.get(_event.mapId).unsubscribeSystems(_connectionId, _responseId);
+    core.mapController.get(_event.mapId).unsubscribeLinks(_connectionId, _responseId);
 };
 
 

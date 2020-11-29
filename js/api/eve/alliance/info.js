@@ -17,8 +17,7 @@ var _sendError = function (_connectionId, _responseId, _message, _data) {
  * @param _responseId
  * @param _event
  * @param _event.allianceId
- * @param _event.type
- * @returns {Promise<void>}
+ * @param _event.type * @returns {Promise<void>}
  */
 var request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
@@ -32,7 +31,7 @@ var request = async function (_connectionId, _responseId, _event) {
 
     try {
         await core.tokenController.checkToken(token);
-        var info = await core.alliancesController.getInfo(_event.allianceId, _event.type);
+        var info = await core.alliancesController.getInfo(_event.allianceId);
         api.send(_connectionId, _responseId, {
             result: info,
             success: true,

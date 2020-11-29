@@ -8,7 +8,7 @@ require("./env/tools/standardTypeExtend");
 var ConfReader = require("./utils/configReader");
 global.config = new ConfReader("conf").build();
 
-var handlers   = require("./handlers");
+var handlers   = require("./api/_dir");
 var Api        = require("./api");
 var Controller = require("./core/controller");
 

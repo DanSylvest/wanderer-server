@@ -37,7 +37,7 @@ var request = function (_connectionId, _responseId, _event) {
 
     .then(function(_list){
         api.send(_connectionId, _responseId, {
-            list: _list,
+            data: _list,
             success: true,
             eventType: "responseEveMapList"
         });

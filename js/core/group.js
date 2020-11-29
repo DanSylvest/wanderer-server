@@ -25,9 +25,11 @@ var Group = classCreator("Group", Emitter, {
     async getInfo () {
         try {
             let result = await core.dbController.groupsDB.get(this.options.groupId, ["name", "owner", "description"]);
+            let owner = await core.userController.getUserName(result.owner);
+
             return {
                 name: result.name,
-                owner: result.owner,
+                owner: owner,
                 description: result.description
             }
         } catch (err) {

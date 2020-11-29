@@ -40,11 +40,14 @@ const request = async function (_connectionId, _responseId, _event) {
             characterId: _event.characterId
         };
 
-        let result = await core.mapController.createMapFast(userId, props);
+        let resultPr = core.mapController.createMapFast(userId, props);
+        let userNamePr = core.userController.getUserName(userId);
+        let result = await resultPr;
+        let userName = await userNamePr;
+
+        result.owner = userName;
         api.send(_connectionId, _responseId, {
-            mapData: result,
-            // mapId: mapId,
-            // userId: userId,
+            data: result,
             eventType: "responseEveMapAddFast",
             success: true
         });

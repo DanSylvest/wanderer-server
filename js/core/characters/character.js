@@ -89,36 +89,35 @@ var Character = classCreator("Character", Emitter, {
         }
     },
      getInfo: async function () {
-         let attrs = ["name", "images", "online", "ship", "info", "addDate"];
+         let attrs = ["name", "online", "ship", "info", "addDate"];
 
-        let result = await core.dbController.charactersDB.get(this.options.characterId, attrs);
+         let result = await core.dbController.charactersDB.get(this.options.characterId, attrs);
 
-        let shipName = "capsule";
-        if(result.ship) {
-            let shipInfo = await core.sdeController.getShipTypeInfo(result.ship);
-            shipName = shipInfo.typeName;
-        }
+         let shipName = "capsule";
+         if (result.ship) {
+             let shipInfo = await core.sdeController.getShipTypeInfo(result.ship);
+             shipName = shipInfo.typeName;
+         }
 
-        let out = {
-            name: result.name,
-            images: result.images,
-            online: result.online,
-            ship: shipName,
-            addDate: result.addDate
-        }
+         let out = {
+             name: result.name,
+             online: result.online,
+             ship: shipName,
+             addDate: result.addDate
+         }
 
-        if(result.info.corporationId) {
-            out.corporation = result.info.corporation.name;
-            out.corporationId = result.info.corporationId;
-        }
+         if (result.info.corporationId) {
+             out.corporation = result.info.corporation.name;
+             out.corporationId = result.info.corporationId;
+         }
 
-        if(result.info.allianceId) {
-            out.alliance = result.info.alliance.name;
-            out.allianceId = result.info.allianceId;
-        }
+         if (result.info.allianceId) {
+             out.alliance = result.info.alliance.name;
+             out.allianceId = result.info.allianceId;
+         }
 
-        return out;
-    },
+         return out;
+     },
     getCorporationId: async function () {
         let result = await core.dbController.charactersDB.get(this.options.characterId, ["info"]);
         return result.info.corporationId || -1;
@@ -193,7 +192,7 @@ var Character = classCreator("Character", Emitter, {
         }.bind(this), function(_err){
             pr.reject({
                 sub: _err,
-                message: "Error on load charInfo"
+                message: "Error on load info"
             });
         }.bind(this))
 

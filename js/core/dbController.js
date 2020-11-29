@@ -148,8 +148,6 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "name",        type: String},
                 {name: "description", type: String},
                 {name: "owner",       type: String,  index: true},   // this is id of mapper character
-                {name: "private",     type: Boolean},
-                // {name: "guestGroup",  type: String}
 
             ]
         });
@@ -238,7 +236,6 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "description",   type: String},                       // some description about this system
                 {name: "tag",           type: String},                       // system tag
                 {name: "signatures",    type: Array},
-                {name: "type",          type: Object},                       // type of system - wormhole/lowsec/nullsec/highsec/abyss
                 {name: "effects",       type: String},                       // if it wormhole or abyss, system my have had some effects
                 {name: "visible",       type: Boolean, defaultValue: true},  // if it false system is not show at the map (this flag for delete)
                 {name: "position",      type: Object,  defaultValue: function () { return {x: 0, y: 0} } },

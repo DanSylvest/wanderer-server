@@ -1,6 +1,3 @@
-/**
- * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
- */
 
 const request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
@@ -14,17 +11,13 @@ const request = async function (_connectionId, _responseId, _event) {
 
     try {
         let userId = await core.tokenController.checkToken(token);
-        let maps = await core.mapController.getMapsWhereCharacterTrackByUser(userId);
-
+        await core.groupsController.updateAllowedCharactersForGroup(userId, _event.groupId, _event.characters);
         api.send(_connectionId, _responseId, {
-            list: maps,
             success: true,
-            eventType: "responseEveAllowedMaps"
+            eventType: "responseEveUpdateAllowedCharacterForGroup"
         });
-
-    } catch (_err) {
-        debugger;
-        _sendError(_connectionId, _responseId, "Error on getAllowedMapsByUser", _err);
+    } catch (err) {
+        _sendError(_connectionId, _responseId, "Error on load group list", err);
     }
 };
 
@@ -33,7 +26,7 @@ const _sendError = function (_connectionId, _responseId, _message, _data) {
         errData: _data,
         success: false,
         message: _message,
-        eventType: "responseEveAllowedMaps",
+        eventType: "responseEveUpdateAllowedCharacterForGroup",
     });
 };
 

@@ -1,0 +1,2067 @@
+{
+	"openapi": "3.0.0",
+	"info": {
+		"title": "test title",
+		"description": "test description",
+		"version": "0.0.1",
+		"contact": {
+			"name": "Alex",
+			"url": "",
+			"email": "example@mail.com"
+		}
+	},
+	"servers": [
+		{
+			"url": "ws://localhost:1400/",
+			"description": "test server"
+		}
+	],
+	"components": {
+		"schemas": {
+			"characterInfo": {
+				"type": "object",
+				"required": [
+					"name",
+					"online",
+					"ship",
+					"info",
+					"addDate"
+				],
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"online": {
+						"type": "string"
+					},
+					"ship": {
+						"type": "string"
+					},
+					"info": {
+						"type": "string"
+					},
+					"addDate": {
+						"type": "string"
+					},
+					"isOwn": {
+						"type": "boolean"
+					},
+					"corporation":  {
+						"type": "string"
+					},
+					"corporationId": {
+						"type": "integer"
+					},
+					"alliance":  {
+						"type": "string"
+					},
+					"allianceId": {
+						"type": "integer"
+					}
+				}
+			},
+			"eveSearchResponse": {
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "integer"
+						},
+						"name": {
+							"type": "string"
+						}
+					}
+				}
+			},
+			"signaturesSchema": {
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"name": {
+							"type": "string"
+						},
+						"description": {
+							"type": "string"
+						},
+						"created": {
+							"type": "string"
+						},
+						"kind": {
+							"type": "string"
+						},
+						"type": {
+							"type": "string"
+						}
+					}
+				}
+			},
+			"solarSystemInfo": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"mapId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"tag": {
+						"type": "string"
+					},
+					"isLocked": {
+						"type": "boolean"
+					},
+					"visible": {
+						"type": "boolean"
+					},
+					"systemClass": {
+						"type": "integer"
+					},
+					"systemType": {
+						"type": "integer"
+					},
+					"onlineCount": {
+						"type": "integer"
+					},
+					"security": {
+						"type": "string"
+					},
+					"constellationName": {
+						"type": "string"
+					},
+					"regionName": {
+						"type": "string"
+					},
+					"position": {
+						"type": "object",
+						"properties": {
+							"x": {
+								"type": "number"
+							},
+							"y": {
+								"type": "number"
+							}
+						}
+					},
+					"signatures": {
+						"$ref": "#/components/schemas/signaturesSchema"
+					},
+					"onlineCharacters": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"type": {
+						"type": "object",
+						"properties": {
+						
+						}
+					},
+					"effects": {
+						"type": "string"
+					},
+					"systemData": {
+						"type": "object",
+						"required": [
+							"typeName",
+							"isShattered"
+						],
+						"properties": {
+							"typeName": {
+								"type": "string"
+							},
+							"isShattered": {
+								"type": "boolean"
+							},
+							"statics": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"type": {
+											"type": "string"
+										},
+										"fullName": {
+											"type": "string"
+										},
+										"class": {
+											"type": "string"
+										}
+									}
+								}
+							},
+							"effectType": {
+								"type": "string"
+							},
+							"effectName": {
+								"type": "string"
+							},
+							"effectData": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"properties": {
+										"description": {
+											"type": "string"
+										},
+										"positive": {
+											"type": "boolean"
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"linkInfo": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"mapId": {
+						"type": "string"
+					},
+					"solarSystemSource": {
+						"type": "string"
+					},
+					"solarSystemTarget": {
+						"type": "string"
+					},
+					"lifeTime": {
+						"type": "integer"
+					},
+					"openingTime": {
+						"type": "string"
+					},
+					"massStatus": {
+						"type": "integer"
+					},
+					"timeStatus": {
+						"type": "integer"
+					},
+					"shipSizeType": {
+						"type": "integer"
+					},
+					"wormholeType": {
+						"type": "string"
+					},
+					"countOfPassage": {
+						"type": "integer"
+					}
+				}
+			}
+		},
+		"parameters": {
+			"mapId": {
+				"name": "mapId",
+				"description": "Map id",
+				"required": true,
+				"schema": {
+					"type": "string"
+				},
+				"style": "simple"
+			},
+			"groupId": {
+				"name": "groupId",
+				"description": "group id",
+				"required": true,
+				"schema": {
+					"type": "string"
+				},
+				"style": "simple"
+			},
+			"linkId": {
+				"name": "linkId",
+				"description": "link id",
+				"required": true,
+				"schema": {
+					"type": "string"
+				},
+				"style": "simple"
+			},
+			"characterId": {
+				"name": "characterId",
+				"description": "Internal mapper character ID. But it same id like eve character ID",
+				"required": true,
+				"schema": {
+					"type": "string"
+				},
+				"style": "simple"
+			},
+			"solarSystemId": {
+				"name": "solarSystemId",
+				"description": "Solar system id",
+				"required": true,
+				"schema": {
+					"type": "string"
+				},
+				"style": "simple"
+			},
+			"map": {
+				"name": {
+					"name": "name",
+					"description": "Map name",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				},
+				"description": {
+					"name": "description",
+					"description": "Map description",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				},
+				"groups": {
+					"name": "groups",
+					"description": "Map description",
+					"required": true,
+					"schema": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"style": "simple"
+				}
+			},
+			"group": {
+				"name": {
+					"name": "name",
+					"description": "Group name",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				},
+				"description": {
+					"name": "description",
+					"description": "Group description",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				},
+				"characters": {
+					"name": "name",
+					"description": "Group name",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				},
+				"corporations": {
+					"name": "corporations",
+					"description": "group corporations",
+					"required": true,
+					"schema": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"style": "simple"
+				},
+				"alliances": {
+					"name": "alliances",
+					"description": "group alliances",
+					"required": true,
+					"schema": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"style": "simple"
+				}
+			}
+		},
+		"notifications": {
+		
+		},
+		"responses": {
+			"emptySuccess" : {
+				"content": {
+					"application/json": {
+						"schema": {}
+					}
+				}
+			},
+			"invalidRequest" : {
+				"description": "invalid request",
+				"content": {
+					"application/json": {
+						"schema": {
+							"description": "a message with error description",
+							"type": "string"
+						}
+					}
+				}
+			}
+		}
+	},
+	
+	"routes": {
+		"api/user/register": {
+			"type": "request",
+			"description": "This method will register new user",
+			"parameters": [
+				{
+					"name": "code",
+					"description": "Authentication code",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "a token will be returned",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "string"
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/user/checkToken": {
+			"type": "request",
+			"description": "Accept connection",
+			"parameters": [
+				{
+					"name": "token",
+					"description": "Internal mapper token for auth connection",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				}
+			],
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/user/getAuthToken": {
+			"type": "request",
+			"description": "This token need for auth or attach your character",
+			"parameters": [
+				{
+					"name": "type",
+					"description": "if value is 'auth' - it will register or auth in mapper, if value is 'attach' you will attach your char",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "You will get auth or attach",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "string"
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/user/getAuthType": {
+			"type": "request",
+			"description": "This allow get type of auth token back",
+			"parameters": [
+				{
+					"name": "token",
+					"description": "this is auth token",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "You will get auth type - attach or auth",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "string"
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		
+		"api/eve/character/add": {
+			"type": "request",
+			"description": "Allow attach new character",
+			"parameters": [
+				{
+					"name": "code",
+					"description": "Authentication code",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "If success added char",
+					"content": {
+						"application/json": {
+							"schema": {}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+			
+		},
+		"api/eve/character/info": {
+			"type": "request",
+			"description": "Character's info",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/characterId"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/characterInfo"
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/character/getName": {
+			"type": "request",
+			"description": "Character's info",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/characterId"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/character/list": {
+			"type": "request",
+			"description": "Return all characters which user (by current connection) own",
+			"parameters": [],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "array",
+								"items": {
+									"$ref": "#/components/schemas/characterInfo"
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/character/fastSearch": {
+			"type": "request",
+			"description": "Search characters by eve-online functional",
+			"parameters": [
+				{
+					"name": "type",
+					"description": "search type should be - 'byAll' or 'byUser'",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				},
+				{
+					"name": "match",
+					"description": "search word",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "response list of character ID's with character names",
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/eveSearchResponse"
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/character/online": {
+			"type": "subscription",
+			"description": "Subscribe on character online status",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/characterId"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "response current online status",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "boolean"
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			},
+			"notifications": {
+				"onlineChanged": {
+					"description": "Online status change notify",
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "online status",
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			}
+		},
+		
+		"api/eve/alliance/fastSearch": {
+			"type": "request",
+			"description": "Search alliance by eve-online functional",
+			"parameters": [
+				{
+					"name": "match",
+					"description": "search word",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "response list of alliances ID's with alliances names",
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/eveSearchResponse"
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/alliance/info": {
+			"type": "request",
+			"description": "Alliance's info",
+			"parameters": [
+				{
+					"name": "allianceId",
+					"description": "Internal mapper alliance ID. But it same id like eve alliance ID",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		
+		"api/eve/corporation/fastSearch": {
+			"type": "request",
+			"description": "Search corporation by eve-online functional",
+			"parameters": [
+				{
+					"name": "match",
+					"description": "search word",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "response list of corporation ID's with corporation names",
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/eveSearchResponse"
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/corporation/info": {
+			"type": "request",
+			"description": "Corporation info",
+			"parameters": [
+				{
+					"name": "corporationId",
+					"description": "Internal mapper Corporation ID. But it same id like eve Corporation ID",
+					"required": true,
+					"schema": {
+						"type": "string"
+					},
+					"style": "simple"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		
+		"api/eve/map/add": {
+			"type": "request",
+			"description": "Create new map",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/map/name"
+				},
+				{
+					"$ref": "#/components/parameters/map/description"
+				},
+				{
+					"$ref": "#/components/parameters/map/groups"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"mapId": {
+										"type": "string"
+									},
+									"owner": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+			
+		},
+		"api/eve/map/addFast": {
+			"type": "request",
+			"description": "Create new map",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/map/name"
+				},
+				{
+					"$ref": "#/components/parameters/map/description"
+				},
+				{
+					"$ref": "#/components/parameters/characterId"
+				},
+				{
+					"name": "shareForCorporation",
+					"description": "",
+					"required": true,
+					"schema": {
+						"type": "boolean"
+					},
+					"style": "simple"
+				},
+				{
+					"name": "shareForAlliance",
+					"description": "",
+					"required": true,
+					"schema": {
+						"type": "boolean"
+					},
+					"style": "simple"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "a token will be returned",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"groups": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										}
+									},
+									"name": "string",
+									"description": "string",
+									"mapId": "string",
+									"owner": "string"
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+			
+		},
+		"api/eve/map/edit": {
+			"type": "request",
+			"description": "Update map",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				},
+				{
+					"$ref": "#/components/parameters/map/name"
+				},
+				{
+					"$ref": "#/components/parameters/map/description"
+				},
+				{
+					"$ref": "#/components/parameters/map/groups"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "a token will be returned",
+					"content": {
+						"application/json": {
+							"schema": {}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+			
+		},
+		"api/eve/map/info": {
+			"type": "request",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"id": {
+										"type": "string"
+									},
+									"name": {
+										"type": "string"
+									},
+									"description": {
+										"type": "string"
+									},
+									"owner": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+			
+		},
+		"api/eve/map/list": {
+			"type": "request",
+			"description": "Returns list of user maps",
+			"parameters": [],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"description": {
+											"type": "string"
+										},
+										"owner": {
+											"type": "string"
+										},
+										"groups": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+			
+		},
+		"api/eve/map/remove": {
+			"type": "request",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				}
+			],
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/map/userWatchMapStatus": {
+			"type": "request",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				},
+				{
+					"name": "status",
+					"description": "update watch status (when you want watch on map)",
+					"schema": {
+						"type": "boolean"
+					}
+				}
+			],
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/map/waypoint": {
+			"type": "request",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/characterId"
+				},
+				{
+					"name": "type",
+					"description": "type of waypoint setter",
+					"schema": {
+						"type": "integer"
+					}
+				},
+				{
+					"name": "solarSystemId",
+					"description": "destination solar system id",
+					"schema": {
+						"type": "string"
+					}
+				}
+			],
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"description": "invalid request",
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "a message with error description",
+								"type": "string"
+							}
+						}
+					}
+				}
+			}
+		},
+		"api/eve/map/subscribeAllowedMaps": {
+			"type": "subscription",
+			"description": "",
+			"parameters": [],
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			},
+			"notifications": {
+				"added": {
+					"description": "When maps added to list",
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "map Ids",
+								"type": "array",
+								"items": {
+									"type": "string",
+									"description": "map id"
+								}
+							}
+						}
+					}
+				},
+				"removed": {
+					"description": "When maps removed from list",
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "map Ids",
+								"type": "array",
+								"items": {
+									"type": "string",
+									"description": "map id"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"api/eve/map/subscribeMapExistence": {
+			"type": "subscription",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				}
+			],
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			},
+			"notifications": {
+				"removed": {
+					"description": "When map removed",
+					"content": {
+						"application/json": {
+							"schema": {}
+						}
+					}
+				}
+			}
+		},
+		
+		"api/eve/map/solarSystem/info": {
+			"type": "request",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				},
+				{
+					"$ref": "#/components/parameters/solarSystemId"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/solarSystemInfo"
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/map/solarSystem/remove": {
+			"type": "request",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				},
+				{
+					"name": "solarSystemIds",
+					"description": "",
+					"schema": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				}
+			],
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/map/solarSystem/update": {
+			"type": "request",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				},
+				{
+					"$ref": "#/components/parameters/solarSystemId"
+				},
+				{
+					"name": "data",
+					"description": "",
+					"schema": {
+						"description": "any of this properties can be updated by user",
+						"type": "object",
+						"properties": {
+							"isLocked": {
+								"type": "boolean"
+							},
+							"tag": {
+								"type": "string"
+							},
+							"signatures": {
+								"$ref": "#/components/schemas/signaturesSchema"
+							}
+						}
+					}
+				}
+			],
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/map/solarSystem/updatePositions": {
+			"type": "request",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				},
+				{
+					"name": "data",
+					"description": "",
+					"schema": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"required": [
+								"solarSystemId",
+								"x",
+								"y"
+							],
+							"properties": {
+								"solarSystemId": {
+									"type": "string"
+								},
+								"x": {
+									"type": "number"
+								},
+								"y": {
+									"type": "number"
+								}
+							}
+						}
+					}
+				}
+			],
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/map/solarSystem/subscribeSolarSystems": {
+			"type": "subscription",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				}
+			],
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			},
+			"notifications": {
+				"bulk": {
+					"description": "Return all solar systems info",
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "solar systems info",
+								"type": "array",
+								"items": {
+									"$ref": "#/components/schemas/solarSystemInfo"
+								}
+							}
+						}
+					}
+				},
+				"removed": {
+					"description": "When solar system was removed",
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "Solar system Id",
+								"type": "string"
+							}
+						}
+					}
+				},
+				"added": {
+					"description": "When solar system was removed",
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/solarSystemInfo"
+							}
+						}
+					}
+				},
+				"onlineChanged": {
+					"description": "When online count was changed",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"solarSystemId": {
+										"type": "string"
+									},
+									"onlineCount": {
+										"type": "integer"
+									}
+								}
+							}
+						}
+					}
+				},
+				"userJoin": {
+					"description": "When user has join the solar system",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"solarSystemId": {
+										"type": "string"
+									},
+									"characterId": {
+										"type": "integer"
+									}
+								}
+							}
+						}
+					}
+				},
+				"userLeave": {
+					"description": "When user has left the solar system",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"solarSystemId": {
+										"type": "string"
+									},
+									"characterId": {
+										"type": "integer"
+									}
+								}
+							}
+						}
+					}
+				},
+				"systemUpdated": {
+					"description": "When any of allowed to change properties was changed",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"solarSystemId": {
+										"type": "string"
+									},
+									"data": {
+										"type": "object",
+										"description": "any of this properties can be updated by user",
+										"properties": {
+											"isLocked": {
+												"type": "boolean"
+											},
+											"tag": {
+												"type": "string"
+											},
+											"signatures": {
+												"$ref": "#/components/schemas/signaturesSchema"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"updatedSystemsPosition": {
+					"description": "When systems positions was changed",
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "",
+								"type": "object",
+								"properties": {
+									"solarSystemId": {
+										"type": "string"
+									},
+									"x": {
+										"type": "number"
+									},
+									"y": {
+										"type": "number"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		
+		"api/eve/map/link/info": {
+			"type": "request",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				},
+				{
+					"name": "linkIds",
+					"description": "link ids",
+					"required": true,
+					"schema": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"style": "simple"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "array",
+								"items": {
+									"$ref": "#/components/schemas/linkInfo"
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/map/link/remove": {
+			"type": "request",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				},
+				{
+					"$ref": "#/components/parameters/linkId"
+				}
+			],
+			
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/map/link/update": {
+			"type": "request",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				},
+				{
+					"$ref": "#/components/parameters/linkId"
+				},
+				{
+					"name": "data",
+					"description": "link id",
+					"required": true,
+					"schema": {
+						"type": "object",
+						"required": [
+						
+						],
+						"properties": {
+							"id": {
+								"type": "string"
+							},
+							"mapId": {
+								"type": "string"
+							},
+							"solarSystemSource": {
+								"type": "string"
+							},
+							"solarSystemTarget": {
+								"type": "string"
+							},
+							"lifeTime": {
+								"type": "integer"
+							},
+							"openingTime": {
+								"type": "string"
+							},
+							"massStatus": {
+								"type": "integer"
+							},
+							"timeStatus": {
+								"type": "integer"
+							},
+							"shipSizeType": {
+								"type": "integer"
+							},
+							"wormholeType": {
+								"type": "string"
+							},
+							"countOfPassage": {
+								"type": "integer"
+							}
+						}
+						
+					},
+					"style": "simple"
+				}
+			],
+			
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/map/link/subscribeLinks": {
+			"type": "subscription",
+			"description": "",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/mapId"
+				}
+			],
+			"responses": {
+				"200": {
+					"$ref": "#/components/responses/emptySuccess"
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			},
+			"notifications": {
+				"bulk": {
+					"description": "Return all links info",
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "Links info",
+								"type": "array",
+								"items": {
+									"$ref": "#/components/schemas/linkInfo"
+								}
+							}
+						}
+					}
+				},
+				"removed": {
+					"description": "When link was removed",
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "Link Id",
+								"type": "string"
+							}
+						}
+					}
+				},
+				"added": {
+					"description": "When solar system was added",
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "Link Id",
+								"type": "string"
+							}
+						}
+					}
+				},
+				"linkUpdated": {
+					"description": "When any of allowed to change properties were changed",
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "any of this properties can be updated by user",
+								"type": "object",
+								"properties": {
+									"linkId": {
+										"type": "string"
+									},
+									"data": {
+										"type": "object",
+										"description": "any of this properties can be updated by user",
+										"properties": {
+											"timeStatus": {
+												"type": "integer"
+											},
+											"massStatus": {
+												"type": "integer"
+											},
+											"shipSizeType": {
+												"type": "integer"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		
+		"api/eve/group/add": {
+			"type": "request",
+			"description": "Create new group",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/groups/name"
+				},
+				{
+					"$ref": "#/components/parameters/groups/description"
+				},
+				{
+					"$ref": "#/components/parameters/groups/characters"
+				},
+				{
+					"$ref": "#/components/parameters/groups/corporations"
+				},
+				{
+					"$ref": "#/components/parameters/groups/alliances"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"groupId": {
+										"type": "string"
+									},
+									"owner": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/group/allowedGroups": {
+			"type": "request",
+			"description": "Get allowed groups",
+			"parameters": [],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"properties": {
+										"groupId": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"description": {
+											"type": "string"
+										},
+										"owner": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		},
+		"api/eve/group/edit": {
+			"type": "request",
+			"description": "Edit group",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/groupId"
+				},
+				{
+					"$ref": "#/components/parameters/group/name"
+				},
+				{
+					"$ref": "#/components/parameters/group/description"
+				},
+				{
+					"$ref": "#/components/parameters/group/characters"
+				},
+				{
+					"$ref": "#/components/parameters/group/corporations"
+				},
+				{
+					"$ref": "#/components/parameters/group/alliances"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "a token will be returned",
+					"content": {
+						"application/json": {
+							"schema": {}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+			
+		},
+		"api/eve/group/remove": {
+			"type": "request",
+			"description": "Remove group",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/groupId"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "a token will be returned",
+					"content": {
+						"application/json": {
+							"schema": {}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+			
+		},
+		"api/eve/group/info": {
+			"type": "request",
+			"description": "Group info",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/groupId"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string"
+									},
+									"owner": {
+										"type": "string"
+									},
+									"description": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+			
+		},
+		"api/eve/group/list": {
+			"type": "request",
+			"description": "Groups list",
+			"parameters": [],
+			"responses": {
+				"200": {
+					"description": "",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"properties": {
+										"groupId": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"owner": {
+											"type": "string"
+										},
+										"description": {
+											"type": "string"
+										},
+										"characters": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										},
+										"corporations": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										},
+										"alliances": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+			
+		},
+		"api/eve/group/getAllowedCharacters": {
+			"type": "request",
+			"description": "getAllowedCharacters group",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/groupId"
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "return allowed characters for group",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"properties": {
+										"characterId": {
+											"type": "string"
+										},
+										"track": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+			
+		},
+		"api/eve/group/updateAllowedCharacters": {
+			"type": "request",
+			"description": "update allowed characters for group",
+			"parameters": [
+				{
+					"$ref": "#/components/parameters/groupId"
+				},
+				{
+					"name": "characters",
+					"description": "this is a list of characters which will be tracking for group",
+					"schema": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"characterId": {
+									"type": "string"
+								},
+								"track": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				}
+			],
+			"responses": {
+				"200": {
+					"description": "return allowed characters for group",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"properties": {
+										"characterId": {
+											"type": "string"
+										},
+										"track": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					"$ref": "#/components/responses/invalidRequest"
+				}
+			}
+		}
+	}
+}

@@ -355,10 +355,6 @@ const GroupsController = classCreator("GroupsController", Emitter, {
             prarr.push(core.userController.getUserName(groupsInfo[a].owner));
         }
 
-        let ownerNames = await Promise.all(prarr);
-        for (let a = 0; a < ownerNames.length; a++) {
-            groupsInfo[a].owner = ownerNames[a];
-        }
         return groupsInfo;
     },
 
@@ -605,17 +601,6 @@ const GroupsController = classCreator("GroupsController", Emitter, {
     async updateAllowedCharactersForGroup (_userId, _groupId, _characters) {
         await Promise.all(_characters.map(_character => this.updateCharacterTrack(_groupId, _character.id, _character.track)));
         await core.mapController.notifyAllowedMapsByUser(_userId);
-    },
-    fastSearch (_options) {
-        let match = _options.match;
-        let type = _options.type;
-
-        switch (type) {
-            case "byUserGroups":
-                break;
-            case "byAll":
-                break;
-        }
     },
     async getMapsWhereGroup (_groupId) {
         var cond = [

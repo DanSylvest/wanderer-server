@@ -25,14 +25,19 @@ var request = async function (_connectionId, _responseId, _event) {
         let props = {
             name: _event.name,
             description: _event.description,
-            private: _event.isPrivate,
             groups: _event.groups
         };
 
-        let mapId = await core.mapController.createMap(userId, props);
+        let mapIdPr = core.mapController.createMap(userId, props);
+        let userNamePr = core.userController.getUserName(userId);
+        let mapId = await mapIdPr;
+        let userName = await userNamePr;
+
         api.send(_connectionId, _responseId, {
-            mapId: mapId,
-            userId: userId,
+            data: {
+                mapId: mapId,
+                owner: userName,
+            },
             eventType: "responseEveMapAdd",
             success: true
         });

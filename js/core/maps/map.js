@@ -9,7 +9,7 @@ const exist           = require("./../../env/tools/exist");
 const CustomPromise   = require("./../../env/promise");
 const md5             = require("md5");
 const Subscriber      = require("./../../utils/subscriber");
-// const log             = require("./../../utils/log");
+const counterLog      = require("./../../utils/counterLog");
 // const { performance } = require('perf_hooks');
 const Character       = require("./map/character");
 const MapSolarSystem  = require("./map/solarSystem.js");
@@ -146,8 +146,8 @@ const Map = classCreator("Map", Emitter, {
         await Promise.all(result.map(_row => this.linkRemove(_row.id)));
 
         for(let characterId in this.characters) {
-            if(this.character[characterId].currentLocation() === _systemId) {
-                this.character[characterId].clearCurrentLocation();
+            if(this.characters[characterId].currentLocation() === _systemId) {
+                this.characters[characterId].clearCurrentLocation();
             }
         }
 
@@ -343,6 +343,7 @@ const Map = classCreator("Map", Emitter, {
                 SELECT "mapId" FROM public.${core.dbController.mapSystemToCharacterTable.name()} WHERE "mapId" = '${this.options.mapId}' AND "systemId" = '${_systemId}' AND "characterId" = '${_characterId}'
             );`;
 
+        counterLog("SQL", query);
         this._createSystemObject(_systemId);
         await core.dbController.db.custom(query);
         this._systems[_systemId].onlineCharacters.push(_characterId);

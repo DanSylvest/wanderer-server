@@ -15,9 +15,13 @@ const request = async function (_connectionId, _responseId, _event) {
     try {
         let userId = await core.tokenController.checkToken(token);
         let groupId = await core.groupsController.createGroup(userId, _event);
+        let owner = await core.userController.getUserName(userId);
+
         api.send(_connectionId, _responseId, {
-            groupId: groupId,
-            userId: userId,
+            data: {
+                groupId: groupId,
+                owner: owner,
+            },
             eventType: "responseEveGroupAdd",
             success: true
         });

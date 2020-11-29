@@ -4,6 +4,7 @@ var extend        = require("./../env/tools/extend");
 var exist         = require("./../env/tools/exist");
 var print_f       = require("./../env/tools/print_f");
 var log           = require("./../utils/log");
+var counterLog    = require("./../utils/counterLog");
 var CustomPromise = require("./../env/promise");
 var fs            = require("fs");
 
@@ -116,7 +117,7 @@ var DB = classCreator("DB", Emitter, {
 
         var query = print_f("BEGIN;\n%s\nCOMMIT;", _arr.join("\n"));
 
-        log(log.DEBUG, query);
+        counterLog("SQL", query);
 
         this._client.query(query).then(function () {
             pr.resolve();
@@ -129,7 +130,7 @@ var DB = classCreator("DB", Emitter, {
     custom: function (_query) {
         var pr = new CustomPromise();
 
-        log(log.DEBUG, "CUSTOM QUERY: ", _query);
+        counterLog("SQL", `CUSTOM QUERY: ${_query}`);
 
         this._client.query(_query).then(function (_result) {
             pr.resolve(_result);
@@ -204,7 +205,7 @@ var Table = classCreator("Table", Emitter, {
                 if (result.rows.length === 0) {
                     let query = `ALTER TABLE ${this._name} ADD COLUMN "${prop.name}" ${getDBTypeByJsType(prop.type)} ${getOptionsForType(prop.type)}`;
                     await this._client.query(query);
-                    console.log(query);
+                    counterLog("SQL", query);
                 }
             } catch (_err) {
                 console.error(_err);
@@ -264,6 +265,8 @@ var Table = classCreator("Table", Emitter, {
         var pr = new CustomPromise();
 
         var query = print_f("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '%s');", this._name);
+        counterLog("SQL", query);;
+
         this._client.query(query).then(function(_result){
             pr.resolve(_result.rows[0].exists);
         }.bind(this), function(){
@@ -278,7 +281,7 @@ var Table = classCreator("Table", Emitter, {
         let cond = extractCondition(_condition);
         let fields = updateFields(_requestFields);
         let query = print_f('SELECT %s FROM public.%s WHERE %s;', fields, this._name, cond);
-        log(log.DEBUG, query);
+        counterLog("SQL", query);
 
         this._client.query(query).then(function(_result){
             let out = [];
@@ -321,7 +324,7 @@ var Table = classCreator("Table", Emitter, {
 
         var pr = new CustomPromise();
 
-        log(log.DEBUG, query);
+        counterLog("SQL", query);
 
         this._client.query(query).then(function(){
             pr.resolve();
@@ -339,7 +342,7 @@ var Table = classCreator("Table", Emitter, {
 
         var pr = new CustomPromise();
 
-        log(log.DEBUG, query);
+        counterLog("SQL", query);
 
         this._client.query(query).then(function(_result){
             pr.resolve(_result.rowCount > 0);
@@ -359,7 +362,7 @@ var Table = classCreator("Table", Emitter, {
 
         var pr = new CustomPromise();
 
-        log(log.DEBUG, query);
+        counterLog("SQL", query);
 
         this._client.query(query).then(function(_result){
             pr.resolve();
@@ -392,7 +395,7 @@ var Table = classCreator("Table", Emitter, {
 
         this._innerGet(condition, arr).then(function(_result){
             if(_result.length === 0) {
-                pr.reject();
+                pr.resolve(null);
                 return;
             }
 
@@ -456,7 +459,7 @@ var Table = classCreator("Table", Emitter, {
 
         var pr = new CustomPromise();
 
-        log(log.DEBUG, query);
+        counterLog("SQL", query);
 
         this._client.query(query).then(function(_result){
             pr.resolve();
@@ -524,7 +527,7 @@ var Table = classCreator("Table", Emitter, {
 
         var pr = new CustomPromise();
 
-        log(log.DEBUG, query);
+        counterLog("SQL", query);
 
         this._client.query(query).then(function (_result) {
             pr.resolve(_result.rows);

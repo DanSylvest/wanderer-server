@@ -1,6 +1,7 @@
 var Emitter       = require("./../env/tools/emitter");
 var classCreator  = require("./../env/tools/class");
 var CustomPromise = require("./../env/promise");
+const counterLog  = require("./../utils/counterLog")
 
 var SdeController = classCreator("SdeController", Emitter, {
     constructor: function SdeController() {
@@ -25,6 +26,8 @@ var SdeController = classCreator("SdeController", Emitter, {
             FROM public.wormholesystems_new t
             WHERE solarsystemid='${_systemId}'
             ORDER BY t.solarsystemid`;
+
+            counterLog("SQL", query);
 
             var result = await core.dbController.mdDB.custom(query);
 
@@ -52,6 +55,8 @@ var SdeController = classCreator("SdeController", Emitter, {
             FROM public.wormholeclassifications t
             WHERE hole='${_wormholeClass}'
             ORDER BY t.id`;
+
+            counterLog("SQL", query);
 
             var result = await core.dbController.mdDB.custom(query);
 
@@ -107,6 +112,7 @@ var SdeController = classCreator("SdeController", Emitter, {
         WHERE t.hole='${_effectName}'
         ORDER BY t.id`;
 
+            counterLog("SQL", query);
             var result = await core.dbController.mdDB.custom(query);
 
             let out = [];

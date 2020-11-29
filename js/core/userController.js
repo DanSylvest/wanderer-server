@@ -17,34 +17,8 @@ const UserController = classCreator("UserController", Emitter, {
     destructor: function () {
         Emitter.prototype.destructor.call(this);
     },
-    async registerUserByMailAndPassword (_options) {
-        let base = extend({
-            id: md5(+new Date + config.app.solt),
-            mail: "",
-            password: ""
-        }, _options);
-
-        base.password = md5(base.password);
-
-        let exists = await core.dbController.userDB.existsByCondition([
-            {name: "type", operator: "=", value: 0},
-            {name: "mail", operator: "=", value: base.mail},
-        ]);
-
-        if (exists) {
-            throw {error: 0, message: `User ${base.mail} already exists`};
-        } else {
-            await core.dbController.userDB.add({
-                id: base.id,
-                mail: base.mail,
-                password: base.password,
-                online: false,
-                type: 0
-            });
-        }
-    },
-    async registerUserByEveSSO (_options) {
-        let data = await this._verifyAuthCode(_options.code);
+    async registerUserByEveSSO (code) {
+        let data = await this._verifyAuthCode(code);
 
         let existsInUsers = await core.dbController.userDB.existsByCondition([
             {name: "type", operator: "=", value: 1},
@@ -82,31 +56,6 @@ const UserController = classCreator("UserController", Emitter, {
         } else if (existsInUsers && existsInCharacters) {
             // а если этот вариант, то мы просто авторизуем персонажа
             return await core.tokenController.generateToken(data.userData.CharacterID);
-        }
-    },
-    // todo this is deprecated
-    async loginUserByMailAndPassword (_options) {
-        let base = extend({
-            mail: "",
-            password: ""
-        }, _options);
-
-        base.password = md5(base.password);
-
-        let result = await core.dbController.userDB.getByCondition([
-            {name: "type", operator: "=", value: 0},
-            {name: "mail", operator: "=", value: base.mail},
-            {name: "password", operator: "=", value: base.password},
-        ], ["id"]);
-
-        let existsInUsers = result.length > 0;
-        if (existsInUsers) {
-            return await core.tokenController.generateToken(result[0].id);
-        } else {
-            throw {
-                error: 1,
-                message: `User ${base.mail} not exist or password incorrect`
-            };
         }
     },
     /**

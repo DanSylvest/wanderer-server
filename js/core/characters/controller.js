@@ -95,17 +95,12 @@ var Controller = classCreator("CharactersController", Emitter, {
      * default "global"
      * @returns {*}
      */
-    getCharInfo: async function (_characterId, _type) {
-        // todo где-то вот тут проверять нужно ли запрашивать данные по корпе заного
-        switch (_type) {
-            case "local":
-                break;
-            case "global": // load info from eve server
-                let result = await core.esiApi.characters.info(_characterId);
-                return {name: result.name};
-            case "all":
-                return this.get(_characterId).getInfo();
-        }
+    getCharInfo: async function (_characterId) {
+        return await this.get(_characterId).getInfo();
+    },
+    async getCharacterName (characterId) {
+        let result = await core.esiApi.characters.info(characterId);
+        return {name: result.name};
     },
     removeCharacter: async function (_userId, _characterId) {
         var pr = new CustomPromise();
@@ -163,40 +158,40 @@ var Controller = classCreator("CharactersController", Emitter, {
 
         return pr.native;
     },
-    getAllCharacters: async function () {
-        var pr = new CustomPromise();
-
-        var condition = [
-            {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter}
-        ]
-
-        try {
-            var characterIds = await core.dbController.linksTable.getByCondition(condition, ["second"]);
-            var out = characterIds.map(characterId => characterId.second)
-            pr.resolve(out);
-        } catch (_err) {
-            pr.reject(_err);
-        }
-
-        return pr.native;
-    },
-    getAllCharactersByOnlineUser: async function () {
-        var pr = new CustomPromise();
-
-        var condition = [
-            {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter}
-        ]
-
-        try {
-            var characterIds = await core.dbController.linksTable.getByCondition(condition, ["second"]);
-            var out = characterIds.map(characterId => characterId.second)
-            pr.resolve(out);
-        } catch (_err) {
-            pr.reject(_err);
-        }
-
-        return pr.native;
-    }
+    // getAllCharacters: async function () {
+    //     var pr = new CustomPromise();
+    //
+    //     var condition = [
+    //         {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter}
+    //     ]
+    //
+    //     try {
+    //         var characterIds = await core.dbController.linksTable.getByCondition(condition, ["second"]);
+    //         var out = characterIds.map(characterId => characterId.second)
+    //         pr.resolve(out);
+    //     } catch (_err) {
+    //         pr.reject(_err);
+    //     }
+    //
+    //     return pr.native;
+    // },
+    // getAllCharactersByOnlineUser: async function () {
+    //     var pr = new CustomPromise();
+    //
+    //     var condition = [
+    //         {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter}
+    //     ]
+    //
+    //     try {
+    //         var characterIds = await core.dbController.linksTable.getByCondition(condition, ["second"]);
+    //         var out = characterIds.map(characterId => characterId.second)
+    //         pr.resolve(out);
+    //     } catch (_err) {
+    //         pr.reject(_err);
+    //     }
+    //
+    //     return pr.native;
+    // }
 });
 
 

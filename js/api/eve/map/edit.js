@@ -26,7 +26,6 @@ var request = async function (_connectionId, _responseId, _event) {
         let props = {
             name: _event.name,
             description: _event.description,
-            private: _event.isPrivate,
             groups: _event.groups,
         };
 

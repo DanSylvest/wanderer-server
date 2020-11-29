@@ -7,7 +7,7 @@ var _sendError = function (_connectionId, _responseId, _message, _data) {
         errData: _data,
         success: false,
         message: _message,
-        eventType: "responseEveCharacterCharInfo",
+        eventType: "responseEveMapSystemRemove",
     });
 };
 
@@ -17,24 +17,20 @@ var request = async function (_connectionId, _responseId, _event) {
     var token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
-    if(token === undefined) {
+    if (token === undefined) {
         _sendError(_connectionId, _responseId, "You not authorized or token was expired");
         return;
     }
 
     try {
-        let userId = await core.tokenController.checkToken(token);
-        let info = await core.charactersController.getCharInfo(_event.characterId, _event.type);
-        let own = await core.userController.isCharacterAttachedToUser(_event.characterId, userId);
-        info.isOwn = own;
-
+        await core.tokenController.checkToken(token);
+        await core.mapController.get(_event.mapId).systemRemove(_event.systemId.toString());
         api.send(_connectionId, _responseId, {
-            result: info,
             success: true,
-            eventType: "responseEveCharacterCharInfo"
-        })
+            eventType: "responseEveMapSystemRemove"
+        });
     } catch (_err) {
-        _sendError(_connectionId, _responseId, "Error on load char info", _err);
+        _sendError(_connectionId, _responseId, "Error on getMapSystemInfo", _err);
     }
 };
 

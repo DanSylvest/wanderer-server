@@ -7,14 +7,13 @@ var _sendError = function (_connectionId, _responseId, _message, _data) {
         errData: _data,
         success: false,
         message: _message,
-        eventType: "responseEveMapSystemRemove",
+        eventType: "responseEveMapSystemsRemove",
     });
 };
 
-
 var request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    var token = core.connectionStorage.get(_connectionId);
+    let token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if (token === undefined) {
@@ -25,11 +24,13 @@ var request = async function (_connectionId, _responseId, _event) {
     try {
         await core.tokenController.checkToken(token);
 
-        await core.mapController.get(_event.mapId).systemRemove(_event.systemId.toString());
+        for (let a = 0; a < _event.systemIds.length; a++) {
+            await core.mapController.get(_event.mapId).systemRemove(_event.systemIds[a].toString());
+        }
 
         api.send(_connectionId, _responseId, {
             success: true,
-            eventType: "responseEveMapSystemRemove"
+            eventType: "responseEveMapSystemsRemove"
         });
     } catch (_err) {
         _sendError(_connectionId, _responseId, "Error on getMapSystemInfo", _err);

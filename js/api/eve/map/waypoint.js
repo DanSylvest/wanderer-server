@@ -36,7 +36,7 @@ var request = async function (_connectionId, _responseId, _event) {
             eventType: "responseEveMapWaypoint"
         });
     } catch (_err) {
-        _sendError(_connectionId, _responseId, "Error on getMapSystemInfo", _err);
+        _sendError(_connectionId, _responseId, "Error on set Waypoint", _err);
     }
 };
 

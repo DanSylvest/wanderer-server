@@ -26,7 +26,7 @@ var request = async function (_connectionId, _responseId, _event) {
         await core.tokenController.checkToken(token);
 
         let map = core.mapController.get(_event.mapId);
-        await Promise.all(_event.systemId.map(x => map.systemRemove(x.toString())));
+        await Promise.all(_event.systemIds.map(x => map.systemRemove(x.toString())));
 
         api.send(_connectionId, _responseId, {
             success: true,

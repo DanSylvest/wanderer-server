@@ -12,7 +12,6 @@ var _sendError = function (_connectionId, _responseId, _message, _data) {
 };
 
 var request = async function (_connectionId, _responseId, _event) {
-    // we need get token by connection
     let token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
@@ -22,18 +21,15 @@ var request = async function (_connectionId, _responseId, _event) {
     }
 
     try {
+        // todo
         await core.tokenController.checkToken(token);
-
-        for (let a = 0; a < _event.systemIds.length; a++) {
-            await core.mapController.get(_event.mapId).systemRemove(_event.systemIds[a].toString());
-        }
-
+        await core.mapController.get(_event.mapId).linkRemove(_event.linkId);
         api.send(_connectionId, _responseId, {
             success: true,
-            eventType: "responseEveMapSystemsRemove"
+            eventType: "responseEveMapLinkRemove"
         });
     } catch (_err) {
-        _sendError(_connectionId, _responseId, "Error on getMapSystemInfo", _err);
+        _sendError(_connectionId, _responseId, "Error on linkRemove", _err);
     }
 };
 

@@ -145,11 +145,17 @@ const Map = classCreator("Map", Emitter, {
         let result = await core.dbController.mapLinksTable.getByCondition(lcondition, ["id"]);
         await Promise.all(result.map(_row => this.linkRemove(_row.id)));
 
-        for(let characterId in this.characters) {
-            if(this.characters[characterId].currentLocation() === _systemId) {
-                this.characters[characterId].clearCurrentLocation();
-            }
-        }
+        let condition = [
+            {name: "mapId", operator: "=", value: this.options.mapId},
+            {name: "id", operator: "=", value: _systemId},
+        ];
+        await core.dbController.mapSystemsTable.removeByCondition(condition);
+
+        // for(let characterId in this.characters) {
+        //     if(this.characters[characterId].currentLocation() === _systemId) {
+        //         this.characters[characterId].clearCurrentLocation();
+        //     }
+        // }
 
         if (this._notifySystems && this._systemsSubscriber) {
             this._systemsSubscriber.notify({
@@ -204,10 +210,11 @@ const Map = classCreator("Map", Emitter, {
     },
     async _onCharacterDrop (characterId) {
         let isOnline = this.characters[characterId].isOnline();
+        let currentSystemId = this._charactersOnSystem[characterId];
         this.characters[characterId].destructor();
         delete this.characters[characterId];
-        if(isOnline) {
-            await this._characterLeaveSystem(characterId, this._charactersOnSystem[characterId]);
+        if(isOnline && exist(currentSystemId)) {
+            await this._characterLeaveSystem(characterId, currentSystemId);
         }
     },
     async _notifySystemAdd (_systemId) {
@@ -382,14 +389,12 @@ const Map = classCreator("Map", Emitter, {
         let solarSystemInfo = await core.sdeController.getSolarSystemInfo(_systemId);
         let systemClass = await core.sdeController.getSystemClass(solarSystemInfo.regionID, solarSystemInfo.constellationID, _systemId);
         let isExists = await this.systemExists(_systemId);
-
-        // let isEmpire = systemClass === 7 || systemClass === 8 || systemClass === 9;
         let isAbleToEnter = solarSystemTypesNotAbleToEnter.indexOf(systemClass) === -1;
 
-        if(isExists && isAbleToEnter) {
-            // Если такой системы на карте нет, то создаст и оповестит
-            // Если есть, то ничего не будет делать
-            await this._addSystem(null, _systemId);
+        if(isAbleToEnter) {
+            if(!isExists)
+                await this._addSystem(null, _systemId);
+
             await this._characterJoinToSystem(_characterId, _systemId);
         }
     },

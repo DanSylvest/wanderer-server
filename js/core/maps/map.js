@@ -655,8 +655,8 @@ const Map = classCreator("Map", Emitter, {
 });
 
 
-const solarSystemTypesNotAbleToEnter = [5,7,8,9];
-const solarSystemTypesNotAbleToMove = [5];
+const solarSystemTypesNotAbleToEnter = [7,8,9,19,20,21,22,23,24];
+const solarSystemTypesNotAbleToMove = [19,20,21,22,23,24];
 
 
 module.exports = Map;

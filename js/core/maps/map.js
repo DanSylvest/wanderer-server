@@ -383,9 +383,10 @@ const Map = classCreator("Map", Emitter, {
         let systemClass = await core.sdeController.getSystemClass(solarSystemInfo.regionID, solarSystemInfo.constellationID, _systemId);
         let isExists = await this.systemExists(_systemId);
 
-        let isEmpire = systemClass === 7 || systemClass === 8 || systemClass === 9;
+        // let isEmpire = systemClass === 7 || systemClass === 8 || systemClass === 9;
+        let isAbleToEnter = solarSystemTypesNotAbleToEnter.indexOf(systemClass) === -1;
 
-        if(isExists || !isEmpire) {
+        if(isExists && isAbleToEnter) {
             // Если такой системы на карте нет, то создаст и оповестит
             // Если есть, то ничего не будет делать
             await this._addSystem(null, _systemId);
@@ -397,7 +398,9 @@ const Map = classCreator("Map", Emitter, {
         // Если система слинкована гейтами, то не добавлять ее
         let isJump = await core.sdeController.checkSystemJump(_oldSystem, _newSystem);
 
-        if (!isJump) {
+        let isAbleToMove = solarSystemTypesNotAbleToMove.indexOf(_newSystem) === -1;
+
+        if (!isJump && isAbleToMove) {
             let isSystemExists = await this.systemExists(_oldSystem);
 
             /**
@@ -650,5 +653,10 @@ const Map = classCreator("Map", Emitter, {
         }
     }
 });
+
+
+const solarSystemTypesNotAbleToEnter = [5,7,8,9];
+const solarSystemTypesNotAbleToMove = [5];
+
 
 module.exports = Map;

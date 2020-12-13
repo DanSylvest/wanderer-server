@@ -3,6 +3,7 @@ const ConfReader        = require("./../utils/configReader");
 const reinstallEveDb    = require("./reinstallEveDb");
 const reinstallManualDb = require("./reinstallManualDb");
 const reinstallMapperDb = require("./reinstallMapperDb");
+const reinstallCachedDB = require("./reinstallCachedESD");
 const generateSwagger   = require("./generateSwagger.js");
 const args              = require("args");
 const log               = require("./../utils/log.js");
@@ -33,9 +34,12 @@ var installRole = async function () {
 const processUpdateCommand = async function (_command, _flags) {
     if(_flags.length === 0) _flags.push("all");
 
-    try {
+    // try {
         for (let a = 0; a < _flags.length; a++) {
             switch (_flags[a]) {
+                case "cached":
+                    await reinstallCachedDB(client, conString);
+                    break;
                 case "swagger":
                     await generateSwagger();
                     break;
@@ -56,10 +60,10 @@ const processUpdateCommand = async function (_command, _flags) {
                     break;
             }
         }
-    } catch (_err) {
-        log(log.INFO, _err);
-        log(log.INFO, "Installed with error (check previously message)");
-    }
+    // } catch (_err) {
+    //     log(log.INFO, _err);
+    //     log(log.INFO, "Installed with error (check previously message)");
+    // }
 
     process.exit()
 };
@@ -70,6 +74,7 @@ const processInstall = async function () {
         await reinstallManualDb(client, conString);
         await reinstallEveDb(client, conString);
         await reinstallMapperDb(client, conString);
+        await reinstallCachedDB(client, conString);
         await generateSwagger(client, conString);
         log(log.INFO, "Installed");
     } catch (_err) {

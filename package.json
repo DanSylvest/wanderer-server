@@ -20,6 +20,7 @@
 		"dev": "node --inspect js/main.js",
 		"start": "node js/main.js",
 		"dropAll": "node js/scripts/installer.js update all",
+		"updateСached": "node js/scripts/installer.js update cached",
 		"dropMapperDb": "node js/scripts/installer.js update mapper",
 		"updateEveDb": "node js/scripts/installer.js update eve",
 		"updateManualDb": "node js/scripts/installer.js update other",

@@ -7,6 +7,7 @@ module.exports = {
     solarSystem           : require("./solarSystem/_dir"),
 
     add                   : require("./add"),
+    addChain              : require("./addChain"),
     addFast               : require("./addFast"),
     edit                  : require("./edit"),
     remove                : require("./remove"),

@@ -14,7 +14,6 @@ const GroupsController       = require("./groupsController");
 const TokenController        = require("./tokenController");
 const SDEController          = require("./sdeController");
 const MDController           = require("./mdController");
-const FDController           = require("./fdController");
 const TempStorage            = require("./storage");
 const ESI_API                = require("./../esi/api");
 
@@ -33,7 +32,6 @@ var Controller = classCreator("Controller", Emitter, {
         this.groupsController       = new GroupsController();
         this.sdeController          = new SDEController();
         this.mdController           = new MDController();
-        this.fdController           = new FDController();
         this.connectionStorage      = new TempStorage();
     },
     destructor: function () {
@@ -50,7 +48,6 @@ var Controller = classCreator("Controller", Emitter, {
         // }
         var prarr = [];
         prarr.push(this.mapController.init());
-        prarr.push(this.fdController.init());
 
         await Promise.all(prarr);
 

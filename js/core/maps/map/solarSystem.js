@@ -76,65 +76,67 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
             {name: "mapId", operator: "=", value: this.mapId}
         ]
 
-        let info = await core.dbController.mapSystemsTable.getByCondition(condition, core.dbController.mapSystemsTable.attributes());
+        let mapInfo = await core.dbController.mapSystemsTable.getByCondition(condition, core.dbController.mapSystemsTable.attributes());
+        let solarSystemInfo = await core.dbController.solarSystemsTable.getByCondition({
+            name: "solarSystemId", operator: "=", value: this.solarSystemId
+        }, core.dbController.solarSystemsTable.attributes());
 
-        // TODO may be it not better way
-        // but now i will do so
-        let solarSystemInfo = await core.sdeController.getSolarSystemInfo(this.solarSystemId);
-        let constellationInfoPr = core.sdeController.getConstellationInfo(solarSystemInfo.constellationID);
-        let regionInfoPr = core.sdeController.getRegionInfo(solarSystemInfo.regionID);
-        let wormholeClassPr = core.sdeController.getSystemClass(solarSystemInfo.regionID, solarSystemInfo.constellationID, this.solarSystemId);
-        let additionalSystemInfoPr = core.mdController.getCompiledInfo(this.solarSystemId);
+        if(!solarSystemInfo[0])
+            throw "exception";
 
-        let constellationInfo = await constellationInfoPr;
-        let regionInfo = await regionInfoPr;
-        let wormholeClass = await wormholeClassPr;
-        let additionalSystemInfo = await additionalSystemInfoPr;
+        if(!mapInfo[0])
+            throw "exception";
 
-        let systemTypeInfo = core.fdController.wormholeClassesInfo[wormholeClass];
-
-        if(solarSystemInfo.security === -0.99)
-            solarSystemInfo.security = -1.0;
-
-        solarSystemInfo.security = solarSystemInfo.security.toFixed(1);
-
-        let typeName = systemTypeInfo.shortName;
-        switch (systemTypeInfo.type) {
-            case 0:
-            case 1:
-            case 2:
-                typeName = solarSystemInfo.security.toString();
-                break;
-        }
+        solarSystemInfo = solarSystemInfo[0];
+        mapInfo = mapInfo[0];
 
         let systemData = {
-            typeName: typeName,
-            isShattered: !!core.fdController.wormholeClassesInfo[solarSystemInfo.constellationID]
+            typeName: solarSystemInfo.typeName,
+            typeDescription: solarSystemInfo.typeDescription,
+            isShattered: solarSystemInfo.isShattered,
         }
 
-        if(exist(additionalSystemInfo) && exist(additionalSystemInfo.effect)) {
-            let effectData = await core.mdController.getSolarSystemEffectInfo(additionalSystemInfo.effect, wormholeClass);
+        if(solarSystemInfo.effectType)
+            systemData.effectType = solarSystemInfo.effectType;
 
-            systemData.effectType = core.fdController.effectNames[additionalSystemInfo.effect];
-            systemData.effectName = additionalSystemInfo.effect;
-            systemData.effectData = effectData;
-        }
+        if(solarSystemInfo.effectName)
+            systemData.effectName = solarSystemInfo.effectName;
 
-        if(exist(additionalSystemInfo) && exist(additionalSystemInfo.statics)) {
-            systemData.statics = additionalSystemInfo.statics;
-        }
+        if(solarSystemInfo.effectData)
+            systemData.effectData = solarSystemInfo.effectData;
 
-        return extend(extend({}, info[0]), {
-            systemClass: wormholeClass,
+        if(solarSystemInfo.statics)
+            systemData.statics = solarSystemInfo.statics;
+
+        let out = {
+            id: mapInfo.id,
+            mapId: mapInfo.mapId,
+            isLocked: mapInfo.isLocked,
+            name: mapInfo.name,
+            description: mapInfo.description,
+            tag: mapInfo.tag,
+            signatures: mapInfo.signatures,
+            effects: mapInfo.effects,
+            visible: mapInfo.visible,
+            position: mapInfo.position,
+
+            systemClass: solarSystemInfo.systemClass,
             security: solarSystemInfo.security,
-            constellationName: constellationInfo.constellationName,
-            regionName: regionInfo.regionName,
-            systemType: systemTypeInfo.type,
+            solarSystemId: solarSystemInfo.solarSystemId,
+            constellationId: solarSystemInfo.constellationId,
+            regionId: solarSystemInfo.regionId,
+            solarSystemName: solarSystemInfo.solarSystemName,
+            constellationName: solarSystemInfo.constellationName,
+            regionName: solarSystemInfo.regionName,
+            systemType: solarSystemInfo.systemType,
             systemData: systemData,
+
             onlineCount: this.onlineCharacters.length,
-            onlineCharacters: this.onlineCharacters
-        });
-    },
+            onlineCharacters: this.onlineCharacters,
+        }
+
+        return out;
+    }
 });
 
 module.exports = MapSolarSystem;

@@ -44,6 +44,16 @@ var DBController = classCreator("DBController", Emitter, {
             })
         });
 
+        this.cacheDb = new DB({
+            client: new Client({
+                user: config.db.user,
+                host: config.db.host,
+                database: config.db.names.cachedESD,
+                password: config.db.password,
+                port: config.db.port,
+            })
+        });
+
         this._createUserDB();
         this._createTokensDB();
         this._createCharactersDB();
@@ -54,6 +64,7 @@ var DBController = classCreator("DBController", Emitter, {
         this._createMapLinksTable();
         this._createMapSystemsTable();
         this._createMapSystemToCharacter();
+        this._createCachedSolarSystemsTable();
     },
     destructor: function () {
         Emitter.prototype.destructor.call(this);
@@ -66,6 +77,7 @@ var DBController = classCreator("DBController", Emitter, {
         await this.sdeDB.init();
         await this.mdDB.init();
         await this.db.init();
+        await this.cacheDb.init();
 
         var prarr = [];
 
@@ -79,6 +91,7 @@ var DBController = classCreator("DBController", Emitter, {
         prarr.push(this.mapLinksTable.init());
         prarr.push(this.mapSystemsTable.init());
         prarr.push(this.mapSystemToCharacterTable.init());
+        prarr.push(this.solarSystemsTable.init());
 
         await Promise.all(prarr);
 
@@ -235,10 +248,11 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "name",          type: String},                       // by default it will default solar system name
                 {name: "description",   type: String},                       // some description about this system
                 {name: "tag",           type: String},                       // system tag
+                {name: "status",        type: Number,  defaultValue: 0},     // system tag
                 {name: "signatures",    type: Array},
                 {name: "effects",       type: String},                       // if it wormhole or abyss, system my have had some effects
                 {name: "visible",       type: Boolean, defaultValue: true},  // if it false system is not show at the map (this flag for delete)
-                {name: "position",      type: Object,  defaultValue: function () { return {x: 0, y: 0} } },
+                {name: "position",      type: Object,  defaultValue: () => ({x: 0, y: 0})}
             ]
         });
     },
@@ -255,6 +269,32 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "mapId",       type: String},
                 {name: "systemId",    type: String},
                 {name: "characterId", type: String}
+            ]
+        });
+    },
+    _createCachedSolarSystemsTable: function () {
+        this.solarSystemsTable = this.cacheDb.createTable({
+            name: "solar_systems",
+            idField: "solarSystemId",
+            properties: [
+                {name: "systemClass",              type: Number},
+                {name: "security",                 type: String},
+                {name: "solarSystemId",            type: Number},
+                {name: "constellationId",          type: Number},
+                {name: "regionId",                 type: Number},
+                {name: "solarSystemName",          type: String},
+                {name: "constellationName",        type: String},
+                {name: "regionName",               type: String},
+                {name: "systemType",               type: Number},
+                {name: "typeDescription",          type: String},
+                {name: "typeName",                 type: String},
+                {name: "isShattered",              type: Boolean},
+                {name: "effectType",               type: String},
+                {name: "effectName",               type: String},
+                {name: "effectData",               type: Array},
+                {name: "statics",                  type: Array},
+                {name: "solarSystemNameLC",        type: String},
+                {name: "triglavianInvasionStatus", type: String},
             ]
         });
     }

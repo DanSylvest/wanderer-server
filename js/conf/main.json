@@ -28,7 +28,8 @@
         "names" : {
             "eveSde": "eveStaticData",
             "eveManual": "eveManualData",
-            "mapper": "mapper"
+            "mapper": "mapper",
+			"cachedESD": "cachedEveStaticData"
         },
         "user": "postgres",
         "host": "localhost",

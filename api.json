@@ -1400,7 +1400,7 @@
 					}
 				},
 				"added": {
-					"description": "When solar system was removed",
+					"description": "When solar system was added",
 					"content": {
 						"application/json": {
 							"schema": {

@@ -12,6 +12,7 @@ var DB = classCreator("DB", Emitter, {
     constructor: function DB(_options) {
         var base = extend({
             client: null,
+            isTruncatable: true
             // name: "default",
             // user: "default",
             // properties: []
@@ -20,6 +21,7 @@ var DB = classCreator("DB", Emitter, {
         Emitter.prototype.constructor.call(this);
 
         this._client = base.client;
+        this._isTruncatable = base.isTruncatable;
         // this._name = base.name;
         // this._user = base.user;
     },
@@ -30,8 +32,11 @@ var DB = classCreator("DB", Emitter, {
         var pr = new CustomPromise();
 
         this._client.connect();
-        await this._client.query('SELECT NOW()')
-        await this._truncateSequence();
+        await this._client.query('SELECT NOW()');
+
+        if(this._isTruncatable) {
+            await this._truncateSequence();
+        }
 
         pr.resolve();
 
@@ -148,7 +153,8 @@ var Table = classCreator("Table", Emitter, {
             client: null,
             name: null,
             properties: [],
-            idField: "id"
+            idField: "id",
+            enableLog: true
         }, _options);
 
         Emitter.prototype.constructor.call(this);
@@ -158,6 +164,7 @@ var Table = classCreator("Table", Emitter, {
         this._propsMap = Object.create(null);
         this._client = base.client;
         this._idField = base.idField;
+        this._enableLog = base.enableLog;
     },
     init: function () {
         this._properties.map((x,i) => this._propsMap[x.name] = i);
@@ -205,7 +212,7 @@ var Table = classCreator("Table", Emitter, {
                 if (result.rows.length === 0) {
                     let query = `ALTER TABLE ${this._name} ADD COLUMN "${prop.name}" ${getDBTypeByJsType(prop.type)} ${getOptionsForType(prop.type)}`;
                     await this._client.query(query);
-                    counterLog("SQL", query);
+                    this._enableLog && counterLog("SQL", query);
                 }
             } catch (_err) {
                 console.error(_err);
@@ -265,7 +272,7 @@ var Table = classCreator("Table", Emitter, {
         var pr = new CustomPromise();
 
         var query = print_f("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '%s');", this._name);
-        counterLog("SQL", query);;
+        this._enableLog && counterLog("SQL", query);
 
         this._client.query(query).then(function(_result){
             pr.resolve(_result.rows[0].exists);
@@ -281,7 +288,7 @@ var Table = classCreator("Table", Emitter, {
         let cond = extractCondition(_condition);
         let fields = updateFields(_requestFields);
         let query = print_f('SELECT %s FROM public.%s WHERE %s;', fields, this._name, cond);
-        counterLog("SQL", query);
+        this._enableLog && counterLog("SQL", query);
 
         this._client.query(query).then(function(_result){
             let out = [];
@@ -324,7 +331,7 @@ var Table = classCreator("Table", Emitter, {
 
         var pr = new CustomPromise();
 
-        counterLog("SQL", query);
+        this._enableLog && counterLog("SQL", query);
 
         this._client.query(query).then(function(){
             pr.resolve();
@@ -342,7 +349,7 @@ var Table = classCreator("Table", Emitter, {
 
         var pr = new CustomPromise();
 
-        counterLog("SQL", query);
+        this._enableLog && counterLog("SQL", query);
 
         this._client.query(query).then(function(_result){
             pr.resolve(_result.rowCount > 0);
@@ -362,7 +369,7 @@ var Table = classCreator("Table", Emitter, {
 
         var pr = new CustomPromise();
 
-        counterLog("SQL", query);
+        this._enableLog && counterLog("SQL", query);
 
         this._client.query(query).then(function(_result){
             pr.resolve();
@@ -459,7 +466,7 @@ var Table = classCreator("Table", Emitter, {
 
         var pr = new CustomPromise();
 
-        counterLog("SQL", query);
+        this._enableLog && counterLog("SQL", query);
 
         this._client.query(query).then(function(_result){
             pr.resolve();
@@ -527,7 +534,7 @@ var Table = classCreator("Table", Emitter, {
 
         var pr = new CustomPromise();
 
-        counterLog("SQL", query);
+        this._enableLog && counterLog("SQL", query);
 
         this._client.query(query).then(function (_result) {
             pr.resolve(_result.rows);

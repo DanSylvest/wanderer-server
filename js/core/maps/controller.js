@@ -201,6 +201,12 @@ const MapController = classCreator("MapController", Emitter, {
     async actualizeOnlineCharactersForMaps (maps, characters) {
         await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus(maps, characterId, false)));
     },
+
+    async addChainManual (owner, mapId, sourceSolarSystemId, targetSolarSystemId) {
+        let map = this.get(mapId);
+        await map.addChainManual(sourceSolarSystemId, targetSolarSystemId);
+    },
+
     /**
      *
      * @param _owner - is mapper user id
@@ -556,6 +562,27 @@ const MapController = classCreator("MapController", Emitter, {
         let user = this._us.getUser(userId);
         user.allowedMaps.unsubscribe(connectionId, responseId);
         this._us.removeUser(userId);
+    },
+
+    async searchSolarSystems (match) {
+        let matchLC = match.toLowerCase();
+        let cond = {name: "solarSystemNameLC", operator: "LIKE", value: `%${matchLC}%`};
+        let result = await core.dbController.solarSystemsTable.getByCondition(cond, core.dbController.solarSystemsTable.attributes());
+
+        let indexed = result.map(x => ({index: x.solarSystemNameLC.indexOf(matchLC), data: x}));
+        let sorted = indexed.sort((a, b) => a.index - b.index);
+
+        return sorted.map(x => ({
+            systemClass: x.data.systemClass,
+            security: x.data.security,
+            solarSystemId: x.data.solarSystemId,
+            solarSystemName: x.data.solarSystemName,
+            constellationName: x.data.constellationName,
+            regionName: x.data.regionName,
+            systemType: x.data.systemType,
+            typeName: x.data.typeName,
+            isShattered: x.data.isShattered,
+        }))
     }
 });
 

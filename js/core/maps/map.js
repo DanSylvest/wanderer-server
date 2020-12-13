@@ -235,7 +235,8 @@ const Map = classCreator("Map", Emitter, {
      * @returns {Promise<void>}
      * @private
      */
-    async _addSystem (_oldSystem, _systemId) {
+    async _addSystem (_oldSystem, _systemId, position) {
+        let pos = position;
         this._createSystemObject(_systemId);
         let solarSystem = this._systems[_systemId];
 
@@ -245,7 +246,9 @@ const Map = classCreator("Map", Emitter, {
             solarSystem.resolve();
         }
         else if(result.exists && !result.visible) {
-            let pos = await this.findPosition(_oldSystem, _systemId);
+            if(!exist(position))
+                pos = await this.findPosition(_oldSystem, _systemId);
+
             await solarSystem.update(true, pos);
             solarSystem.resolve();
 
@@ -259,7 +262,9 @@ const Map = classCreator("Map", Emitter, {
                 debugger;
             }
 
-            let pos = await this.findPosition(_oldSystem, _systemId);
+            if(!exist(position))
+                pos = await this.findPosition(_oldSystem, _systemId);
+
             await solarSystem.create(solarSystemInfo.solarSystemName, pos);
             solarSystem.resolve();
 
@@ -398,6 +403,34 @@ const Map = classCreator("Map", Emitter, {
             await this._characterJoinToSystem(_characterId, _systemId);
         }
     },
+
+    async addChainManual (sourceSolarSystemId, targetSolarSystemId) {
+        // надо проверить что система соединяется
+        let link = await this._getLink(sourceSolarSystemId, targetSolarSystemId);
+
+        if(!exist(link)) {
+            await this._addLink(sourceSolarSystemId, targetSolarSystemId);
+        }
+    },
+
+    async addManual (solarSystemId, x, y) {
+        this._createSystemObject(solarSystemId);
+        let solarSystem = this._systems[solarSystemId];
+        let result = await solarSystem.isSystemExistsAndVisible();
+
+        if(result.visible)
+            throw "System already exists in map";
+
+        await this._addSystem(null, solarSystemId, {x: x, y: y});
+
+        for(let characterId in this.characters) {
+            let character = this.characters[characterId];
+            if(character.isOnline() && character.location() === solarSystemId) {
+                await this._characterJoinToSystem(characterId, solarSystemId);
+            }
+        }
+    },
+
     async _characterMoveToSystem (_characterId, _oldSystem, _newSystem) {
         // проверить связанна ли система гейтами
         // Если система слинкована гейтами, то не добавлять ее

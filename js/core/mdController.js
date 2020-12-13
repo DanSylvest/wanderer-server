@@ -70,27 +70,27 @@ var SdeController = classCreator("SdeController", Emitter, {
         return pr.native;
     },
 
-    getCompiledInfo: async function (_systemId) {
-        var info = await this.getAdditionalSystemInfo(_systemId);
-
-        if(info && info.statics === null)
-            info.statics = [];
-
-        if(info && info.statics && info.statics.length > 0) {
-            var staticArr = info.statics.split(",");
-            var arrResults = await Promise.all(staticArr.map(_hole => this.getWormholeClassInfo(_hole)));
-            info.statics = arrResults.map(function(_info, _index) {
-                return {
-                    id: staticArr[_index],
-                    type: core.fdController.wormholeClassesInfo[_info.in_class].shortName,
-                    fullName: core.fdController.wormholeClassesInfo[_info.in_class].fullName,
-                    class: _info.in_class
-                };
-            });
-        }
-
-        return info;
-    },
+    // getCompiledInfo: async function (_systemId) {
+    //     var info = await this.getAdditionalSystemInfo(_systemId);
+    //
+    //     if(info && info.statics === null)
+    //         info.statics = [];
+    //
+    //     if(info && info.statics && info.statics.length > 0) {
+    //         var staticArr = info.statics.split(",");
+    //         var arrResults = await Promise.all(staticArr.map(_hole => this.getWormholeClassInfo(_hole)));
+    //         info.statics = arrResults.map(function(_info, _index) {
+    //             return {
+    //                 id: staticArr[_index],
+    //                 type: core.fdController.wormholeClassesInfo[_info.in_class].shortName,
+    //                 fullName: core.fdController.wormholeClassesInfo[_info.in_class].fullName,
+    //                 class: _info.in_class
+    //             };
+    //         });
+    //     }
+    //
+    //     return info;
+    // },
 
     getSolarSystemEffectInfo: async function (_effectName, _wormholeClass) {
         var pr = new CustomPromise();

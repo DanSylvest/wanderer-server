@@ -29,12 +29,9 @@ const UserController = classCreator("UserController", Emitter, {
         ]);
 
         if (!existsInUsers && existsInCharacters) {
-            // по идее так не должно быть. Это значит что, кто-то пытается зарегиться
-            // но уже кто-то этот акк добавил
-            throw {
-                err: 0,
-                message: "This character already attached to another User"
-            };
+            let userId = await this.getUserByCharacter(data.userData.CharacterID.toString());
+            return await core.tokenController.generateToken(userId);
+
         } else if (!existsInUsers && !existsInCharacters) {
             // это значит что ни пользака ни персонажа еще не добавили и надо это сделать
             await this._addCharacter(data);

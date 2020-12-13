@@ -135,6 +135,9 @@ const MapCharacter = classCreator("MapCharacter", Emitter, {
     },
     isOnline () {
         return exist(this.onlineValue) ? this.onlineValue : false;
+    },
+    location () {
+        return this.locationValue;
     }
 });
 

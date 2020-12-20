@@ -115,6 +115,7 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
             name: mapInfo.name,
             description: mapInfo.description,
             tag: mapInfo.tag,
+            status: mapInfo.status,
             signatures: mapInfo.signatures,
             effects: mapInfo.effects,
             visible: mapInfo.visible,

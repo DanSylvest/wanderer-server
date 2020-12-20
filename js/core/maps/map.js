@@ -510,7 +510,6 @@ const Map = classCreator("Map", Emitter, {
         ];
 
         let attrs = core.dbController.mapSystemsTable.attributes();
-
         for(let attr in _data) {
             if(!attrs.indexOf(attr)) {
                 throw "Error: you try update not exist attribute";

@@ -227,20 +227,6 @@ var Table = classCreator("Table", Emitter, {
     attributes: function () {
         return this._properties.map(_prop => _prop.name)
     },
-    getPropValue (_prop, _value) {
-        if (exist(_value)) {
-            return _value;
-        } else {
-            let propDesc = this.getPropertyInfo(_prop);
-            if (exist(propDesc.defaultValue) && typeof propDesc.defaultValue === "function") {
-                return propDesc.defaultValue();
-            } else if (exist(propDesc.defaultValue)) {
-                return propDesc.defaultValue;
-            } else {
-                return getDefaultValueByType(propDesc.type);
-            }
-        }
-    },
     _create: function () {
         var pr = new CustomPromise();
 
@@ -300,7 +286,7 @@ var Table = classCreator("Table", Emitter, {
                     let row = _result.rows[a];
                     let newRow = Object.create(null);
                     for(let attr in row) {
-                        newRow[attr] = exist(row[attr]) ? extractFromDbType(this.getPropertyInfo(attr).type, row[attr]) : this.getPropValue(attr, row[attr]);
+                        newRow[attr] = this._processGetAttr(attr, row[attr]);
                     }
                     out.push(newRow);
                 }
@@ -314,22 +300,56 @@ var Table = classCreator("Table", Emitter, {
         return pr.native;
     },
 
+    _processGetAttr (attr, value) {
+        let out = value;
+        let propInfo = this.getPropertyInfo(attr);
+
+        if(exist(value)) {
+            out = extractFromDbType(propInfo.type, value);
+
+            if(propInfo.willEscaped) {
+                out = unescape(out);
+            }
+        } else {
+            if (exist(propInfo.defaultValue) && typeof propInfo.defaultValue === "function") {
+                out = propInfo.defaultValue();
+            } else if (exist(propInfo.defaultValue)) {
+                out = propInfo.defaultValue;
+            } else {
+                out = getDefaultValueByType(propInfo.type);
+            }
+        }
+
+        return out;
+    },
+
+    _processSetAttr (attr, value) {
+        let propInfo = this.getPropertyInfo(attr);
+        let out = value;
+
+        if(propInfo.willEscaped)
+            out = escape(value);
+
+        out = convertToDBType(propInfo.type, out);
+
+        return out;
+    },
+
     _innerSet: function (_condition, _data, _isTransaction) {
         var cond = extractCondition(_condition);
 
-        var arr = [];
-        for(var k in _data) {
-            var prop = this._properties.searchByObjectKey("name", k);
-            arr.push(print_f('"%s"=\'%s\'', k, convertToDBType(prop.type, _data[k])));
+        let arr = [];
+        for(let attr in _data) {
+            arr.push(print_f(`"${attr}"='${this._processSetAttr(attr, _data[attr])}'`));
         }
-        var props = arr.join(",");
+        let props = arr.join(",");
 
-        var query = print_f('UPDATE public.%s SET %s WHERE %s', this._name, props, cond);
+        let query = print_f('UPDATE public.%s SET %s WHERE %s', this._name, props, cond);
 
         if(_isTransaction)
             return query;
 
-        var pr = new CustomPromise();
+        let pr = new CustomPromise();
 
         this._enableLog && counterLog("SQL", query);
 

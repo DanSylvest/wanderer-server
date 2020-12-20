@@ -246,7 +246,7 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "mapId",         type: String},
                 {name: "isLocked",      type: Boolean},
                 {name: "name",          type: String},                       // by default it will default solar system name
-                {name: "description",   type: String},                       // some description about this system
+                {name: "description",   type: String,  willEscaped: true},   // some description about this system
                 {name: "tag",           type: String},                       // system tag
                 {name: "status",        type: Number,  defaultValue: 0},     // system tag
                 {name: "signatures",    type: Array},

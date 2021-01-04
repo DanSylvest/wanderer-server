@@ -104,6 +104,10 @@ const Map = classCreator("Map", Emitter, {
         this._linksSubscriber && this._linksSubscriber.removeSubscribersByConnection(_connectionId);
     },
 
+    getSolarSystem (solarSystemId) {
+        this._createSystemObject(solarSystemId);
+        return this._systems[solarSystemId];
+    },
 
     async linkRemove (_linkId) {
         // todo - процес удаления линка может быть только один раз
@@ -431,6 +435,71 @@ const Map = classCreator("Map", Emitter, {
         }
     },
 
+    async addHub (solarSystemId) {
+        let hubs = await core.dbController.mapsDB.get(this.options.mapId, "hubs");
+
+        let hasSystem = hubs.indexOf(solarSystemId.toString()) !== -1;
+
+        if(!hasSystem) {
+            hubs.push(solarSystemId.toString());
+            await core.dbController.mapsDB.set(this.options.mapId, "hubs", hubs);
+        }
+    },
+
+    async removeHub (solarSystemId) {
+        let hubs = await core.dbController.mapsDB.get(this.options.mapId, "hubs");
+
+        let index = hubs.indexOf(solarSystemId.toString());
+        if(index !== -1) {
+            hubs.removeByIndex(index);
+            await core.dbController.mapsDB.set(this.options.mapId, "hubs", hubs);
+        }
+    },
+
+    async getHubs () {
+        return await core.dbController.mapsDB.get(this.options.mapId, "hubs");
+    },
+
+    async getRoutesListForSolarSystem (solarSystemId) {
+        let out = [];
+        let hubs = await this.getHubs();
+
+        let links = await this.getLinkPairs();
+        // let c2 = [];
+        // let connections = links.map(x => {(c2.push(x.first | 0), c2.push(x.second | 0))});
+        // let connections = links.map(x => [x.first | 0, x.second | 0]);
+        let connections = links.map(x => x.first + "|" + x.second)
+            .concat(links.map(x => x.second + "|" + x.first));
+
+        let arrRoutes = await Promise.all(hubs.map(destination => this.loadRoute(destination, solarSystemId, "shortest", connections)));
+
+        for(let a = 0; a < arrRoutes.length; a++) {
+            let destination = hubs[a];
+            let route = arrRoutes[a];
+
+            let arrInfo = await Promise.all(route.systems.map(x => this.getSolarSystem(x).staticInfo()));
+
+            out.push({
+                hasConnection: route.hasConnection,
+                systems: arrInfo,
+                origin: solarSystemId,
+                destination: destination
+            })
+        }
+
+        return out;
+    },
+
+    loadRoute (dest, origin, flag, connections) {
+        let pr = new CustomPromise()
+        core.esiApi.routes(dest, origin, flag, connections).then(event => {
+            pr.resolve({hasConnection: true,systems: event});
+        }, (err) => {
+            pr.resolve({hasConnection: false,systems: [dest]});
+        })
+        return pr.native;
+    },
+
     async _characterMoveToSystem (_characterId, _oldSystem, _newSystem) {
         // проверить связанна ли система гейтами
         // Если система слинкована гейтами, то не добавлять ее
@@ -610,6 +679,13 @@ const Map = classCreator("Map", Emitter, {
         ];
         let result = await core.dbController.mapLinksTable.getByCondition(condition, ["id"]);
         return result.map(_item => _item.id);
+    },
+    async getLinkPairs () {
+        let condition = [
+            {name: "mapId", operator: "=", value: this.options.mapId}
+        ];
+        let result = await core.dbController.mapLinksTable.getByCondition(condition, ["id", "solarSystemSource", "solarSystemTarget"]);
+        return result.map(item => ({first: item.solarSystemSource, second: item.solarSystemTarget}));
     },
     async systemExists (_systemId) {
         let condition = [

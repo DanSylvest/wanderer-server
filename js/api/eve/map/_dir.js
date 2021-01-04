@@ -4,6 +4,7 @@
 
 module.exports = {
     link                  : require("./link/_dir"),
+    routes                : require("./routes/_dir"),
     solarSystem           : require("./solarSystem/_dir"),
 
     add                   : require("./add"),

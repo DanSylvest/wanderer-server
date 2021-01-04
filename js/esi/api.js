@@ -10,6 +10,7 @@ var ESI              = require("./generated/javascript-client/src/index.js");
 
 var locationApi      = new ESI.LocationApi();
 var searchApi        = new ESI.SearchApi();
+var routesApi        = new ESI.RoutesApi();
 var characterApi     = new ESI.CharacterApi();
 var corporationApi   = new ESI.CorporationApi();
 var allianceApi      = new ESI.AllianceApi();
@@ -163,6 +164,24 @@ var _search = function (_categories, _match) {
     return pr.native;
 };
 
+const _routes = function (destination, origin, flag, connections) {
+    let pr = new CustomPromise();
+
+    let base = extend(publicData, {
+        flag: flag || "secure",
+        connections: connections || []
+    });
+
+    routesApi.getRouteOriginDestination(destination, origin, base, function (error, data, response) {
+        if(error)
+            pr.reject(error);
+        else
+            pr.resolve(data);
+    });
+
+    return pr.native;
+};
+
 module.exports = {
     uiapi: {
         waypoint: __esi_uiapi_waypoint
@@ -182,5 +201,6 @@ module.exports = {
         portrait: __esi_characters_portrait,
         info: __esi_characters_info,
     },
-    search: _search
+    search: _search,
+    routes: _routes
 };

@@ -137,6 +137,13 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
         }
 
         return out;
+    },
+    async staticInfo () {
+        let result = await core.dbController.solarSystemsTable.getByCondition({
+            name: "solarSystemId", operator: "=", value: this.solarSystemId
+        }, core.dbController.solarSystemsTable.attributes());
+
+        return result.length === 1 ? result[0] : null;
     }
 });
 

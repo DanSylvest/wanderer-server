@@ -161,7 +161,7 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "name",        type: String},
                 {name: "description", type: String},
                 {name: "owner",       type: String,  index: true},   // this is id of mapper character
-
+                {name: "hubs",        type: Array,   defaultValue: () => []}
             ]
         });
     },

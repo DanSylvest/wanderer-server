@@ -2,28 +2,47 @@
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 4/11/20.
  */
 
-var WebSocketServer = require('websocket').server;
-var http            = require('http');
+const WebSocketServer = require('websocket').server;
+const http            = require('http');
+const https           = require('https');
+const fs              = require('fs');
 
-var Emitter         = require("./../env/tools/emitter");
-var classCreator    = require("./../env/tools/class");
-var log             = require("./log");
+const Emitter         = require("./../env/tools/emitter");
+const classCreator    = require("./../env/tools/class");
+const log             = require("./log");
 
 var Connector = classCreator("Connector", Emitter, {
-    constructor: function connector(_port) {
+    constructor: function connector(options) {
+        this.options = extend({
+            protocol: "http",
+            port: 1414,
+            key: "",
+            cert: "",
+        }, options);
+
         Emitter.prototype.constructor.call(this);
 
         this._counter = 0;
-        this._port = _port || 1414;
         this._connections = {};
 
         this.createSocket();
     },
     createSocket: function () {
-        this._server = http.createServer(function(request, response) {});
+        switch(this.options.protocol) {
+            case "http":
+                this._server = http.createServer(function(request, response) {});
+                break;
+            case "https":
+                const options = {
+                    key: fs.readFileSync(this.options.key),
+                    cert: fs.readFileSync(this.options.cert)
+                };
+                this._server = https.createServer(options, function (req, res) {});
+                break;
+        }
 
-        this._server.listen(this._port, function() {
-            log(log.INFO, "WebSocket Server started and listening on port (%s)", this._port);
+        this._server.listen(this.options.port, function() {
+            log(log.INFO, "WebSocket Server started and listening on port (%s)", this.options.port);
         }.bind(this));
 
         this._wsServer = new WebSocketServer({

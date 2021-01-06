@@ -3,7 +3,12 @@
 		"solt": ""
 	},
     "connection": {
-        "port": 1400
+		"protocol": "http",
+        "port": 1400,
+		"ssl": {
+			"key": "",
+			"cert": ""
+		}
     },
     "product": {
         "version": "1.0.0",

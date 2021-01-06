@@ -23,7 +23,12 @@ var Api = classCreator("Api", Emitter, {
         Emitter.prototype.destructor.call(this);
     },
     _createServer: function () {
-        this._connector = new Connector(config.connection.port);
+        this._connector = new Connector({
+            protocol: config.connection.protocol,
+            port: config.connection.port,
+            key: config.connection.ssl.key,
+            cert: config.connection.ssl.cert
+        });
         this._connector.on("data", this._onData.bind(this));
         this._connector.on("closed", this._onClosed.bind(this));
         this._connector.on("newConnection", this._onNewConnection.bind(this));

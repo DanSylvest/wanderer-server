@@ -6,7 +6,7 @@ const WebSocketServer = require('websocket').server;
 const http            = require('http');
 const https           = require('https');
 const fs              = require('fs');
-
+const extend          = require("./../env/tools/extend");
 const Emitter         = require("./../env/tools/emitter");
 const classCreator    = require("./../env/tools/class");
 const log             = require("./log");

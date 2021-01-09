@@ -6,11 +6,13 @@ const OAuth         = require("./../esi/oauth.js");
 const log           = require("./../utils/log");
 const md5           = require("md5");
 const MultiObject   = require("./../env/multiObject")
+const Subscriber    = require("./../../utils/subscriber");
 
 const UserController = classCreator("UserController", Emitter, {
     constructor: function UserController() {
         Emitter.prototype.constructor.call(this);
 
+        this._iid = -1;
         this._usersOnline = Object.create(null);
         this.userAtConnection = new MultiObject();
     },
@@ -281,6 +283,29 @@ const UserController = classCreator("UserController", Emitter, {
             out = result.map(x => ({characterId: x.second, userId: x.first}));
         }
         return out;
+    },
+    _notifyOnline () {
+        this._onlineSubscription.notify(api.connectionsCount());
+    },
+    _createOnlineSubscription () {
+        if (!this._onlineSubscription) {
+            this._onlineSubscription = new Subscriber({
+                responseCommand: "responseOnlineSubscription",
+                onStart: function () {
+                    this._notifyOnline = true;
+                    this._iid = setInterval(this._notifyOnline.bind(this), 10000);
+                }.bind(this),
+                onStop: function () {
+                    this._notifyOnline = false;
+                    clearInterval(this._iid);
+                    this._iid = -1;
+                }.bind(this)
+            });
+        }
+    },
+    subscribeOnline (_connectionId, _responseId) {
+        this._createOnlineSubscription();
+        this._onlineSubscription.addSubscriber(_connectionId, _responseId);
     }
 });
 

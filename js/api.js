@@ -60,6 +60,9 @@ var Api = classCreator("Api", Emitter, {
     send: function (_connectionId, _responseId, _data) {
         this._connector.send(_connectionId, extend(_data, {responseId: _responseId}))
     },
+    connectionsCount (){
+        return this._connector.connectionsCount();
+    }
 });
 
 module.exports = Api;

@@ -11,6 +11,7 @@ const Emitter         = require("./../env/tools/emitter");
 const classCreator    = require("./../env/tools/class");
 const log             = require("./log");
 
+var idCounter = 0;
 var Connector = classCreator("Connector", Emitter, {
     constructor: function connector(options) {
         this.options = extend({
@@ -52,7 +53,7 @@ var Connector = classCreator("Connector", Emitter, {
         this._wsServer.on("request", this._onRequest.bind(this));
     },
     _onRequest: function(_request){
-        var connection_id = this._counter++;
+        var connection_id = idCounter++;
         log(log.INFO, "New connection: %s", connection_id);
 
         var connection = _request.accept(null, _request.origin);
@@ -62,9 +63,11 @@ var Connector = classCreator("Connector", Emitter, {
 
         log(log.INFO, connection.remoteAddress);
 
-        this.emit("newConnection",  connection_id );
+        this._counter++;
+        this.emit("newConnection", connection_id);
     },
     _onClose: function(_connectionId, _connection) {
+        this._counter--;
         log(log.INFO, "Socket closed:");
         this.emit("closed", _connectionId, {reason: "socket closed"});
         delete this._connections[_connectionId];
@@ -100,6 +103,9 @@ var Connector = classCreator("Connector", Emitter, {
     },
     exist: function (_connectionId) {
         return this._connections[_connectionId] !== undefined;
+    },
+    connectionsCount () {
+        return this._counter;
     }
 });
 

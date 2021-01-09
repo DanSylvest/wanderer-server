@@ -25,7 +25,8 @@
 		"updateEveDb": "node js/scripts/installer.js update eve",
 		"updateManualDb": "node js/scripts/installer.js update other",
 		"updateSwagger": "node js/scripts/installer.js update swagger",
-		"installApp": "node js/scripts/installer.js install"
+		"installApp": "node js/scripts/installer.js install",
+		"clearSignatures": "node js/scripts/installer.js update clearSignatures"
 	},
 	"dependencies": {
 		"args": "^5.0.1",

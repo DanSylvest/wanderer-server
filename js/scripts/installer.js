@@ -5,6 +5,7 @@ const reinstallManualDb = require("./reinstallManualDb");
 const reinstallMapperDb = require("./reinstallMapperDb");
 const reinstallCachedDB = require("./reinstallCachedESD");
 const generateSwagger   = require("./generateSwagger.js");
+const clearSignatures   = require("./clearSignatures.js");
 const args              = require("args");
 const log               = require("./../utils/log.js");
 
@@ -39,6 +40,9 @@ const processUpdateCommand = async function (_command, _flags) {
             switch (_flags[a]) {
                 case "cached":
                     await reinstallCachedDB(client, conString);
+                    break;
+                case "clearSignatures":
+                    await clearSignatures(client, conString);
                     break;
                 case "swagger":
                     await generateSwagger();

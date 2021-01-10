@@ -10,8 +10,10 @@ const args              = require("args");
 const log               = require("./../utils/log.js");
 
 const config = new ConfReader("conf").build();
+const MAPPER_DB = config.db.name;
+
 const conString = `postgres://${config.db.user}:${config.db.password}@${config.db.host}`;
-const client = new pg.Client(conString);
+const client = new pg.Client(`${conString}/${MAPPER_DB}`);
 client.connect();
 
 var installRole = async function () {
@@ -25,6 +27,7 @@ var installRole = async function () {
     
           CREATE ROLE yaml LOGIN PASSWORD '';
        END IF;
+       GRANT yaml TO ${config.db.user};
     END
     $do$;`;
 

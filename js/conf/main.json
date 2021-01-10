@@ -40,7 +40,7 @@
         "host": "localhost",
         "password": "",
         "port": 5432,
-        "name": "mapper"
+        "name": "dummy"
     },
 	"tokens": {
 		"solt": "someSolt",

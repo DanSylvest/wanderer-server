@@ -104,7 +104,7 @@ var DBController = classCreator("DBController", Emitter, {
             await this.solarSystemsTable.init();
             log(log.INFO, 'solarSystemsTable inited');
         } catch (e) {
-            log(log.ERR, e);
+            log(log.ERR, JSON.stringify(e, true, 3));
         }
 
         // prarr.push(this.userDB.init());

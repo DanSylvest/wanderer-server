@@ -18,7 +18,7 @@ var DBController = classCreator("DBController", Emitter, {
             client: new Client({
                 user: config.db.user,
                 host: config.db.host,
-                database: config.db.name,
+                database: config.db.names.mapper,
                 password: config.db.password,
                 port: config.db.port,
             })
@@ -28,7 +28,7 @@ var DBController = classCreator("DBController", Emitter, {
             client: new Client({
                 user: config.db.user,
                 host: config.db.host,
-                database: "eveStaticData",
+                database: config.db.names.eveSde,
                 password: config.db.password,
                 port: config.db.port,
             })
@@ -38,7 +38,7 @@ var DBController = classCreator("DBController", Emitter, {
             client: new Client({
                 user: config.db.user,
                 host: config.db.host,
-                database: "eveManualData",
+                database: config.db.names.eveManual,
                 password: config.db.password,
                 port: config.db.port,
             })

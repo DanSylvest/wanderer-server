@@ -79,29 +79,33 @@ var DBController = classCreator("DBController", Emitter, {
         await this.db.init();
         await this.cacheDb.init();
 
-        // var prarr = [];
-        await this.userDB.init();
-        log(log.INFO, 'userDB inited');
-        await this.tokensDB.init();
-        log(log.INFO, 'tokensDB inited');
-        await this.charactersDB.init();
-        log(log.INFO, 'charactersDB inited');
-        await this.mapsDB.init();
-        log(log.INFO, 'mapsDB inited');
-        await this.groupsDB.init();
-        log(log.INFO, 'groupsDB inited');
-        await this.linksTable.init();
-        log(log.INFO, 'linksTable inited');
-        await this.groupToCharacterTable.init();
-        log(log.INFO, 'groupToCharacterTable inited');
-        await this.mapLinksTable.init();
-        log(log.INFO, 'mapLinksTable inited');
-        await this.mapSystemsTable.init();
-        log(log.INFO, 'mapSystemsTable inited');
-        await this.mapSystemToCharacterTable.init();
-        log(log.INFO, 'mapSystemToCharacterTable inited');
-        await this.solarSystemsTable.init();
-        log(log.INFO, 'solarSystemsTable inited');
+        try {
+            // var prarr = [];
+            await this.userDB.init();
+            log(log.INFO, 'userDB inited');
+            await this.tokensDB.init();
+            log(log.INFO, 'tokensDB inited');
+            await this.charactersDB.init();
+            log(log.INFO, 'charactersDB inited');
+            await this.mapsDB.init();
+            log(log.INFO, 'mapsDB inited');
+            await this.groupsDB.init();
+            log(log.INFO, 'groupsDB inited');
+            await this.linksTable.init();
+            log(log.INFO, 'linksTable inited');
+            await this.groupToCharacterTable.init();
+            log(log.INFO, 'groupToCharacterTable inited');
+            await this.mapLinksTable.init();
+            log(log.INFO, 'mapLinksTable inited');
+            await this.mapSystemsTable.init();
+            log(log.INFO, 'mapSystemsTable inited');
+            await this.mapSystemToCharacterTable.init();
+            log(log.INFO, 'mapSystemToCharacterTable inited');
+            await this.solarSystemsTable.init();
+            log(log.INFO, 'solarSystemsTable inited');
+        } catch (e) {
+            log(log.ERR, e);
+        }
 
         // prarr.push(this.userDB.init());
         // prarr.push(this.tokensDB.init());

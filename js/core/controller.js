@@ -5,6 +5,7 @@ const CustomPromise          = require("./../env/promise");
 const log                    = require("./../utils/log");
 
 const DbController           = require("./dbController");
+const ServerController       = require("./serverController");
 const UserController         = require("./userController");
 const CharactersController   = require("./characters/controller");
 const CorporationsController = require("./corporations/controller");
@@ -23,6 +24,7 @@ var Controller = classCreator("Controller", Emitter, {
 
         this.esiApi                 = ESI_API;
         this.dbController           = new DbController();
+        this.serverController       = new ServerController();
         this.userController         = new UserController();
         this.tokenController        = new TokenController();
         this.charactersController   = new CharactersController();
@@ -41,19 +43,21 @@ var Controller = classCreator("Controller", Emitter, {
         var pr = new CustomPromise();
         log(log.DEBUG, "start controller loading...");
 
-        // try {
-            await this.dbController.init();
-        // }catch (e) {
-        //     debugger;
-        // }
+        await this.dbController.init();
+
         var prarr = [];
+        prarr.push(this.serverController.init());
         prarr.push(this.mapController.init());
 
         await Promise.all(prarr);
 
+        this.initHandlers();
         pr.resolve();
 
         return pr.native;
+    },
+    initHandlers () {
+        this.serverController.on("changedStatus", this._onServerStatusChanged.bind(this));
     },
     postInit: function ( ){
         api.on("connectionClosed", this._onConnectionClosed.bind(this));
@@ -69,6 +73,13 @@ var Controller = classCreator("Controller", Emitter, {
             this.mapController.connectionBreak(_connectionId);
             // }
             // notify controllers
+        }
+    },
+    _onServerStatusChanged (isOnline) {
+        if(!isOnline) {
+            this.charactersController.serverStatusOffline();
+        } else {
+            this.charactersController.serverStatusOnline();
         }
     }
 });

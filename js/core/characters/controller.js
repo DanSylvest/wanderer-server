@@ -158,6 +158,16 @@ var Controller = classCreator("CharactersController", Emitter, {
 
         return pr.native;
     },
+    serverStatusOffline () {
+        for(let id in this._characters){
+            this._characters[id].serverStatusOffline();
+        }
+    },
+    serverStatusOnline () {
+        for(let id in this._characters){
+            this._characters[id].serverStatusOnline();
+        }
+    }
     // getAllCharacters: async function () {
     //     var pr = new CustomPromise();
     //

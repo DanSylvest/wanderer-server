@@ -3,24 +3,21 @@
  */
 
 
-var Emitter          = require("./../../../env/tools/emitter");
-var classCreator     = require("./../../../env/tools/class");
-var extend           = require("./../../../env/tools/extend");
-// var exist            = require("./../../../env/tools/exist");
-// var CustomPromise    = require("./../../../env/promise");
+const Emitter          = require("./../../../env/tools/emitter");
+const classCreator     = require("./../../../env/tools/class");
+const extend           = require("./../../../env/tools/extend");
+const WaypointProvider = require("./../../providers/waypoint");
 
-var WaypointProvider = require("./../../providers/waypoint");
-// var Observer         = require("./../../../utils/observer");
-// var Subscriber       = require("./../../../utils/subscriber");
-
-var Waypoint = classCreator("Waypoint", Emitter, {
+const Waypoint = classCreator("Waypoint", Emitter, {
     constructor: function Waypoint(_options) {
         this.options = extend({
             accessToken: null
-        },_options);
+        }, _options);
 
         Emitter.prototype.constructor.call(this);
 
+        this._paused = false;
+        this._lastRequest = null;
     },
     destructor: function () {
         this.options = Object.create(null);
@@ -48,6 +45,11 @@ var Waypoint = classCreator("Waypoint", Emitter, {
         this._destroyProvider();
     },
     set: function (_type, _destinationSolarSystemId) {
+        if(this._paused) {
+            this._lastRequest = [_type, _destinationSolarSystemId];
+            return;
+        }
+
         switch (_type) {
             case 0:
                 this.destinationId = _destinationSolarSystemId;
@@ -72,6 +74,16 @@ var Waypoint = classCreator("Waypoint", Emitter, {
         // TODO Important
         // Думаю что здесь будет необходимо организовать очередь, дабы не спамили
         // Но пока можно без нее обойтись
+    },
+    serverStatusOffline () {
+        this._paused = true;
+        this._provider && this._provider.stop();
+    },
+    serverStatusOnline () {
+        this._paused = false;
+        this._provider && this._provider.start();
+        this._lastRequest && this.set(this._lastRequest[0], this._lastRequest[1]);
+        this._lastRequest = null;
     }
 });
 

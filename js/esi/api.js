@@ -6,6 +6,7 @@
 // var classCreator   = require("./../env/tools/class");
 var CustomPromise    = require("./../env/promise");
 var extend           = require("./../env/tools/extend");
+var exist            = require("./../env/tools/exist");
 var ESI              = require("./generated/javascript-client/src/index.js");
 
 var locationApi      = new ESI.LocationApi();
@@ -15,6 +16,7 @@ var characterApi     = new ESI.CharacterApi();
 var corporationApi   = new ESI.CorporationApi();
 var allianceApi      = new ESI.AllianceApi();
 var userInterfaceApi = new ESI.UserInterfaceApi();
+var statusApi        = new ESI.StatusApi();
 
 var publicData = {
     datasource: config.eve.datasource
@@ -182,6 +184,30 @@ const _routes = function (destination, origin, flag, connections) {
     return pr.native;
 };
 
+const _get_status = function () {
+    let pr = new CustomPromise();
+    let base = extend(publicData, {});
+
+    statusApi.getStatus(base, function (error, data, response) {
+        // so...
+        if(exist(error) && exist(error.status) && error.status === 504 && error.message === "Timeout contacting tranquility") {
+            pr.resolve({online: false, vip: false, players: 0, server_version: "", start_time: ""});
+        } else if(!exist(error)) {
+            // if vip status - offline
+            if(data.vip) {
+                pr.resolve(extend(data, {online: false}));
+            } else {
+                pr.resolve(extend(data, {online: true}))
+            }
+        } else {
+            pr.reject(error);
+        }
+
+    });
+
+    return pr.native;
+};
+
 module.exports = {
     uiapi: {
         waypoint: __esi_uiapi_waypoint
@@ -201,6 +227,7 @@ module.exports = {
         portrait: __esi_characters_portrait,
         info: __esi_characters_info,
     },
+    status: _get_status,
     search: _search,
     routes: _routes
 };

@@ -5,7 +5,10 @@
 var Emitter           = require("./../../env/tools/emitter");
 var classCreator      = require("./../../env/tools/class");
 var extend            = require("./../../env/tools/extend");
+var exist             = require("./../../env/tools/exist");
+var waiter            = require("./../../env/tools/waiter");
 var CustomPromise     = require("./../../env/promise");
+var Cache             = require("./../../env/cache.js");
 
 var Subscriber        = require("./../../utils/subscriber");
 var log               = require("./../../utils/log");
@@ -20,6 +23,7 @@ var DBController      = require("./../dbController");
 var Character = classCreator("Character", Emitter, {
     constructor: function Character(_options) {
         this.options = extend({
+            showLogs: false,
             characterId: null
         },_options);
 
@@ -33,6 +37,7 @@ var Character = classCreator("Character", Emitter, {
         this._refreshAccessTokenCount = 0;
 
         this._createEvents();
+        this._createCachedAttrs();
     },
     destructor: function () {
         this.waypoint.destructor();
@@ -52,7 +57,43 @@ var Character = classCreator("Character", Emitter, {
             accessToken: this.getAccessToken.bind(this)
         });
     },
+    _createCachedAttrs () {
+        this.realExpiresIn = new Cache({
+            name: "realExpiresIn",
+            getter: function (resolve, reject) {
+                core.dbController.charactersDB.get(this.options.characterId, "realExpiresIn")
+                    .then(resolve, reject);
+            }.bind(this),
+            setter: function (newVal, resolve, reject) {
+                core.dbController.charactersDB.set(this.options.characterId, {realExpiresIn: newVal})
+                    .then(resolve, reject);
+            }.bind(this)
+        });
 
+        this.accessToken = new Cache({
+            name: "accessToken",
+            getter: function (resolve, reject) {
+                core.dbController.charactersDB.get(this.options.characterId, "accessToken")
+                    .then(resolve, reject);
+            }.bind(this),
+            setter: function (newVal, resolve, reject) {
+                core.dbController.charactersDB.set(this.options.characterId, {accessToken: newVal})
+                    .then(resolve, reject);
+            }.bind(this)
+        });
+
+        this.refreshToken = new Cache({
+            name: "refreshToken",
+            getter: function (resolve, reject) {
+                core.dbController.charactersDB.get(this.options.characterId, "refreshToken")
+                    .then(resolve, reject);
+            }.bind(this),
+            setter: function (newVal, resolve, reject) {
+                core.dbController.charactersDB.set(this.options.characterId, {refreshToken: newVal})
+                    .then(resolve, reject);
+            }.bind(this)
+        });
+    },
     has: function (_attribute) {
         return !!this._attributes[_attribute];
     },
@@ -88,7 +129,7 @@ var Character = classCreator("Character", Emitter, {
             this._attributes[id].connectionBreak(_connectionId);
         }
     },
-     getInfo: async function () {
+    getInfo: async function () {
          let attrs = ["name", "online", "ship", "info", "addDate"];
 
          let result = await core.dbController.charactersDB.get(this.options.characterId, attrs);
@@ -218,21 +259,21 @@ var Character = classCreator("Character", Emitter, {
     getAccessToken: function () {
         var pr = new CustomPromise();
 
-        this._updateAccessToken().then(function(){
-            return core.dbController.charactersDB.get(this.options.characterId, "accessToken");
-        }.bind(this), function(_err){
-            pr.reject({
-                sub: _err,
-                message: "Error on _updateAccessToken"
-            });
-        }.bind(this)).then(function(_accessToken){
-            pr.resolve(_accessToken);
-        }.bind(this), function(_err){
-            pr.reject({
-                sub: _err,
-                message: "Error on get from [charactersDB] - accessToken"
-            });
-        }.bind(this));
+        this._updateAccessToken()
+            .then(
+                () => this.accessToken.get(),
+                err => pr.reject({
+                    sub: err,
+                    message: "Error on _updateAccessToken"
+                })
+            )
+            .then(
+                accessToken => pr.resolve(accessToken),
+                err => pr.reject({
+                    sub: err,
+                    message: "Error on get from [charactersDB] - accessToken"
+                })
+            )
 
         return pr.native;
     },
@@ -240,19 +281,36 @@ var Character = classCreator("Character", Emitter, {
     _checkAccessTokenExpire: function () {
         var pr = new CustomPromise();
 
-        core.dbController.charactersDB.get(this.options.characterId, "realExpiresIn").then(function(_value){
-            var timeToExpires = _value - +new Date;
-            log(log.INFO, "Time to token expires is %s", timeToExpires);
+        this.realExpiresIn.get().then(val => {
+            var timeToExpires = val - +new Date;
+            this.options.showLogs && log(log.INFO, `[Character:${this.options.characterId}] Time to token expires is ${timeToExpires}`);
             pr.resolve(timeToExpires <= 0);
-        }.bind(this), function(_err){
+        }, err => {
             pr.reject({
-                sub: _err,
+                sub: err,
                 message: "Error on load realExpiresIn"
             });
-        }.bind(this));
+        })
 
         return pr.native;
     },
+
+    // _checkAccessTokenExpire: function () {
+    //     var pr = new CustomPromise();
+    //
+    //     core.dbController.charactersDB.get(this.options.characterId, "realExpiresIn").then(function(_value){
+    //         var timeToExpires = _value - +new Date;
+    //         log(log.INFO, "Time to token expires is %s", timeToExpires);
+    //         pr.resolve(timeToExpires <= 0);
+    //     }.bind(this), function(_err){
+    //         pr.reject({
+    //             sub: _err,
+    //             message: "Error on load realExpiresIn"
+    //         });
+    //     }.bind(this));
+    //
+    //     return pr.native;
+    // },
     _updateAccessToken: function () {
         var pr = new CustomPromise();
 
@@ -288,9 +346,9 @@ var Character = classCreator("Character", Emitter, {
             var isNotExit = true;
             while(isNotExit) {
                 try {
-                    log(log.INFO, "Try refreshing token (%s/%s)", this._refreshAccessTokenCount, this._refreshAccessTokenMaxCount);
+                    log(log.INFO, `[Character:${this.options.characterId}] Try refreshing token (${this._refreshAccessTokenCount}/${this._refreshAccessTokenMaxCount})`);
 
-                    var refreshToken = await core.dbController.charactersDB.get(this.options.characterId, "refreshToken")
+                    var refreshToken = await this.refreshToken.get();
 
                     var startLoadTime = +new Date;
                     var _event = await OAuth.refreshToken(refreshToken);
@@ -298,21 +356,26 @@ var Character = classCreator("Character", Emitter, {
 
                     var realExpiresIn = (+new Date + _event.expires_in * 1000) - loadingTime;
 
-                    var attrs = {
-                        refreshToken: _event.refresh_token,
-                        accessToken: _event.access_token,
-                        realExpiresIn: realExpiresIn,
-                    };
+                    // var attrs = {
+                    //     refreshToken: _event.refresh_token,
+                    //     accessToken: _event.access_token,
+                    //     realExpiresIn: realExpiresIn,
+                    // };
 
-                    await core.dbController.charactersDB.set(this.options.characterId, attrs);
+                    await this.realExpiresIn.set(realExpiresIn);
+                    await this.accessToken.set(_event.access_token);
+                    await this.refreshToken.set(_event.refresh_token);
+
+                    // await core.dbController.charactersDB.set(this.options.characterId, attrs);
 
                     this._isRefreshingToken = false;
                     this._refreshAccessTokenResolver.resolve();
                     isNotExit = false;
 
-                    log(log.INFO, "Token successfully updated");
+                    log(log.INFO, `[Character:${this.options.characterId}] Token successfully updated`);
                 } catch (_err) {
-                    log(log.INFO, "Error on try refresh token =>", JSON.stringify(_err));
+                    log(log.INFO, `[Character:${this.options.characterId}] Error on try refresh token =>`, JSON.stringify(_err));
+                    await waiter(1000);
 
                     if (this._refreshAccessTokenCount < this._refreshAccessTokenMaxCount) {
                         this._refreshAccessTokenCount++;
@@ -326,9 +389,70 @@ var Character = classCreator("Character", Emitter, {
         }
 
         return this._refreshAccessTokenResolver.native;
-    }
-});
+    },
+    serverStatusOffline () {
+        this.waypoint.serverStatusOffline();
 
+        for(let attrName in this._attributes) {
+            this._attributes[attrName].serverStatusOffline();
+        }
+    },
+    serverStatusOnline () {
+        this.waypoint.serverStatusOnline();
+
+        for(let attrName in this._attributes) {
+            this._attributes[attrName].serverStatusOnline();
+        }
+    }
+    // _refreshAccessToken: async function () {
+    //     if(!this._isRefreshingToken) {
+    //
+    //         this._refreshAccessTokenResolver = new CustomPromise();
+    //         this._isRefreshingToken = true;
+    //
+    //         var isNotExit = true;
+    //         while(isNotExit) {
+    //             try {
+    //                 log(log.INFO, "Try refreshing token (%s/%s)", this._refreshAccessTokenCount, this._refreshAccessTokenMaxCount);
+    //
+    //                 var refreshToken = await core.dbController.charactersDB.get(this.options.characterId, "refreshToken")
+    //
+    //                 var startLoadTime = +new Date;
+    //                 var _event = await OAuth.refreshToken(refreshToken);
+    //                 var loadingTime = +new Date - startLoadTime;
+    //
+    //                 var realExpiresIn = (+new Date + _event.expires_in * 1000) - loadingTime;
+    //
+    //                 var attrs = {
+    //                     refreshToken: _event.refresh_token,
+    //                     accessToken: _event.access_token,
+    //                     realExpiresIn: realExpiresIn,
+    //                 };
+    //
+    //                 await core.dbController.charactersDB.set(this.options.characterId, attrs);
+    //
+    //                 this._isRefreshingToken = false;
+    //                 this._refreshAccessTokenResolver.resolve();
+    //                 isNotExit = false;
+    //
+    //                 log(log.INFO, "Token successfully updated");
+    //             } catch (_err) {
+    //                 log(log.INFO, "Error on try refresh token =>", JSON.stringify(_err));
+    //
+    //                 if (this._refreshAccessTokenCount < this._refreshAccessTokenMaxCount) {
+    //                     this._refreshAccessTokenCount++;
+    //                 } else {
+    //                     isNotExit = false;
+    //                     this._isRefreshingToken = false;
+    //                     this._refreshAccessTokenResolver.reject();
+    //                 }
+    //             }
+    //         }
+    //     }
+    //
+    //     return this._refreshAccessTokenResolver.native;
+    // }
+});
 
 
 module.exports = Character;

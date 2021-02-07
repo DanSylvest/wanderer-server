@@ -505,7 +505,7 @@ const Map = classCreator("Map", Emitter, {
         // Если система слинкована гейтами, то не добавлять ее
         let isJump = await core.sdeController.checkSystemJump(_oldSystem, _newSystem);
 
-        let isAbleToMove = solarSystemTypesNotAbleToMove.indexOf(_newSystem) === -1;
+        let isAbleToMove = /*solarSystemTypesNotAbleToMove.indexOf(_newSystem) === -1*/ true;
 
         if (!isJump && isAbleToMove) {
             let isSystemExists = await this.systemExists(_oldSystem);

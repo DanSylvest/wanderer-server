@@ -35,8 +35,6 @@ var Controller = classCreator("Controller", Emitter, {
         this.sdeController          = new SDEController();
         this.mdController           = new MDController();
         this.connectionStorage      = new TempStorage();
-
-        this.currentServerStatusOnline = false;
     },
     destructor: function () {
         Emitter.prototype.destructor.call(this);
@@ -70,23 +68,16 @@ var Controller = classCreator("Controller", Emitter, {
 
             await this.userController.updateUserOfflineStatus(_connectionId, token);
 
-            // if(isOffline) {
             this.charactersController.connectionBreak(_connectionId);
             this.mapController.connectionBreak(_connectionId);
-            // }
-            // notify controllers
         }
     },
     _onServerStatusChanged (isOnline) {
-        if(this.currentServerStatusOnline !== isOnline) {
-            if(!isOnline) {
-                this.charactersController.serverStatusOffline();
-            } else {
-                this.charactersController.serverStatusOnline();
-            }
+        if(!isOnline) {
+            this.charactersController.serverStatusOffline();
+        } else {
+            this.charactersController.serverStatusOnline();
         }
-        this.currentServerStatusOnline = isOnline;
-
     }
 });
 

@@ -35,6 +35,8 @@ var Controller = classCreator("Controller", Emitter, {
         this.sdeController          = new SDEController();
         this.mdController           = new MDController();
         this.connectionStorage      = new TempStorage();
+
+        this.currentServerStatusOnline = false;
     },
     destructor: function () {
         Emitter.prototype.destructor.call(this);
@@ -76,11 +78,15 @@ var Controller = classCreator("Controller", Emitter, {
         }
     },
     _onServerStatusChanged (isOnline) {
-        if(!isOnline) {
-            this.charactersController.serverStatusOffline();
-        } else {
-            this.charactersController.serverStatusOnline();
+        if(this.currentServerStatusOnline !== isOnline) {
+            if(!isOnline) {
+                this.charactersController.serverStatusOffline();
+            } else {
+                this.charactersController.serverStatusOnline();
+            }
         }
+        this.currentServerStatusOnline = isOnline;
+
     }
 });
 

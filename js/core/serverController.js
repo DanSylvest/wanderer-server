@@ -3,17 +3,16 @@
  */
 
 const Emitter       = require("./../env/tools/emitter");
-const Group         = require("./group");
 const classCreator  = require("./../env/tools/class");
-const exist         = require("./../env/tools/exist");
 const CustomPromise = require("./../env/promise.js");
-const md5           = require("md5");
-const DBController  = require("./dbController");
 const ServerStatus  = require("./../core/providers/status");
 
-const GroupsController = classCreator("GroupsController", Emitter, {
+const ServerStatusController = classCreator("GroupsController", Emitter, {
     constructor: function GroupsController() {
         Emitter.prototype.constructor.call(this);
+        this.serverStatusData = {
+            online: false
+        }
     },
     destructor: function () {
         Emitter.prototype.destructor.call(this);
@@ -27,7 +26,8 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         let pr = new CustomPromise();
         this.createStatusProvider();
 
-        let initChangeId = this.serverStatusProvider.on("change", () => {
+        let initChangeId = this.serverStatusProvider.on("change", (data) => {
+            this._onServerStatusChange(data);
             this.serverStatusProvider.off(initChangeId);
             this.gotServerStatus = true;
             pr.resolve();
@@ -41,13 +41,13 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         this._sspHandleId = this.serverStatusProvider.on("change", this._onServerStatusChange.bind(this));
     },
     _onServerStatusChange (data) {
-        this.serverStatusData = data;
-
         if(this.gotServerStatus) {
-            this.emit("changedStatus", this.serverStatusData.online);
+            if(this.serverStatusData.online !== data.online)
+                this.emit("changedStatus", this.serverStatusData.online);
         }
+        this.serverStatusData = data;
     }
 });
 
 
-module.exports = GroupsController;
+module.exports = ServerStatusController;

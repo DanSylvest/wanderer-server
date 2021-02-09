@@ -80,10 +80,12 @@ const Waypoint = classCreator("Waypoint", Emitter, {
         this._provider && this._provider.stop();
     },
     serverStatusOnline () {
-        this._paused = false;
-        this._provider && this._provider.start();
-        this._lastRequest && this.set(this._lastRequest[0], this._lastRequest[1]);
-        this._lastRequest = null;
+        if(this._lastRequest) {
+            this._paused = false;
+            this._provider && this._provider.start();
+            this._lastRequest && this.set(this._lastRequest[0], this._lastRequest[1]);
+            this._lastRequest = null;
+        }
     }
 });
 

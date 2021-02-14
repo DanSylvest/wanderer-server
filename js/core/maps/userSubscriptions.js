@@ -13,7 +13,8 @@ class AllowedMapsForUser {
 
     deinit () {
         this.userId = null;
-        this.subscription.destructor();
+        this.subscription && this.subscription.destructor();
+        this.subscription = null;
     }
 
     _create () {

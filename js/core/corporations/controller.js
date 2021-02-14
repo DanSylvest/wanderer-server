@@ -31,6 +31,11 @@ var Controller = classCreator("CorporationsController", Emitter, {
         }.bind(this), function(_err){
             debugger;
         }.bind(this)).then(function(_arr){
+            if(_arr === undefined) {
+                console.log(JSON.stringify(_arr), _arr);
+            }
+
+
             var out = [];
             for (var a = 0; a < _arr.length; a++) {
                 if(_arr[a].name.indexOf(_match) === -1)

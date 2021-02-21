@@ -1,39 +1,42 @@
 /**
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
+const helpers = require("./../../../utils/helpers.js");
+const responseName = "responseEveMapInfo";
 
-var _sendError = function (_connectionId, _responseId, _message, _data) {
-    api.send(_connectionId, _responseId, {
-        errData: _data,
-        success: false,
-        message: _message,
-        eventType: "responseEveMapInfo",
-    });
-};
-
-
-var request = async function (_connectionId, _responseId, _event) {
+/**
+ *
+ * @param _connectionId
+ * @param _responseId
+ * @param _event
+ * @param _event.mapId
+ * @returns {Promise<void>}
+ */
+const request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    var token = core.connectionStorage.get(_connectionId);
+    const token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if (token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
     try {
         await core.tokenController.checkToken(token);
 
-        var info = await core.mapController.getMapInfo(_event.mapId);
+        let info = await core.mapController.getMapInfo(_event.mapId);
 
         api.send(_connectionId, _responseId, {
             data: info,
             success: true,
-            eventType: "responseEveMapInfo"
+            eventType: responseName
         });
-    } catch (_err) {
-        _sendError(_connectionId, _responseId, "Error on getMapInfo", _err);
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on getting map info", {
+            code: 0,
+            handledError: err
+        });
     }
 };
 

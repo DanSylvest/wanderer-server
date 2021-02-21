@@ -14,7 +14,6 @@ const MapController          = require("./maps/controller");
 const GroupsController       = require("./groupsController");
 const TokenController        = require("./tokenController");
 const SDEController          = require("./sdeController");
-const MDController           = require("./mdController");
 const TempStorage            = require("./storage");
 const ESI_API                = require("./../esi/api");
 
@@ -24,7 +23,7 @@ var Controller = classCreator("Controller", Emitter, {
 
         this.esiApi                 = ESI_API;
         this.dbController           = new DbController();
-        this.serverController       = new ServerController();
+        this.eveServer              = new ServerController();
         this.userController         = new UserController();
         this.tokenController        = new TokenController();
         this.charactersController   = new CharactersController();
@@ -33,7 +32,6 @@ var Controller = classCreator("Controller", Emitter, {
         this.mapController          = new MapController();
         this.groupsController       = new GroupsController();
         this.sdeController          = new SDEController();
-        this.mdController           = new MDController();
         this.connectionStorage      = new TempStorage();
     },
     destructor: function () {
@@ -46,18 +44,20 @@ var Controller = classCreator("Controller", Emitter, {
         await this.dbController.init();
 
         var prarr = [];
-        prarr.push(this.serverController.init());
         prarr.push(this.mapController.init());
 
         await Promise.all(prarr);
 
         this.initHandlers();
+
+        this.eveServer.start();
+
         pr.resolve();
 
         return pr.native;
     },
     initHandlers () {
-        this.serverController.on("changedStatus", this._onServerStatusChanged.bind(this));
+        this.eveServer.on("changedStatus", this._onServerStatusChanged.bind(this));
     },
     postInit: function ( ){
         api.on("connectionClosed", this._onConnectionClosed.bind(this));
@@ -70,6 +70,7 @@ var Controller = classCreator("Controller", Emitter, {
 
             this.charactersController.connectionBreak(_connectionId);
             this.mapController.connectionBreak(_connectionId);
+            this.eveServer.connectionBreak(_connectionId);
         }
     },
     _onServerStatusChanged (isOnline) {

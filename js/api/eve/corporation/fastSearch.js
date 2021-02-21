@@ -2,51 +2,40 @@
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
 
-var _sendError = function (_connectionId, _responseId, _message) {
-    api.send(_connectionId, _responseId, {
-        success: false,
-        message: _message,
-        eventType: "responseEveCorporationFastSearch",
-    });
-};
+const helpers = require("./../../../utils/helpers.js");
+const responseName = "responseEveCorporationFastSearch";
 
-var request = function (_connectionId, _responseId, _event) {
+const request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    var token = core.connectionStorage.get(_connectionId);
+    let token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
-    if(token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+    if (token === undefined) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
-    var userId = null;
+    try {
+        let userId = await core.tokenController.checkToken(token);
 
-    core.tokenController.checkToken(token).then(function(_value) {
-        userId = _value;
+        if (!core.eveServer.isOnline()) {
+            helpers.errResponse(_connectionId, _responseId, responseName, "TQ is offline", {code: 1001});
+            return;
+        }
 
-        // log(log.INFO, printf("SSO_AUTH[1]: inner token success for user [%s]", _value));
-        var options = {
-            userId: userId,
-            match: _event.match
-        };
+        let result = await core.corporationsController.fastSearch({userId: userId, match: _event.match});
 
-        return core.corporationsController.fastSearch(options);
-    }.bind(this), function() {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
-    }.bind(this))
-
-    .then(function(_result){
         api.send(_connectionId, _responseId, {
-            result: _result,
-            eventType: "responseEveCorporationFastSearch",
+            result: result,
+            eventType: responseName,
             success: true
         });
-    }.bind(this), function(_err){
-        // need log it
-        _sendError(_connectionId, _responseId, "Error on fast search");
-    }.bind(this))
-
+    } catch (_err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on fast search", {
+            code: 0,
+            handledError: _err
+        });
+    }
 };
 
 module.exports = request;

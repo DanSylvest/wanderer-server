@@ -2,13 +2,15 @@
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/21/20.
  */
 
-var Emitter       = require("./../../env/tools/emitter");
-var Character     = require("./character");
-var classCreator  = require("./../../env/tools/class");
-var CustomPromise = require("./../../env/promise");
-var DBController  = require("./../../core/dbController");
+const Emitter       = require("./../../env/tools/emitter");
+const Character     = require("./character");
+const classCreator  = require("./../../env/tools/class");
+const CustomPromise = require("./../../env/promise");
+const DBController  = require("./../../core/dbController");
 
-var Controller = classCreator("CharactersController", Emitter, {
+const SEARCH_LIMIT = 12;
+
+const Controller = classCreator("CharactersController", Emitter, {
     constructor: function CharactersController() {
         Emitter.prototype.constructor.call(this);
 
@@ -39,45 +41,32 @@ var Controller = classCreator("CharactersController", Emitter, {
             this._characters[characterId].connectionBreak(_connectionId);
         }
     },
-    searchInEve: function (_match) {
-        var pr = new CustomPromise();
+    async searchInEve (_match) {
+        let result = Object.create(null);
 
-        var countForShow = 12;
-        var characterIds = [];
+        try {
+            result = await core.esiApi.search(["character"], _match);
+        } catch (e) {
+            return [];
+        }
 
-        core.esiApi.search(["character"], _match).then(function (_event) {
-            characterIds = _event.character || [];
+        let characterIds = result.character || [];
 
-            var prarr = [];
-            for (var a = 0; a < countForShow && a < characterIds.length; a++) {
-                prarr.push(core.esiApi.characters.info(characterIds[a]));
-            }
+        if(characterIds.length > SEARCH_LIMIT)
+            characterIds = characterIds.slice(0, SEARCH_LIMIT);
 
-            return Promise.all(prarr);
-        }.bind(this), function (_err) {
-            debugger;
-        }.bind(this)).then(function (_arr) {
-            var out = [];
-            for (var a = 0; a < _arr.length; a++) {
-                if (_arr[a].name.indexOf(_match) === -1)
-                    continue;
+        let infoArr = await Promise.all(characterIds.map(x => core.esiApi.characters.info(x)));
 
-                out.push({
-                    id: characterIds[a],
-                    name: _arr[a].name
-                });
-            }
+        let out = infoArr.map((x, index) => ({
+            id: characterIds[index],
+            name: x.name
+        }));
 
-            out.sort(function (a, b) {
-                return a.name > b.name ? 1 : a.name < b.name ? -1 : 0
-            });
+        out.sort(function (a, b) {
+            return a.name > b.name ? 1 : a.name < b.name ? -1 : 0
+        });
 
-            pr.resolve(out);
-        }.bind(this), function (_err) {
-            debugger;
-        }.bind(this));
-
-        return pr.native;
+        return out;
     },
 
     fastSearch: function (_options) {

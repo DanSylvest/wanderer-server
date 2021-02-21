@@ -1,65 +1,51 @@
 /**
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
-var printf        = require("./../../../env/tools/print_f");
-var CustomPromise = require("./../../../env/promise");
-var DBController  = require("./../../../core/dbController");
 
-var _sendError = function (_connectionId, _responseId, _message) {
-    api.send(_connectionId, _responseId, {
-        success: false,
-        message: _message,
-        eventType: "responseEveCharacterList",
-    });
-};
+const helpers = require("./../../../utils/helpers.js");
+const responseName = "responseEveCharacterList";
 
-var request = function (_connectionId, _responseId, _event) {
+const request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    var token = core.connectionStorage.get(_connectionId);
+    let token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if(token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
-    var userId = "";
-    var userCharacters = [];
+    try {
+        let userId = await core.tokenController.checkToken(token);
 
-    // we need check token valid
-    core.tokenController.checkToken(token).then(function(_value) {
-        userId = _value;
-
-        return core.userController.getUserCharacters(userId);
-    }.bind(this), function() {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
-    }.bind(this)).then(function(_characters){
-        userCharacters = _characters;
-
-        var prarr = [];
-
-        // we need obtain information about each user
-        for (var a = 0; a < _characters.length; a++) {
-            prarr.push(core.charactersController.get(_characters[a]).getInfo());
+        if (!core.eveServer.isOnline()) {
+            helpers.errResponse(_connectionId, _responseId, responseName, "TQ is offline", {code: 1001});
+            return;
         }
 
-        return Promise.all(prarr)
-    }.bind(this), function(_error){
-        _sendError(_connectionId, _responseId, printf("Error on load characters for user - %s", userId));
-    }.bind(this)).then(function(_charactersInfoArr){
-        for (var a = 0; a < _charactersInfoArr.length; a++) {
-            _charactersInfoArr[a].id = userCharacters[a];
+        let characters = await core.userController.getUserCharacters(userId);
+
+        if (!core.eveServer.isOnline()) {
+            helpers.errResponse(_connectionId, _responseId, responseName, "TQ is offline", {code: 1001});
+            return;
         }
+
+        let arr = await Promise.all(characters.map(x => core.charactersController.get(x).getInfo()));
+
+        arr.map((x, i) => arr[i].id = characters[i])
 
         api.send(_connectionId, _responseId, {
-            data: _charactersInfoArr,
+            data: arr,
             success: true,
-            eventType: "responseEveCharacterList"
+            eventType: responseName
         });
 
-    }.bind(this), function(_error){
-        _sendError(_connectionId, _responseId, printf("Error on load characters for user - %s", userId));
-    }.bind(this));
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on load characters list info", {
+            code: 0,
+            handledError: err
+        });
+    }
 
 };
 

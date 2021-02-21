@@ -47,16 +47,9 @@ var Controller = classCreator("AlliancesController", Emitter, {
         return pr.native;
     },
 
-    getInfo: function (_allianceId) {
-        var pr = new CustomPromise();
-
-        core.esiApi.alliance.info(_allianceId).then(function(_result){
-            pr.resolve({name: _result.name});
-        }.bind(this), function(_err){
-            pr.reject(_err);
-        }.bind(this));
-
-        return pr.native;
+    async getInfo (_allianceId) {
+        let result = await core.esiApi.alliance.info(_allianceId);
+        return {name: result.name};
     },
 
     fastSearch: function (_options) {

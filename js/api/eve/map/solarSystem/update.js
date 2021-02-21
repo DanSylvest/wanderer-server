@@ -1,20 +1,23 @@
-var _sendError = function (_connectionId, _responseId, _message, _data) {
-    api.send(_connectionId, _responseId, {
-        errData: _data,
-        success: false,
-        message: _message,
-        eventType: "responseEveMapSystemsUpdate",
-    });
-};
+const helpers = require("./../../../../utils/helpers.js");
+const responseName = "responseEveMapSystemsUpdate";
 
-
-var request = async function (_connectionId, _responseId, _event) {
+/**
+ *
+ * @param _connectionId
+ * @param _responseId
+ * @param _event
+ * @param _event.mapId
+ * @param _event.systemId
+ * @param _event.data
+ * @returns {Promise<void>}
+ */
+const request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    var token = core.connectionStorage.get(_connectionId);
+    const token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if (token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
@@ -26,8 +29,11 @@ var request = async function (_connectionId, _responseId, _event) {
             success: true,
             eventType: "responseEveMapSystemsUpdate"
         });
-    } catch (_err) {
-        _sendError(_connectionId, _responseId, "Error ", _err);
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on update solar system", {
+            code: 0,
+            handledError: err
+        });
     }
 };
 

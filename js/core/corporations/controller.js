@@ -13,43 +13,33 @@ var Controller = classCreator("CorporationsController", Emitter, {
     destructor: function () {
         Emitter.prototype.destructor.call(this);
     },
-    searchInEve: function (_match) {
+    async searchInEve (_match) {
         var pr = new CustomPromise();
 
-        var countForShow = 12;
-        var corporationIds = [];
+        let countForShow = 12;
 
-        core.esiApi.search(["corporation"], _match).then(function(_event){
-            corporationIds = _event.corporation || [];
+        let _event = await core.esiApi.search(["corporation"], _match)
 
-            var prarr = [];
-            for (var a = 0; a < countForShow && a < corporationIds.length; a++) {
-                prarr.push(core.esiApi.corporation.info(corporationIds[a]));
-            }
+        let corporationIds = _event.corporation || [];
 
-            return Promise.all(prarr);
-        }.bind(this), function(_err){
-            debugger;
-        }.bind(this)).then(function(_arr){
-            var out = [];
-            for (var a = 0; a < _arr.length; a++) {
-                if(_arr[a].name.indexOf(_match) === -1)
-                    continue;
+        let prarr = [];
+        for (let a = 0; a < countForShow && a < corporationIds.length; a++) {
+            prarr.push(core.esiApi.corporation.info(corporationIds[a]));
+        }
 
-                out.push({
-                    id: corporationIds[a],
-                    name: _arr[a].name
-                });
-            }
+        let _arr = await Promise.all(prarr);
+        let out = [];
+        for (var a = 0; a < _arr.length; a++) {
+            if (_arr[a].name.indexOf(_match) === -1)
+                continue;
 
-            out.sort(function(a, b) {
-                return a.name > b.name ? 1 : a.name < b.name ? -1 : 0
+            out.push({
+                id: corporationIds[a],
+                name: _arr[a].name
             });
+        }
 
-            pr.resolve(out);
-        }.bind(this), function(_err){
-            debugger;
-        }.bind(this));
+        out.sort((a, b) => a.name > b.name ? 1 : a.name < b.name ? -1 : 0);
 
         return pr.native;
     },

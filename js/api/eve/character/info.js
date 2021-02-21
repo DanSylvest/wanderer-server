@@ -2,39 +2,46 @@
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
 
-var _sendError = function (_connectionId, _responseId, _message, _data) {
-    api.send(_connectionId, _responseId, {
-        errData: _data,
-        success: false,
-        message: _message,
-        eventType: "responseEveCharacterCharInfo",
-    });
-};
-
+const helpers = require("./../../../utils/helpers.js");
+const responseName = "responseEveCharacterInfo";
 
 var request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    var token = core.connectionStorage.get(_connectionId);
+    let token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if(token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
     try {
         let userId = await core.tokenController.checkToken(token);
+
+        if (!core.eveServer.isOnline()) {
+            helpers.errResponse(_connectionId, _responseId, responseName, "TQ is offline", {code: 1001});
+            return;
+        }
+
         let info = await core.charactersController.getCharInfo(_event.characterId);
-        let own = await core.userController.isCharacterAttachedToUser(_event.characterId, userId);
-        info.isOwn = own;
+
+        if (!core.eveServer.isOnline()) {
+            helpers.errResponse(_connectionId, _responseId, responseName, "TQ is offline", {code: 1001});
+            return;
+        }
+
+        info.isOwn = await core.userController.isCharacterAttachedToUser(_event.characterId, userId);
 
         api.send(_connectionId, _responseId, {
             result: info,
             success: true,
-            eventType: "responseEveCharacterCharInfo"
+            eventType: responseName
         })
     } catch (_err) {
-        _sendError(_connectionId, _responseId, "Error on load char info", _err);
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on load character info", {
+            code: 0,
+            handledError: _err
+        });
     }
 };
 

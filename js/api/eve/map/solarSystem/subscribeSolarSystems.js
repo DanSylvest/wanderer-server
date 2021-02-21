@@ -1,33 +1,45 @@
-var _sendError = function (_connectionId, _responseId, _message) {
-    api.send(_connectionId, _responseId, {
-        success: false,
-        message: _message,
-        eventType: "responseEveMapSystems",
-    });
-};
+const helpers = require("./../../../../utils/helpers.js");
+const responseName = "responseEveMapSystems";
 
-var subscriber = async function (_connectionId, _responseId, _event) {
+/**
+ *
+ * @param _connectionId
+ * @param _responseId
+ * @param _event
+ * @param _event.mapId
+ * @returns {Promise<void>}
+ */
+const subscriber = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    var token = core.connectionStorage.get(_connectionId);
+    const token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if(token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
-    await core.tokenController.checkToken(token);
-    var systems = await core.mapController.get(_event.mapId).getSystems();
-    core.mapController.get(_event.mapId).subscribeSystems(_connectionId, _responseId);
+    try {
+        await core.tokenController.checkToken(token);
 
-    api.send(_connectionId, _responseId, {
-        data: {
-            type: "bulk",
-            list: systems
-        },
-        success: true,
-        eventType: "responseEveMapSystems"
-    });
+        let systems = await core.mapController.get(_event.mapId).getSystems();
+
+        core.mapController.get(_event.mapId).subscribeSystems(_connectionId, _responseId);
+
+        api.send(_connectionId, _responseId, {
+            data: {
+                type: "bulk",
+                list: systems
+            },
+            success: true,
+            eventType: responseName
+        });
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on remove solar system", {
+            code: 0,
+            handledError: err
+        });
+    }
 };
 
 subscriber.unsubscribe = function (_connectionId, _responseId, _event) {

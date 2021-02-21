@@ -1,40 +1,39 @@
-var _sendError = function (_connectionId, _responseId, _message) {
-    api.send(_connectionId, _responseId, {
-        success: false,
-        message: _message,
-        eventType: "responseEveMapSystems",
-    });
-};
+const helpers = require("./../../../../utils/helpers.js");
+const responseName = "responseEveMapLinks";
 
-var subscriber = async function (_connectionId, _responseId, _event) {
+const subscriber = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    var token = core.connectionStorage.get(_connectionId);
+    const token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
-    if(token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+    if (token === undefined) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
-    await core.tokenController.checkToken(token);
-    var linkIds = await core.mapController.get(_event.mapId).getLinks();
-    core.mapController.get(_event.mapId).subscribeLinks(_connectionId, _responseId);
+    try {
+        await core.tokenController.checkToken(token);
+        let linkIds = await core.mapController.get(_event.mapId).getLinks();
+        core.mapController.get(_event.mapId).subscribeLinks(_connectionId, _responseId);
 
-    api.send(_connectionId, _responseId, {
-        data: {
-            type: "bulk",
-            list: linkIds
-        },
-        success: true,
-        eventType: "responseEveMapLinks"
-    });
+        api.send(_connectionId, _responseId, {
+            data: {
+                type: "bulk",
+                list: linkIds
+            },
+            success: true,
+            eventType: responseName
+        });
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error in subscribe links", {
+            code: 1,
+            handledError: err
+        });
+    }
 };
 
 subscriber.unsubscribe = function (_connectionId, _responseId, _event) {
-    // TODO - maybe we need check all (token, characters e.t., but i thing it not need now.
-
     core.mapController.get(_event.mapId).unsubscribeLinks(_connectionId, _responseId);
 };
-
 
 module.exports = subscriber;

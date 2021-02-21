@@ -2,13 +2,8 @@
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
 
-const _sendError = function (_connectionId, _responseId, _message) {
-    api.send(_connectionId, _responseId, {
-        success: false,
-        message: _message,
-        eventType: "responseEveCharacterOnline",
-    });
-};
+const helpers = require("./../../../utils/helpers.js");
+const responseName = "responseEveCharacterOnline";
 
 const subscriber = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
@@ -16,7 +11,7 @@ const subscriber = async function (_connectionId, _responseId, _event) {
 
     // when token is undefined - it means what you have no rights
     if(token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
@@ -26,7 +21,7 @@ const subscriber = async function (_connectionId, _responseId, _event) {
 
         // we need check, if user has had such characterId
         if (userCharacters.indexOf(_event.characterId) === -1) {
-            _sendError(_connectionId, _responseId, "You have not permission for this operation.");
+            helpers.errResponse(_connectionId, _responseId, responseName, "You have not permission for this operation", {code: -1});
             return;
         }
 
@@ -37,10 +32,10 @@ const subscriber = async function (_connectionId, _responseId, _event) {
         api.send(_connectionId, _responseId, {
             data: isOnline,
             success: true,
-            eventType: "responseEveCharacterOnline"
+            eventType: responseName
         });
-    } catch (e) {
-        _sendError(_connectionId, _responseId, JSON.stringify(e));
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error in subscribe online", {code: 1, handledError: err});
     }
 };
 

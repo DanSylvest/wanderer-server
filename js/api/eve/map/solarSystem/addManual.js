@@ -1,24 +1,16 @@
 /**
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
+const helpers = require("./../../../../utils/helpers.js");
+const responseName = "responseEveMapSystemRemove";
 
-var _sendError = function (_connectionId, _responseId, _message, _data) {
-    api.send(_connectionId, _responseId, {
-        errData: _data,
-        success: false,
-        message: _message,
-        eventType: "responseEveMapSystemRemove",
-    });
-};
-
-
-var request = async function (_connectionId, _responseId, _event) {
+const request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    var token = core.connectionStorage.get(_connectionId);
+    const token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if (token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
@@ -27,19 +19,17 @@ var request = async function (_connectionId, _responseId, _event) {
 
         let map = core.mapController.get(_event.mapId);
 
-        try {
-            await map.addManual(_event.solarSystemId, _event.x, _event.y);
-        } catch (errMsg) {
-            _sendError(_connectionId, _responseId, errMsg);
-        }
-        // await Promise.all(_event.systemIds.map(x => map.systemRemove(x.toString())));
+        await map.addManual(_event.solarSystemId, _event.x, _event.y);
 
         api.send(_connectionId, _responseId, {
             success: true,
-            eventType: "responseEveMapSystemRemove"
+            eventType: responseName
         });
-    } catch (_err) {
-        _sendError(_connectionId, _responseId, "Error on getMapSystemInfo", _err);
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on add solar system manual", {
+            code: 0,
+            handledError: err
+        });
     }
 };
 

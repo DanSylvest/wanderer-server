@@ -2,41 +2,42 @@
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
 
-var _sendError = function (_connectionId, _responseId, _message, _data) {
-    api.send(_connectionId, _responseId, {
-        errData: _data,
-        success: false,
-        message: _message,
-        eventType: "responseEveMapWaypoint",
-    });
-};
+const helpers = require("./../../../utils/helpers.js");
+const responseName = "responseEveMapWaypoint";
 
-
-var request = async function (_connectionId, _responseId, _event) {
+/**
+ *
+ * @param _connectionId
+ * @param _responseId
+ * @param _event
+ * @param _event.type
+ * @param _event.characterId
+ * @param _event.destinationSolarSystemId
+ * @returns {Promise<void>}
+ */
+const request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    var token = core.connectionStorage.get(_connectionId);
+    const token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if (token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
     try {
-        /*const userId = */await core.tokenController.checkToken(token);
-
+        await core.tokenController.checkToken(token);
         core.charactersController.get(_event.characterId).waypoint.set(_event.type, _event.destinationSolarSystemId)
-
-        // debugger;
-
-        // var info = await core.mapController.get(_event.mapId).getSystemInfo(_event.systemId);
 
         api.send(_connectionId, _responseId, {
             success: true,
-            eventType: "responseEveMapWaypoint"
+            eventType: responseName
         });
-    } catch (_err) {
-        _sendError(_connectionId, _responseId, "Error on set Waypoint", _err);
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on set Waypoint", {
+            code: 0,
+            handledError: err
+        });
     }
 };
 

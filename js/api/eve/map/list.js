@@ -1,51 +1,35 @@
 /**
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
+const helpers = require("./../../../utils/helpers.js");
+const responseName = "responseEveMapList";
 
-var _sendError = function (_connectionId, _responseId, _message, _data) {
-    api.send(_connectionId, _responseId, {
-        errData: _data,
-        success: false,
-        message: _message,
-        eventType: "responseEveMapList",
-    });
-};
-
-
-var request = function (_connectionId, _responseId, _event) {
+const request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    var token = core.connectionStorage.get(_connectionId);
+    const token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if(token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
-    var userId = null;
+    try {
+        let userId = await core.tokenController.checkToken(token);
 
-    core.tokenController.checkToken(token).then(function(_value) {
-        userId = _value;
+        let list = await core.mapController.getMapListByOwner(userId);
 
-        // log(log.INFO, printf("SSO_AUTH[1]: inner token success for user [%s]", _value));
-
-
-        return core.mapController.getMapListByOwner(userId);
-    }.bind(this), function() {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
-    }.bind(this))
-
-    .then(function(_list){
         api.send(_connectionId, _responseId, {
-            data: _list,
+            data: list,
             success: true,
-            eventType: "responseEveMapList"
+            eventType: responseName
         });
-    }.bind(this), function(_err){
-        // need log it
-        _sendError(_connectionId, _responseId, "Error on load map list", _err);
-    }.bind(this))
-
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on load map list", {
+            code: 0,
+            handledError: err
+        });
+    }
 };
 
 module.exports = request;

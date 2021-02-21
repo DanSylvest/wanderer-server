@@ -3,6 +3,8 @@
  */
 
 const exist = require("./../../../env/tools/exist");
+const helpers = require("./../../../utils/helpers.js");
+const responseName = "responseEveMapSetWatchStatus";
 
 /**
  *
@@ -14,12 +16,12 @@ const exist = require("./../../../env/tools/exist");
  */
 const request = async function (_connectionId, _responseId, _event) {
     if(!exist(_event.mapId) && typeof _event.mapId !== "string") {
-        _sendError(_connectionId, _responseId, `Invalid parameter "mapId"`);
+        helpers.errResponse(_connectionId, _responseId, responseName, `Invalid parameter "mapId"`, {code: -1});
         return;
     }
 
     if(!exist(_event.status) && typeof _event.status !== "boolean") {
-        _sendError(_connectionId, _responseId, `Invalid parameter "status"`);
+        helpers.errResponse(_connectionId, _responseId, responseName, `Invalid parameter "status"`, {code: -1});
         return;
     }
 
@@ -28,7 +30,7 @@ const request = async function (_connectionId, _responseId, _event) {
 
     // when token is undefined - it means what you have no rights
     if(token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
@@ -36,20 +38,16 @@ const request = async function (_connectionId, _responseId, _event) {
         let userId = await core.tokenController.checkToken(token);
         await core.mapController.setMapWatchStatus(_connectionId, userId, _event.mapId, _event.status);
         api.send(_connectionId, _responseId, {
-            eventType: "responseEveMapSetWatchStatus",
+            eventType: responseName,
             success: true
         });
-    } catch (_err) {
-        _sendError(_connectionId, _responseId, `Error on set map on watch status '${_event.mapId}' - ${_event.status}.`);
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on update watch status", {
+            code: 0,
+            handledError: err
+        });
     }
 };
 
-const _sendError = function (_connectionId, _responseId, _message) {
-    api.send(_connectionId, _responseId, {
-        success: false,
-        message: _message,
-        eventType: "responseEveMapSetWatchStatus",
-    });
-};
 
 module.exports = request;

@@ -18,7 +18,7 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
         this._loadPromise = new CustomPromise();
     },
     destructor() {
-        this._loadPromise.cancel();
+        this._loadPromise.native.cancel();
         this._loadPromise = new CustomPromise();
         this.onlineCharacters = [];
         Emitter.prototype.destructor.call(this);

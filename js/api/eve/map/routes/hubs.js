@@ -1,23 +1,16 @@
 /**
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
-
-const _sendError = function (_connectionId, _responseId, _message, _data) {
-    api.send(_connectionId, _responseId, {
-        errData: _data,
-        success: false,
-        message: _message,
-        eventType: "responseEveMapRouteHubs",
-    });
-};
+const helpers = require("./../../../../utils/helpers.js");
+const responseName = "responseEveMapRouteHubs";
 
 const request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
-    let token = core.connectionStorage.get(_connectionId);
+    const token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if (token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
@@ -29,10 +22,13 @@ const request = async function (_connectionId, _responseId, _event) {
         api.send(_connectionId, _responseId, {
             data: list,
             success: true,
-            eventType: "responseEveMapRouteHubs"
+            eventType: responseName
         });
-    } catch (_err) {
-        _sendError(_connectionId, _responseId, "Error on get hubs", _err);
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on get hubs", {
+            code: 0,
+            handledError: err
+        });
     }
 };
 

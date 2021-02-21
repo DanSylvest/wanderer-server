@@ -1,8 +1,9 @@
 /**
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
-
-const exist = require("./../../../env/tools/exist");
+const helpers = require("./../../../utils/helpers.js");
+const responseName = "responseEveMapAddFast";
+// const exist = require("./../../../env/tools/exist");
 
 /**
  * @param _connectionId
@@ -16,17 +17,12 @@ const exist = require("./../../../env/tools/exist");
  * @returns {*}
  */
 const request = async function (_connectionId, _responseId, _event) {
-    if(!checkTypes(_connectionId, _responseId, _event)) {
-        return;
-    }
-
-
     // we need get token by connection
-    let token = core.connectionStorage.get(_connectionId);
+    const token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if(token === undefined) {
-        _sendError(_connectionId, _responseId, "You not authorized or token was expired");
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
@@ -43,54 +39,56 @@ const request = async function (_connectionId, _responseId, _event) {
         let resultPr = core.mapController.createMapFast(userId, props);
         let userNamePr = core.userController.getUserName(userId);
         let result = await resultPr;
-        let userName = await userNamePr;
+        result.owner = await userNamePr;
 
-        result.owner = userName;
         api.send(_connectionId, _responseId, {
             data: result,
-            eventType: "responseEveMapAddFast",
+            eventType: responseName,
             success: true
         });
-    } catch (_err) {
-        _sendError(_connectionId, _responseId, "Error on create map");
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on fast creating map", {
+            code: 0,
+            handledError: err
+        });
     }
 };
 
-const checkTypes = function (_connectionId, _responseId, _event) {
-    if(!exist(_event.name) && typeof _event.name !== "string") {
-        _sendError(_connectionId, _responseId, `Invalid parameter "name"`);
-        return false;
-    }
+// const checkTypes = function (_connectionId, _responseId, _event) {
+//     if(!exist(_event.name) && typeof _event.name !== "string") {
+//         _sendError(_connectionId, _responseId, `Invalid parameter "name"`);
+//         return false;
+//     }
+//
+//     if(!exist(_event.description) && typeof _event.description !== "string") {
+//         _sendError(_connectionId, _responseId, `Invalid parameter "shareForCorporation"`);
+//         return false;
+//     }
+//
+//     if(!exist(_event.shareForCorporation) && typeof _event.shareForCorporation !== "boolean") {
+//         _sendError(_connectionId, _responseId, `Invalid parameter "shareForCorporation"`);
+//         return false;
+//     }
+//
+//     if(!exist(_event.shareForAlliance) && typeof _event.shareForAlliance !== "boolean") {
+//         _sendError(_connectionId, _responseId, `Invalid parameter "shareForAlliance"`);
+//         return false;
+//     }
+//
+//     if(!exist(_event.characterId) && typeof _event.characterId !== "number") {
+//         _sendError(_connectionId, _responseId, `Invalid parameter "characterId"`);
+//         return false;
+//     }
+//
+//     return true;
+// }
 
-    if(!exist(_event.description) && typeof _event.description !== "string") {
-        _sendError(_connectionId, _responseId, `Invalid parameter "shareForCorporation"`);
-        return false;
-    }
-
-    if(!exist(_event.shareForCorporation) && typeof _event.shareForCorporation !== "boolean") {
-        _sendError(_connectionId, _responseId, `Invalid parameter "shareForCorporation"`);
-        return false;
-    }
-
-    if(!exist(_event.shareForAlliance) && typeof _event.shareForAlliance !== "boolean") {
-        _sendError(_connectionId, _responseId, `Invalid parameter "shareForAlliance"`);
-        return false;
-    }
-
-    if(!exist(_event.characterId) && typeof _event.characterId !== "number") {
-        _sendError(_connectionId, _responseId, `Invalid parameter "characterId"`);
-        return false;
-    }
-
-    return true;
-}
-
-var _sendError = function (_connectionId, _responseId, _message) {
-    api.send(_connectionId, _responseId, {
-        success: false,
-        message: _message,
-        eventType: "responseEveMapAddFast",
-    });
-};
+// var _sendError = function (_connectionId, _responseId, _message) {
+//     api.send(_connectionId, _responseId, {
+//         success: false,
+//         message: _message,
+//         eventType: "responseEveMapAddFast",
+//     });
+// };
 
 module.exports = request;

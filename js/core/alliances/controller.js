@@ -4,9 +4,8 @@
 
 var Emitter       = require("./../../env/tools/emitter");
 var classCreator  = require("./../../env/tools/class");
-var CustomPromise = require("./../../env/promise");
 
-var countForShow = 12;
+const SEARCH_LIMIT = 12;
 
 var Controller = classCreator("AlliancesController", Emitter, {
     constructor: function AlliancesController() {
@@ -16,35 +15,31 @@ var Controller = classCreator("AlliancesController", Emitter, {
         Emitter.prototype.destructor.call(this);
     },
     searchInEve: async function (_match) {
-        var pr = new CustomPromise();
+        let result = Object.create(null);
 
         try {
-            var prarr = [];
-            var searchResult = await core.esiApi.search(["alliance"], _match);
-            var allianceIds = searchResult.alliance || [];
-
-            for (let a = 0; a < countForShow && a < allianceIds.length; a++)
-                prarr.push(core.esiApi.alliance.info(allianceIds[a]));
-
-            var arrResults = await Promise.all(prarr);
-            var out = [];
-            for (let a = 0; a < arrResults.length; a++) {
-                if (arrResults[a].name.indexOf(_match) === -1)
-                    continue;
-
-                out.push({id: allianceIds[a], name: arrResults[a].name});
-            }
-
-            out.sort(function (a, b) {
-                return a.name > b.name ? 1 : a.name < b.name ? -1 : 0
-            });
-
-            pr.resolve(out);
-        } catch (_err) {
-            pr.reject(_err);
+            result = await core.esiApi.search(["alliance"], _match);
+        } catch (e) {
+            return [];
         }
 
-        return pr.native;
+        let ids = result.alliance || [];
+
+        if(ids.length > SEARCH_LIMIT)
+            ids = ids.slice(0, SEARCH_LIMIT);
+
+        let infoArr = await Promise.all(ids.map(x => core.esiApi.alliance.info(x)));
+
+        let out = infoArr.map((x, index) => ({
+            id: ids[index],
+            name: x.name
+        }));
+
+        out.sort((a, b) => {
+            return a.name > b.name ? 1 : a.name < b.name ? -1 : 0;
+        });
+
+        return out;
     },
 
     async getInfo (_allianceId) {

@@ -1,22 +1,23 @@
 /**
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
+const helpers = require("./../../utils/helpers.js");
+const responseName = "responseAuthType";
 
-const request = async function (_connection_id, _response_id, _event) {
+const request = async function (_connectionId, _responseId, _event) {
     try {
         await core.tokenController.checkToken(_event.token);
-        await core.userController.updateUserOnlineStatus(_connection_id, _event.token);
+        await core.userController.updateUserOnlineStatus(_connectionId, _event.token);
 
-        api.send(_connection_id, _response_id, {
-            event_type: "responseCheckToken",
+        api.send(_connectionId, _responseId, {
+            event_type: responseName,
             success: true
         });
-    } catch (_err) {
-        api.send(_connection_id, _response_id, {
-            message: "Error on check token",
-            event_type: "responseCheckToken",
-            success: false
-        });
+    } catch (err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on check token", {
+            code: 0,
+            handledError: err
+        })
     }
 };
 

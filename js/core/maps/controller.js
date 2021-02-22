@@ -579,6 +579,12 @@ const MapController = classCreator("MapController", Emitter, {
 
     async searchSolarSystems (match) {
         let matchLC = match.toLowerCase();
+
+        matchLC = matchLC
+            .replace(/^( *?)([a-z0-9])/igm, "$2") // remove spaces before
+            .replace(/([a-z0-9])( *?)$/igm, "$1") // remove spaces after
+            .replace(/\s+/img, " ")               // remove more than one spaces between symbols
+
         let cond = {name: "solarSystemNameLC", operator: "LIKE", value: `%${matchLC}%`};
         let result = await core.dbController.solarSystemsTable.getByCondition(cond, core.dbController.solarSystemsTable.attributes());
 

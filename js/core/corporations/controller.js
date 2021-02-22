@@ -2,11 +2,12 @@
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/21/20.
  */
 
-var Emitter       = require("./../../env/tools/emitter");
-var classCreator  = require("./../../env/tools/class");
-var CustomPromise = require("./../../env/promise");
+const Emitter       = require("./../../env/tools/emitter");
+const classCreator  = require("./../../env/tools/class");
+const CustomPromise = require("./../../env/promise");
+const SEARCH_LIMIT = 12;
 
-var Controller = classCreator("CorporationsController", Emitter, {
+const Controller = classCreator("CorporationsController", Emitter, {
     constructor: function CorporationsController() {
         Emitter.prototype.constructor.call(this);
     },
@@ -14,34 +15,31 @@ var Controller = classCreator("CorporationsController", Emitter, {
         Emitter.prototype.destructor.call(this);
     },
     async searchInEve (_match) {
-        var pr = new CustomPromise();
+        let result = Object.create(null);
 
-        let countForShow = 12;
-
-        let _event = await core.esiApi.search(["corporation"], _match)
-
-        let corporationIds = _event.corporation || [];
-
-        let prarr = [];
-        for (let a = 0; a < countForShow && a < corporationIds.length; a++) {
-            prarr.push(core.esiApi.corporation.info(corporationIds[a]));
+        try {
+            result = await core.esiApi.search(["corporation"], _match);
+        } catch (e) {
+            return [];
         }
 
-        let _arr = await Promise.all(prarr);
-        let out = [];
-        for (var a = 0; a < _arr.length; a++) {
-            if (_arr[a].name.indexOf(_match) === -1)
-                continue;
+        let ids = result.corporation || [];
 
-            out.push({
-                id: corporationIds[a],
-                name: _arr[a].name
-            });
-        }
+        if(ids.length > SEARCH_LIMIT)
+            ids = ids.slice(0, SEARCH_LIMIT);
 
-        out.sort((a, b) => a.name > b.name ? 1 : a.name < b.name ? -1 : 0);
+        let infoArr = await Promise.all(ids.map(x => core.esiApi.corporation.info(x)));
 
-        return pr.native;
+        let out = infoArr.map((x, index) => ({
+            id: ids[index],
+            name: x.name
+        }));
+
+        out.sort((a, b) => {
+            return a.name > b.name ? 1 : a.name < b.name ? -1 : 0;
+        });
+
+        return out;
     },
 
     getCorporationInfo: function (_corporationId) {

@@ -1,24 +1,23 @@
 /**
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
-
-var request = async function (_connection_id, _response_id, _event) {
+const helpers = require("./../../../utils/helpers.js");
+const responseName = "responseRegisterUser";
+const request = async function (_connectionId, _responseId, _event) {
     try {
         // eve sso
-        var token = await core.userController.registerUserByEveSSO(_event.code);
+        const token = await core.userController.registerUserByEveSSO(_event.code);
 
-        api.send(_connection_id, _response_id, {
+        api.send(_connectionId, _responseId, {
             token: token,
-            eventType: "responseRegisterUser",
+            eventType: responseName,
             success: true
         });
 
-    } catch(_err) {
-        api.send(_connection_id, _response_id, {
-            err: _err,
-            message: _err.message,
-            eventType: "responseRegisterUser",
-            success: false
+    } catch(err) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on register", {
+            code: 0,
+            handledError: err
         });
     }
 };

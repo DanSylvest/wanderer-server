@@ -17,11 +17,6 @@ const request = async function (_connectionId, _responseId, _event) {
     try {
         await core.tokenController.checkToken(token);
 
-        if (!core.eveServer.isOnline()) {
-            helpers.errResponse(_connectionId, _responseId, responseName, "TQ is offline", {code: 1001});
-            return;
-        }
-
         let info = await core.groupsController.get(_event.groupId).getInfo();
 
         api.send(_connectionId, _responseId, {

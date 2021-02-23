@@ -1,7 +1,7 @@
 /**
  * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
  */
-const helpers = require("./../../../utils/helpers.js");
+const helpers = require("./../../utils/helpers.js");
 const responseName = "responseRegisterUser";
 const request = async function (_connectionId, _responseId, _event) {
     try {

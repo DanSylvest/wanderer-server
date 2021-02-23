@@ -1,9 +1,9 @@
 /**
- * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/20/20.
+ * Created by Aleksey Chichenkov <a.chichenkov@initi.ru> on 2/23/21.
  */
 
 const helpers = require("./../../../utils/helpers.js");
-const responseName = "responseEveCharacterList";
+const responseName = "responseEveCharactersByUser";
 
 const request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
@@ -18,17 +18,15 @@ const request = async function (_connectionId, _responseId, _event) {
     try {
         let userId = await core.tokenController.checkToken(token);
         let characters = await core.userController.getUserCharacters(userId);
-        let arr = await Promise.all(characters.map(x => core.charactersController.get(x).getInfo()));
-        arr.map((x, i) => arr[i].id = characters[i]);
 
         api.send(_connectionId, _responseId, {
-            data: arr,
+            data: characters,
             success: true,
             eventType: responseName
         });
 
     } catch (err) {
-        helpers.errResponse(_connectionId, _responseId, responseName, "Error on load characters list info", {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on load characters list", {
             code: 0,
             handledError: err
         });

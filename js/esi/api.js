@@ -8,6 +8,7 @@ var CustomPromise    = require("./../env/promise");
 var extend           = require("./../env/tools/extend");
 var exist            = require("./../env/tools/exist");
 var ESI              = require("./generated/javascript-client/src/index.js");
+const fs             = require("fs")
 
 var locationApi      = new ESI.LocationApi();
 var searchApi        = new ESI.SearchApi();
@@ -187,6 +188,14 @@ const _routes = function (destination, origin, flag, connections) {
 const _get_status = function () {
     let pr = new CustomPromise();
     let base = extend(publicData, {});
+
+    // FOR TESTS
+    let manualOffline = new fs.existsSync('./js/esi/offline');
+    if(manualOffline) {
+        pr.resolve({online: false, vip: false, players: 0, server_version: "", start_time: ""});
+        return pr.native;
+    }
+    // FOR TESTS
 
     statusApi.getStatus(base, function (error, data, response) {
         // so...

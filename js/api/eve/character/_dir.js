@@ -10,4 +10,5 @@ module.exports = {
     info       : require("./info"),
     getName    : require("./getName"),
     remove     : require("./remove"),
+    byUser     : require("./byUser"),
 };

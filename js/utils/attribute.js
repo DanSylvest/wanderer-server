@@ -29,6 +29,7 @@ const Attribute = classCreator("Online", Emitter, {
 
         this._innerSubscribers = Object.create(null);
         this._subscribeQueue = [];
+        this._awaitSubscribers = [];
         this._subscriberReadyPromise = new CustomPromise();
 
         this._createObserver();
@@ -101,7 +102,12 @@ const Attribute = classCreator("Online", Emitter, {
      */
     on: function (_type, _callback) {
         var handleId = Emitter.prototype.on.call(this, _type, _callback);
-        this._innerSubscribers[handleId] = this.observer.subscribe();
+
+        if(!this._paused) {
+            this._innerSubscribers[handleId] = this.observer.subscribe();
+        } else {
+            this._awaitSubscribers.push(handleId);
+        }
 
         if(_type === "change" && exist(this._value))
             this._delayedNotify(handleId);
@@ -111,6 +117,10 @@ const Attribute = classCreator("Online", Emitter, {
 
     off: function (_handleId) {
         var subscriptionId;
+
+        if(this._paused) {
+            this._awaitSubscribers.removeByValue(_handleId)
+        }
 
         if(exist(_handleId)) {
             subscriptionId = this._innerSubscribers[_handleId];
@@ -142,6 +152,11 @@ const Attribute = classCreator("Online", Emitter, {
         this.observer && this.observer.object().start();
         this._subscribeQueue.map(x => this.subscribe(x[0], x[1]));
         this._subscribeQueue = [];
+
+        this._awaitSubscribers.map(handleId => {
+            this._innerSubscribers[handleId] = this.observer.subscribe();
+        });
+        this._awaitSubscribers = [];
     }
 });
 

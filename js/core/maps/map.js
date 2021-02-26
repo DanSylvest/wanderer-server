@@ -293,7 +293,7 @@ const Map = classCreator("Map", Emitter, {
             loadingPromise = new CustomPromise();
             this._links[_sourceSystemId + "_" + _targetSystemId] = loadingPromise;
 
-            let link = await this._getLink();
+            let link = await this._getLink(_sourceSystemId, _targetSystemId);
             if (!link) {
                 let id = md5(config.app.solt + "_" + +new Date);
 
@@ -334,6 +334,7 @@ const Map = classCreator("Map", Emitter, {
     },
     async _linkPassage (_sourceSystemId, _targetSystemId, _characterId) {
         // Итак, теперь, если линка нет, то все при проходе будут вот тут соять и ждать
+        // TODO: однако что-то идет не так и после дт, линк дублируется. Понять почему.
         await this._addLink(_sourceSystemId, _targetSystemId);
 
         // А здесь нам уже все-равно, т.к. полюбому линк будет добавлен
@@ -400,12 +401,15 @@ const Map = classCreator("Map", Emitter, {
         let isExists = await this.systemExists(_systemId);
         let isAbleToEnter = solarSystemTypesNotAbleToEnter.indexOf(systemClass) === -1;
 
-        if(isAbleToEnter) {
-            if(!isExists)
-                await this._addSystem(null, _systemId);
-
-            await this._characterJoinToSystem(_characterId, _systemId);
+        // Это происходит, когда нет никаких систем, и персонаж первый раз попал на карту
+        if(!isExists && isAbleToEnter) {
+            await this._addSystem(null, _systemId);
+            isExists = true;
         }
+
+        // Это происходит когда система уже была добавлена: вручную или в результате прохода в неё.
+        if(isExists)
+            await this._characterJoinToSystem(_characterId, _systemId);
     },
 
     async addChainManual (sourceSolarSystemId, targetSolarSystemId) {

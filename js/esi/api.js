@@ -190,7 +190,7 @@ const _get_status = function () {
     let base = extend(publicData, {});
 
     // FOR TESTS
-    let manualOffline = new fs.existsSync('./js/esi/offline');
+    let manualOffline = fs.existsSync(projectPath + '/esi/offline');
     if(manualOffline) {
         pr.resolve({online: false, vip: false, players: 0, server_version: "", start_time: ""});
         return pr.native;
@@ -216,6 +216,11 @@ const _get_status = function () {
 
     return pr.native;
 };
+
+const checkFileExists = (path, filename) => {
+    let result = fs.readdirSync(path);
+    debugger;
+}
 
 module.exports = {
     uiapi: {

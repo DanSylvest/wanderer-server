@@ -34,12 +34,12 @@ const ServerStatusController = classCreator("GroupsController", Emitter, {
     },
     _onServerStatusChange (data) {
         if(this.statusData.online !== data.online) {
-            this.emit("changedStatus", this.statusData.online);
+            this.emit("changedStatus", data.online);
 
             if(this.notifyStatus) {
                 this.subscriptionStatus.notify({
                     type: "status",
-                    isOnline: this.statusData.online
+                    isOnline: data.online
                 });
             }
         }

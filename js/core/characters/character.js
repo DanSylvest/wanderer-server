@@ -56,6 +56,8 @@ var Character = classCreator("Character", Emitter, {
         this.waypoint = new WaypointEvent({
             accessToken: this.getAccessToken.bind(this)
         });
+
+        !core.eveServer.isOnline() && this.waypoint.serverStatusOffline();
     },
     _createCachedAttrs () {
         this.realExpiresIn = new Cache({
@@ -107,6 +109,8 @@ var Character = classCreator("Character", Emitter, {
                 accessToken: this.getAccessToken.bind(this)
             });
             this._add(_attribute, instance);
+
+            !core.eveServer.isOnline() && instance.serverStatusOffline();
         }
 
         return this._attributes[_attribute];

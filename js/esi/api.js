@@ -217,11 +217,6 @@ const _get_status = function () {
     return pr.native;
 };
 
-const checkFileExists = (path, filename) => {
-    let result = fs.readdirSync(path);
-    debugger;
-}
-
 module.exports = {
     uiapi: {
         waypoint: __esi_uiapi_waypoint

@@ -9,7 +9,12 @@ Array.prototype.removeByIndex = function removeByIndex (index) {
 
 Array.prototype.removeByValue = function removeByValue (value) {
     let index = this.indexOf(value);
-    index !== -1 && this.removeByIndex();
+    index !== -1 && this.removeByIndex(index);
+}
+
+Array.prototype.exists = function exists (value) {
+    let index = this.indexOf(value);
+    return index !== -1 ? value : undefined;
 }
 
 Array.prototype.searchByObjectKey = function (_key, _value) {

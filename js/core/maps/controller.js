@@ -9,7 +9,8 @@ const DBController      = require("./../dbController");
 const Map               = require("./map");
 const md5               = require("md5");
 const UserMapWatcher    = require("./userMapWatcher.js");
-const UserSubscriptions = require("./userSubscriptions.js")
+const UserSubscriptions = require("./userSubscriptions.js");
+const mapSqlActions     = require("./sql/mapSqlActions.js");
 
 const USER_DROP_TIMEOUT = 10000;
 
@@ -155,12 +156,6 @@ const MapController = classCreator("MapController", Emitter, {
 
         return filteredMaps;
     },
-    async _unlinkMapGroups (_mapId) {
-        await core.dbController.linksTable.removeByCondition([
-            {name: "type",operator: "=",value: DBController.linksTableTypes.mapToGroups},
-            {name: "first",operator: "=",value: _mapId}
-        ]);
-    },
     async _updateGroups (_mapId, _groups) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.mapToGroups},
@@ -283,22 +278,9 @@ const MapController = classCreator("MapController", Emitter, {
      * @returns {Promise<unknown>}
      */
     async removeMap (_mapId) {
-        let trArr = [];
-        trArr.push(core.dbController.mapLinksTable.removeByCondition([
-            {name: "mapId", operator: "=", value: _mapId}
-        ], true))
+        await mapSqlActions.removeMap(_mapId);
+        await mapSqlActions.unlinkMapGroups(_mapId);
 
-        trArr.push(core.dbController.mapSystemsTable.removeByCondition([
-            {name: "mapId", operator: "=", value: _mapId}
-        ], true));
-
-        trArr.push(core.dbController.mapSystemToCharacterTable.removeByCondition([
-            {name: "mapId", operator: "=", value: _mapId}
-        ], true));
-
-        await core.dbController.db.transaction(trArr);
-        await this._unlinkMapGroups(_mapId);
-        await core.dbController.mapsDB.remove(_mapId);
         this._umw.removeMapFromAllUsers(_mapId);
         this.remove(_mapId);
 
@@ -471,17 +453,27 @@ const MapController = classCreator("MapController", Emitter, {
             this._umw.eachMap(userId, connectionId, (_mapId, _isWatch) => {
                 if(_isWatch) {
                     this._umw.set(userId, connectionId, _mapId, false);
-                    prarr.push(this.updateMapWatchStatus(userId, _mapId, false));
+
+                    // Пользователь может с разных вкладок смотреть на разные карты
+                    // При открытии второй вкладки, по умолчанию пользак видит ту же что и на первой
+                    // Потом он переключается, и вот конкретно для него, мы убираем статус отслеживания
+                    // Но этот же пользователь, может смотреть на карту и под другими конекшенами
+                    // поэтому мы проверяем, смотрит ли он еще на карту...
+                    if(!this._umw.isUserWatchOnMap(userId, _mapId)) {
+                        prarr.push(this.updateMapWatchStatus(userId, _mapId, false));
+                    }
                 }
             });
             await Promise.all(prarr);
 
-            // теперь зададим текущую карту в тру
             this._umw.set(userId, connectionId, mapId, true);
             await this.updateMapWatchStatus(userId, mapId, true);
         } else if(this._umw.get(userId, connectionId, mapId)) {
             this._umw.set(userId, connectionId, mapId, false);
-            await this.updateMapWatchStatus(userId, mapId, false);
+
+            if(!this._umw.isUserWatchOnMap(userId, _mapId)) {
+                await this.updateMapWatchStatus(userId, mapId, false);
+            }
         }
     },
     async getTrackingCharactersForMapByUser (mapId, userId) {

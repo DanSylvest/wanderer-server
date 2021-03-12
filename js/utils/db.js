@@ -199,26 +199,36 @@ var Table = classCreator("Table", Emitter, {
         return pr.native;
     },
     checkAndUpgradeColumns: async function () {
-        for (let a = 0; a < this._properties.length; a++) {
-            let prop = this._properties[a];
+        let cols = await this.getColumns();
 
-            let checkQuery = `SELECT column_name
-                FROM information_schema.columns 
-                WHERE table_name='${this._name}' and column_name='${prop.name}';`;
+        try {
+            // first check what was added
+            for (let a = 0; a < this._properties.length; a++) {
+                let prop = this._properties[a];
 
-            try {
-                let result = await this._client.query(checkQuery);
-
-                if (result.rows.length === 0) {
-                    let query = `ALTER TABLE ${this._name} ADD COLUMN "${prop.name}" ${getDBTypeByJsType(prop.type)} ${getOptionsForType(prop.type)}`;
+                // если проп отсутствует - то добавим
+                if (!cols.exists(prop.name)) {
+                    let query = `ALTER TABLE ${this._name} ADD COLUMN "${prop.name}" ${getDBTypeByJsType(prop.type)} ${getOptionsForType(prop.type)} DEFAULT ('${this.getDefaultValue(prop.name)}');`;
+                    this._enableLog && log(log.INFO, query);
                     await this._client.query(query);
                     this._enableLog && counterLog("SQL", query);
                 }
-            } catch (_err) {
-                console.error(_err);
-                process.exit(1);
             }
 
+            // then check what was deleted
+            for (let a = 0; a < cols.length; a++) {
+                let propName = cols[a];
+
+                if(!exist(this._properties.searchByObjectKey("name", propName))) {
+                    let query = `ALTER TABLE ${this._name} DROP COLUMN IF EXISTS "${propName}";`
+                    this._enableLog && log(log.INFO, query);
+                    await this._client.query(query);
+                    this._enableLog && counterLog("SQL", query);
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            process.exit(1);
         }
     },
     getPropertyInfo: function (_name) {
@@ -311,13 +321,7 @@ var Table = classCreator("Table", Emitter, {
                 out = unescape(out);
             }
         } else {
-            if (exist(propInfo.defaultValue) && typeof propInfo.defaultValue === "function") {
-                out = propInfo.defaultValue();
-            } else if (exist(propInfo.defaultValue)) {
-                out = propInfo.defaultValue;
-            } else {
-                out = getDefaultValueByType(propInfo.type);
-            }
+            out = this.getDefaultValue(attr);
         }
 
         return out;
@@ -331,6 +335,21 @@ var Table = classCreator("Table", Emitter, {
             out = escape(value);
 
         out = convertToDBType(propInfo.type, out);
+
+        return out;
+    },
+
+    getDefaultValue (attr) {
+        let out = null;
+
+        let propInfo = this.getPropertyInfo(attr);
+        if (exist(propInfo.defaultValue) && typeof propInfo.defaultValue === "function") {
+            out = propInfo.defaultValue();
+        } else if (exist(propInfo.defaultValue)) {
+            out = propInfo.defaultValue;
+        } else {
+            out = getDefaultValueByType(propInfo.type);
+        }
 
         return out;
     },
@@ -566,6 +585,14 @@ var Table = classCreator("Table", Emitter, {
     },
     name: function () {
         return this._name;
+    },
+    async getColumns (){
+        let columnsQuery = `SELECT column_name
+                FROM information_schema.columns 
+                WHERE table_name='${this._name}'`;
+        let result = await this._client.query(columnsQuery);
+
+        return result.rowCount > 0 ? result.rows.map(x => x.column_name): []
     }
 });
 
@@ -624,6 +651,7 @@ var convertToDBType = function (_type, _value) {
             return _value.toString().replace("'", "''");
         case Number:
         case Boolean:
+        case Date:
             return _value;
         default:
             return Buffer.from(JSON.stringify(_value)).toString('base64');
@@ -636,8 +664,10 @@ var extractFromDbType = function (_type, _value) {
             return _value.replace("''", "'");
         case Number:
         case Boolean:
+        case Date:
             return _value;
         default:
+            console.log(_value);
             return JSON.parse(Buffer.from(_value, 'base64').toString('utf8'));
     }
 };

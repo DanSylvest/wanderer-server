@@ -18,18 +18,32 @@ var Location = classCreator("Location", Provider, {
         Provider.prototype.constructor.call(this, base);
     },
     _sendRequest: function () {
-        core.esiApi.status().then(function(_event){
-            this._notify({
-                online: _event.online,
-                players: _event.players,
-                server_version: _event.server_version,
-                start_time: _event.start_time,
-                vip: _event.vip,
-            });
-        }.bind(this), function(_err){
-            log(log.INFO, "Was next in StatusObserver");
-            this._next();
-        }.bind(this));
+        core.esiApi.status()
+            .then(
+                event => {
+                    this._notify({
+                        online: event.online,
+                        players: event.players,
+                        server_version: event.server_version,
+                        start_time: event.start_time,
+                        vip: event.vip,
+                    });
+                },
+                err => {
+                    if(err.errno === -3001) { // when EAI_AGAIN
+                        this._notify({
+                            online: false,
+                            players: 0,
+                            server_version: "",
+                            start_time: "",
+                            vip: false,
+                        });
+                    } else {
+                        log(log.INFO, "Was next in StatusObserver");
+                        this._next();
+                    }
+                }
+            );
     }
 });
 

@@ -15,7 +15,7 @@ var TokenController = classCreator("TokenController", Emitter, {
     generateToken: async function (_value, expire) {
         let pr = new CustomPromise();
         let tokenId = md5(+new Date + config.tokens.solt);
-        let expireDate = new Date(exist(expire) ? expire : config.tokens.lifeTime);
+        let expireDate = new Date(exist(expire) ? expire : (+new Date) + config.tokens.lifeTime);
 
         try {
             await core.dbController.tokensDB.add({id: tokenId, value: _value, expire: expireDate});

@@ -65,6 +65,7 @@ var DBController = classCreator("DBController", Emitter, {
         this._createMapSystemsTable();
         this._createMapSystemToCharacter();
         this._createCachedSolarSystemsTable();
+        this._createChainPassages();
     },
     destructor: function () {
         Emitter.prototype.destructor.call(this);
@@ -97,6 +98,8 @@ var DBController = classCreator("DBController", Emitter, {
             log(log.INFO, 'groupToCharacterTable inited');
             await this.mapLinksTable.init();
             log(log.INFO, 'mapLinksTable inited');
+            await this.mapChainPassagesTable.init();
+            log(log.INFO, 'mapChainPassagesTable inited');
             await this.mapSystemsTable.init();
             log(log.INFO, 'mapSystemsTable inited');
             await this.mapSystemToCharacterTable.init();
@@ -234,32 +237,37 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "mapId",             type: String},
                 {name: "solarSystemSource", type: String},
                 {name: "solarSystemTarget", type: String},
-                {
-                    name: "lifeTime", type: Number, defaultValue: function () {
-                        return +new Date + (1000 * 60 * 60 * 24 * 2)     // maximum wormhole lifetime is two days
-                    }
-                },
-                {
-                    name: "openingTime",    type: String,                // time when user added wormhole to map
-                    defaultValue: function () {
-                        return +new Date;                                // maximum wormhole lifetime is two days
-                    }
-                },
-                {name: "massStatus", type: Number, defaultValue: 0},     // Mass state can be from 0 to 2;
-                                                                         // where 0 - greater than half
-                                                                         // where 1 - less than half
-                                                                         // where 2 - critical less than 10%
+                {name: "massStatus",        type: Number, defaultValue: 0}, // Mass state can be from 0 to 2;
+                                                                            // where 0 - greater than half
+                                                                            // where 1 - less than half
+                                                                            // where 2 - critical less than 10%
 
-                {name: "timeStatus", type: Number, defaultValue: 0},     // Time state can be from 0 to 2
-                                                                         // where 0 - normal
-                                                                         // where 1 - end of life
+                {name: "timeStatus",        type: Number, defaultValue: 0}, // Time state can be from 0 to 2
+                                                                            // where 0 - normal
+                                                                            // where 1 - end of life
 
-                {name: "shipSizeType",   type: Number, defaultValue: 1}, // Ship size type
-                                                                         // where 0 - Frigate
-                                                                         // where 1 - Medium and Large
-                                                                         // where 2 - Capital
-                {name: "wormholeType",   type: String},
-                {name: "countOfPassage", type: Number, defaultValue: 0}
+                {name: "shipSizeType",      type: Number, defaultValue: 1}, // Ship size type
+                                                                            // where 0 - Frigate
+                                                                            // where 1 - Medium and Large
+                                                                            // where 2 - Capital
+                {name: "wormholeType",      type: String},
+                {name: "countOfPassage",    type: Number, defaultValue: 0},
+                {name: "created",           type: Date,   defaultValue: () => new Date},
+                {name: "updated",           type: Date,   defaultValue: () => new Date},
+            ]
+        });
+    },
+    _createChainPassages () {
+        this.mapChainPassagesTable = this.db.createTable({
+            name: "map_chain_passages",
+            idField: "id",
+            properties: [
+                {name: "mapId",               type: String},
+                {name: "solarSystemSourceId", type: String},
+                {name: "solarSystemTargetId", type: String},
+                {name: "time",                type: Date,   defaultValue: () => new Date},
+                {name: "characterId",         type: String},
+                {name: "shipTypeId",          type: String},
             ]
         });
     },

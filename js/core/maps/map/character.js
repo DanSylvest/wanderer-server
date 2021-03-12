@@ -130,8 +130,11 @@ const MapCharacter = classCreator("MapCharacter", Emitter, {
         }
     },
 
-    _onShipChange (_characterId, _shipTypeId) {
+    async _onShipChange (shipTypeId) {
         // todo Пока ничего делать не надо, но в будущем надо отправлять уведомление, что тип шипа поменялся
+        //
+        // let info = await core.sdeController.getShipTypeInfo(shipTypeId);
+        // this.emit("shipTypeChange", info.typeName);
     },
     isOnline () {
         return exist(this.onlineValue) ? this.onlineValue : false;

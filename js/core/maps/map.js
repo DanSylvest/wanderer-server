@@ -303,8 +303,15 @@ const Map = classCreator("Map", Emitter, {
         let ssInfo = await solarSystemSql.getSolarSystemInfo(_systemId);
                 // let solarSystemInfo = await core.sdeController.getSolarSystemInfo(_systemId);
         // let systemClass = await core.sdeController.getSystemClass(solarSystemInfo.regionID, solarSystemInfo.constellationID, _systemId);
-        let isExists = await this.systemExists(_systemId);
+        let isExists = await this.systemExists(_systemId, true);
         let isAbleToEnter = solarSystemTypesNotAbleToEnter.indexOf(ssInfo.systemClass) === -1;
+
+        // This is will filter Jita. Because wormhole can not be open to Jita.
+        switch (_systemId) {
+            case 30000142:
+                isAbleToEnter = false;
+                break;
+        }
 
         // Это происходит, когда нет никаких систем, и персонаж первый раз попал на карту
         if(!isExists && isAbleToEnter) {
@@ -345,8 +352,8 @@ const Map = classCreator("Map", Emitter, {
                 await this._linkPassage(_oldSystem, _newSystem, _characterId);
             }
         } else {
-            let isDestSystemExists = await this.systemExists(_newSystem);
-            let isOldSystemExists = await this.systemExists(_oldSystem);
+            let isDestSystemExists = await this.systemExists(_newSystem, true);
+            let isOldSystemExists = await this.systemExists(_oldSystem, true);
 
             if (isOldSystemExists)
                 await this._characterLeaveSystem(_characterId, _oldSystem);
@@ -510,8 +517,8 @@ const Map = classCreator("Map", Emitter, {
     async getLinkPairs () {
         return await mapSqlActions.getLinkPairs(this.options.mapId);
     },
-    async systemExists (_systemId) {
-        return await mapSqlActions.systemExists(this.options.mapId, _systemId);
+    async systemExists (_systemId, checkVisible) {
+        return await mapSqlActions.systemExists(this.options.mapId, _systemId, checkVisible);
     },
     async linkRemove (_linkId) {
         // todo - процес удаления линка может быть только один раз

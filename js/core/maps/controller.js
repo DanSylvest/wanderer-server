@@ -471,7 +471,7 @@ const MapController = classCreator("MapController", Emitter, {
         } else if(this._umw.get(userId, connectionId, mapId)) {
             this._umw.set(userId, connectionId, mapId, false);
 
-            if(!this._umw.isUserWatchOnMap(userId, _mapId)) {
+            if(!this._umw.isUserWatchOnMap(userId, mapId)) {
                 await this.updateMapWatchStatus(userId, mapId, false);
             }
         }

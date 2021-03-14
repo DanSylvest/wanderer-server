@@ -279,19 +279,24 @@ const Map = classCreator("Map", Emitter, {
         }
     },
     async _characterLeaveSystem (_characterId, _systemId) {
-        await mapSqlActions.removeCharacterFromSystem(this.options.mapId, _systemId, _characterId);
-        this._systems[_systemId].onlineCharacters.removeByValue(_characterId)
+        if(exist(this._systems[_systemId])) {
+            await mapSqlActions.removeCharacterFromSystem(this.options.mapId, _systemId, _characterId);
+            this._systems[_systemId].onlineCharacters.removeByValue(_characterId);
+            delete this._charactersOnSystem[_characterId];
 
-        delete this._charactersOnSystem[_characterId];
-
-        if (this._notifySystems && this._systemsSubscriber) {
-            this._systemsSubscriber.notify({
-                type: "systemUpdatedList",
-                list: [
-                    {type: "onlineUpdate", systemId: _systemId, onlineCount: this._systems[_systemId].onlineCharacters.length},
-                    {type: "userLeave", systemId: _systemId, characterId: _characterId},
-                ]
-            });
+            if (this._notifySystems && this._systemsSubscriber) {
+                this._systemsSubscriber.notify({
+                    type: "systemUpdatedList",
+                    list: [
+                        {
+                            type: "onlineUpdate",
+                            systemId: _systemId,
+                            onlineCount: this._systems[_systemId].onlineCharacters.length
+                        },
+                        {type: "userLeave", systemId: _systemId, characterId: _characterId},
+                    ]
+                });
+            }
         }
     },
     async _characterEnterToSystem (_characterId, _systemId) {
@@ -528,6 +533,11 @@ const Map = classCreator("Map", Emitter, {
         await this._systems[_systemId].update(false);
         let affectedLinks = await mapSqlActions.getLinksBySystem(this.options.mapId, _systemId);
         await Promise.all(affectedLinks.map(linkId => this.linkRemove(linkId)));
+
+        await Promise.all(this._systems[_systemId].onlineCharacters.map(x => {
+            delete this._charactersOnSystem[x]
+            return mapSqlActions.removeCharacterFromSystem(this.options.mapId, _systemId, x);
+        }));
 
         if (this._notifySystems && this._systemsSubscriber) {
             this._systemsSubscriber.notify({

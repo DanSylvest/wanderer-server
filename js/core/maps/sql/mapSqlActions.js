@@ -203,11 +203,14 @@ const getLinkPairs = async function (mapId) {
     return result.map(item => ({first: item.solarSystemSource, second: item.solarSystemTarget}));
 };
 
-const systemExists = async function (mapId, systemId) {
+const systemExists = async function (mapId, systemId, checkVisible) {
     let condition = [
         {name: "mapId", operator: "=", value: mapId},
         {name: "id", operator: "=", value: systemId},
     ];
+
+    checkVisible && condition.push({name: "visible", operator: "=", value: true});
+
     let result = await core.dbController.mapSystemsTable.getByCondition(condition, ["id"]);
     return result.length > 0;
 };

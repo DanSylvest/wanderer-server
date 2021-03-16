@@ -453,7 +453,7 @@ const Map = classCreator("Map", Emitter, {
         let newPosition = {x: 0, y: 0};
 
         if(_oldSystemId !== null) {
-            let oldSystemPositionResult = await mapSqlActions.getSystemPosition(this.options.mapId, _systemId);
+            let oldSystemPositionResult = await mapSqlActions.getSystemPosition(this.options.mapId, _oldSystemId);
 
             if (exist(oldSystemPositionResult)) {
                 let oldPosition = oldSystemPositionResult.position;

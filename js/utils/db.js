@@ -667,7 +667,7 @@ var extractFromDbType = function (_type, _value) {
         case Date:
             return _value;
         default:
-            console.log(_value);
+            // console.log(_value);
             return JSON.parse(Buffer.from(_value, 'base64').toString('utf8'));
     }
 };

@@ -22,18 +22,7 @@ const subscriber = async function (_connectionId, _responseId, _event) {
     try {
         await core.tokenController.checkToken(token);
 
-        let systems = await core.mapController.get(_event.mapId).getSystems();
-
-        core.mapController.get(_event.mapId).subscribeSystems(_connectionId, _responseId);
-
-        api.send(_connectionId, _responseId, {
-            data: {
-                type: "bulk",
-                list: systems
-            },
-            success: true,
-            eventType: responseName
-        });
+        await core.mapController.get(_event.mapId).subscribers.subscribeSystems(_connectionId, _responseId);
     } catch (err) {
         helpers.errResponse(_connectionId, _responseId, responseName, "Error on remove solar system", {
             code: 0,
@@ -45,7 +34,7 @@ const subscriber = async function (_connectionId, _responseId, _event) {
 subscriber.unsubscribe = function (_connectionId, _responseId, _event) {
     // TODO - maybe we need check all (token, characters e.t., but i thing it not need now.
 
-    core.mapController.get(_event.mapId).unsubscribeSystems(_connectionId, _responseId);
+    core.mapController.get(_event.mapId).subscribers.unsubscribeSystems(_connectionId, _responseId);
 };
 
 

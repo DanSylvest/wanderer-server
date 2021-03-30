@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <a.chichenkov@initi.ru> on 3/2/21.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 3/2/21.
  */
  
 const getSolarSystemInfo = async function (solarSystemId) {

@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <a.chichenkov@initi.ru> on 10/1/20.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 10/1/20.
  */
 
 

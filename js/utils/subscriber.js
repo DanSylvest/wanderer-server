@@ -121,8 +121,11 @@ var SubscriptionsController = classCreator("SubscriptionsController", Emitter, {
         api.send(_connectionId, _responseId, {
             data: this._data,
             success: true,
-            eventType: "responseEveCharacterOnline"
+            eventType: this.options.responseCommand
         });
+    },
+    subscribersCount () {
+        return this._subscribers.length;
     }
 });
 

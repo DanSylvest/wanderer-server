@@ -13,7 +13,7 @@ const subscriber = async function (_connectionId, _responseId, _event) {
 
     try {
         await core.tokenController.checkToken(token);
-        core.mapController.get(_event.mapId).subscribeExistence(_connectionId, _responseId);
+        core.mapController.get(_event.mapId).subscribers.subscribeExistence(_connectionId, _responseId);
         api.send(_connectionId, _responseId, {
             data: true,
             success: true,
@@ -29,7 +29,7 @@ const subscriber = async function (_connectionId, _responseId, _event) {
 };
 
 subscriber.unsubscribe = function (_connectionId, _responseId, _event) {
-    core.mapController.get(_event.mapId).unsubscribeExistence(_connectionId, _responseId);
+    core.mapController.get(_event.mapId).subscribers.unsubscribeExistence(_connectionId, _responseId);
 };
 
 module.exports = subscriber;

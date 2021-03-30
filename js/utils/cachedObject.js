@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <a.chichenkov@initi.ru> on 2/13/21.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 2/13/21.
  */
 
 // const Emitter        = require("./../env/tools/emitter");

@@ -3,6 +3,19 @@
  */
 
 global.logging = true;
+global._ = {
+    // trace : false,
+    // err : false,
+    // warn : true,
+    // info : false,
+    // debug : false,
+
+    trace : true,
+    err : true,
+    warn : true,
+    info : true,
+    debug : true,
+}
 var log_level = 0;
 var show_time = true;
 var log = function () {
@@ -15,33 +28,45 @@ var log = function () {
     var status = "";
     var command = "";
     var color = "";
+
+    var enable = true;
+
     switch (level) {
         case log.TRACE:
             status = "TRACE";
             command = "trace";
             color = "magenta";
+            enable = global._.trace === true;
             break;
         case log.ERR:
             status = "ERROR";
             command = "error";
             color = "red";
+            enable = global._.err === true;
             break;
         case log.WARN:
             status = "WARNING";
             command = "warn";
             color = "orange";
+            enable = global._.warn === true;
             break;
         case log.INFO:
             status = "INFO";
             command = "info";
             color = "yellow";
+            enable = global._.info === true;
             break;
         case log.DEBUG:
             status = "DEBUG";
             command = "log";
             color = "blue";
+            enable = global._.debug === true;
             break;
     }
+
+    if(!enable)
+        return;
+
     var time = new Date();
 
     var h = convert(2, time.getHours());

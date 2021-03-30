@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <a.chichenkov@initi.ru> on 11/29/20.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 11/29/20.
  */
  
 const log = require("./log.js");

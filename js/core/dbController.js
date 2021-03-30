@@ -284,7 +284,6 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "tag",           type: String},                       // system tag
                 {name: "status",        type: Number,  defaultValue: 0},     // system tag
                 {name: "signatures",    type: Array},
-                {name: "effects",       type: String},                       // if it wormhole or abyss, system my have had some effects
                 {name: "visible",       type: Boolean, defaultValue: true},  // if it false system is not show at the map (this flag for delete)
                 {name: "position",      type: Object,  defaultValue: () => ({x: 0, y: 0})}
             ]

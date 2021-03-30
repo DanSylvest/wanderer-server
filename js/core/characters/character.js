@@ -101,7 +101,6 @@ var Character = classCreator("Character", Emitter, {
     },
     get: function (_attribute) {
         if(!this.has(_attribute)) {
-
             var _class = this._attributesFactory(_attribute);
 
             var instance = new _class({
@@ -298,23 +297,6 @@ var Character = classCreator("Character", Emitter, {
 
         return pr.native;
     },
-
-    // _checkAccessTokenExpire: function () {
-    //     var pr = new CustomPromise();
-    //
-    //     core.dbController.charactersDB.get(this.options.characterId, "realExpiresIn").then(function(_value){
-    //         var timeToExpires = _value - +new Date;
-    //         log(log.INFO, "Time to token expires is %s", timeToExpires);
-    //         pr.resolve(timeToExpires <= 0);
-    //     }.bind(this), function(_err){
-    //         pr.reject({
-    //             sub: _err,
-    //             message: "Error on load realExpiresIn"
-    //         });
-    //     }.bind(this));
-    //
-    //     return pr.native;
-    // },
     _updateAccessToken: function () {
         var pr = new CustomPromise();
 
@@ -360,17 +342,9 @@ var Character = classCreator("Character", Emitter, {
 
                     var realExpiresIn = (+new Date + _event.expires_in * 1000) - loadingTime;
 
-                    // var attrs = {
-                    //     refreshToken: _event.refresh_token,
-                    //     accessToken: _event.access_token,
-                    //     realExpiresIn: realExpiresIn,
-                    // };
-
                     await this.realExpiresIn.set(realExpiresIn);
                     await this.accessToken.set(_event.access_token);
                     await this.refreshToken.set(_event.refresh_token);
-
-                    // await core.dbController.charactersDB.set(this.options.characterId, attrs);
 
                     this._isRefreshingToken = false;
                     this._refreshAccessTokenResolver.resolve();
@@ -408,54 +382,6 @@ var Character = classCreator("Character", Emitter, {
             this._attributes[attrName].serverStatusOnline();
         }
     }
-    // _refreshAccessToken: async function () {
-    //     if(!this._isRefreshingToken) {
-    //
-    //         this._refreshAccessTokenResolver = new CustomPromise();
-    //         this._isRefreshingToken = true;
-    //
-    //         var isNotExit = true;
-    //         while(isNotExit) {
-    //             try {
-    //                 log(log.INFO, "Try refreshing token (%s/%s)", this._refreshAccessTokenCount, this._refreshAccessTokenMaxCount);
-    //
-    //                 var refreshToken = await core.dbController.charactersDB.get(this.options.characterId, "refreshToken")
-    //
-    //                 var startLoadTime = +new Date;
-    //                 var _event = await OAuth.refreshToken(refreshToken);
-    //                 var loadingTime = +new Date - startLoadTime;
-    //
-    //                 var realExpiresIn = (+new Date + _event.expires_in * 1000) - loadingTime;
-    //
-    //                 var attrs = {
-    //                     refreshToken: _event.refresh_token,
-    //                     accessToken: _event.access_token,
-    //                     realExpiresIn: realExpiresIn,
-    //                 };
-    //
-    //                 await core.dbController.charactersDB.set(this.options.characterId, attrs);
-    //
-    //                 this._isRefreshingToken = false;
-    //                 this._refreshAccessTokenResolver.resolve();
-    //                 isNotExit = false;
-    //
-    //                 log(log.INFO, "Token successfully updated");
-    //             } catch (_err) {
-    //                 log(log.INFO, "Error on try refresh token =>", JSON.stringify(_err));
-    //
-    //                 if (this._refreshAccessTokenCount < this._refreshAccessTokenMaxCount) {
-    //                     this._refreshAccessTokenCount++;
-    //                 } else {
-    //                     isNotExit = false;
-    //                     this._isRefreshingToken = false;
-    //                     this._refreshAccessTokenResolver.reject();
-    //                 }
-    //             }
-    //         }
-    //     }
-    //
-    //     return this._refreshAccessTokenResolver.native;
-    // }
 });
 
 

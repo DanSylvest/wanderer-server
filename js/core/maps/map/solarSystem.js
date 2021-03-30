@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <a.chichenkov@initi.ru> on 11/16/20.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 11/16/20.
  */
 
 const Emitter       = require("./../../../env/tools/emitter");
@@ -7,6 +7,8 @@ const classCreator  = require("./../../../env/tools/class");
 const CustomPromise = require("./../../../env/promise.js");
 const extend        = require("./../../../env/tools/extend.js");
 const exist         = require("./../../../env/tools/exist.js");
+const Subscriber    = require("./../../../utils/subscriber");
+const mapSqlActions = require("./../sql/mapSqlActions.js");
 
 const MapSolarSystem = classCreator("MapCharacter", Emitter, {
     constructor(mapId, solarSystemId) {
@@ -16,6 +18,7 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
         this.solarSystemId = solarSystemId;
         this.onlineCharacters = [];
         this._loadPromise = new CustomPromise();
+        this._notifyDynamicInfoSubscriber = false;
     },
     destructor() {
         this._loadPromise.native.cancel();
@@ -23,8 +26,11 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
         this.onlineCharacters = [];
         Emitter.prototype.destructor.call(this);
     },
-    async init() {
-
+    // async init() {
+    //
+    // },
+    connectionBreak (_connectionId) {
+        this._notifyDynamicInfoSubscriber && this._dynamicInfoSubscriber.removeSubscribersByConnection(_connectionId);
     },
     async isSystemExistsAndVisible () {
         let condition = [
@@ -55,20 +61,6 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
             name: name,
             position: position
         });
-    },
-    async update (visible, position) {
-        let condition = [
-            {name: "id", operator: "=", value: this.solarSystemId},
-            {name: "mapId", operator: "=", value: this.mapId}
-        ];
-
-        let data = {
-            visible: visible
-        }
-        if(position)
-            data.position = position;
-
-        await core.dbController.mapSystemsTable.setByCondition(condition, data);
     },
     async getInfo () {
         let condition = [
@@ -117,7 +109,6 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
             tag: mapInfo.tag,
             status: mapInfo.status,
             signatures: mapInfo.signatures,
-            effects: mapInfo.effects,
             visible: mapInfo.visible,
             position: mapInfo.position,
 
@@ -144,7 +135,100 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
         }, core.dbController.solarSystemsTable.attributes());
 
         return result.length === 1 ? result[0] : null;
-    }
+    },
+    async addCharacter (characterId) {
+        await mapSqlActions.addCharacterToSystem(this.mapId, this.systemId, characterId);
+        this.onlineCharacters.push(characterId);
+
+        if(this._notifyDynamicInfoSubscriber) {
+            this._dynamicInfoSubscriber.notify({
+                type: "multipleEvents",
+                list: [
+                    {type: "onlineUpdate", data: {onlineCount: this.onlineCharacters.length}},
+                    {type: "userJoin", data: {characterId}},
+                ]
+            });
+        }
+    },
+    async removeCharacter(characterId) {
+        await mapSqlActions.removeCharacterFromSystem(this.mapId, this.systemId, characterId);
+        this.onlineCharacters.removeByValue(characterId);
+
+        if (this._notifyDynamicInfoSubscriber) {
+            this._dynamicInfoSubscriber.notify({
+                type: "multipleEvents",
+                list: [
+                    {type: "onlineUpdate", data: {onlineCount: this.onlineCharacters.length}},
+                    {type: "userLeave", data: {characterId}},
+                ]
+            });
+        }
+    },
+    async updatePositions (x, y) {
+        await mapSqlActions.updateSystemPosition(this.mapId, this.solarSystemId, x, y);
+
+        if (this._notifyDynamicInfoSubscriber) {
+            this._dynamicInfoSubscriber.notify({
+                type: "updatedSystemsPosition",
+                data: {position: {x, y}}
+            });
+        }
+    },
+    async update (data) {
+        await mapSqlActions.updateSystem(this.mapId, this.solarSystemId, data);
+
+        if(this._notifyDynamicInfoSubscriber) {
+            this._dynamicInfoSubscriber.notify({
+                type: "systemUpdated",
+                data: data
+            });
+        }
+    },
+    async changeVisible (bool) {
+        await mapSqlActions.updateSystem(this.mapId, this.solarSystemId, {visible: bool});
+    },
+    _createDynamicInfoSubscriber () {
+        if (!this._dynamicInfoSubscriber) {
+            this._dynamicInfoSubscriber = new Subscriber({
+                responseCommand: "responseEveMapSolarSystemData",
+                onStart: function () {
+                    this._notifyDynamicInfoSubscriber = true;
+                }.bind(this),
+                onStop: function () {
+                    this._notifyDynamicInfoSubscriber = false;
+                }.bind(this)
+            });
+        }
+    },
+    subscribeDynamicInfo (connectionId, responseId) {
+        this._createDynamicInfoSubscriber();
+        this._dynamicInfoSubscriber.addSubscriber(connectionId, responseId);
+        this._bulkDynamicInfo(connectionId, responseId);
+    },
+    unsubscribeDynamicInfo (_connectionId, _responseId) {
+        if (this._dynamicInfoSubscriber) {
+            this._dynamicInfoSubscriber.removeSubscriber(_connectionId, _responseId);
+        }
+    },
+
+    async _bulkDynamicInfo (connectionId, responseId) {
+        let info = await mapSqlActions.getSystemInfo(this.mapId, this.solarSystemId);
+
+        this._dynamicInfoSubscriber.notifyFor(connectionId, responseId, {
+            type: "bulk",
+            data: {
+                isLocked: info.isLocked,
+                name: info.name,
+                description: info.description,
+                tag: info.tag,
+                status: info.status,
+                signatures: info.signatures,
+                position: info.position,
+                onlineCount: this.onlineCharacters.length,
+                onlineCharacters: this.onlineCharacters,
+            }
+        });
+    },
 });
 
 module.exports = MapSolarSystem;

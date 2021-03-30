@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <a.chichenkov@initi.ru> on 2/27/21.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 2/27/21.
  */
 const counterLog      = require("./../../../utils/counterLog");
 const DBController    = require("./../../dbController");
@@ -62,15 +62,13 @@ const updateChainPassages = async function (mapId, chainId, count) {
 }
 
 const addChainPassageHistory = async function (mapId, source, target, characterId, shipTypeId) {
-    //mapChainPassagesTable
-
-    // let condition = [
-    //     {name: "mapId", operator: "=", "value": mapId},
-    //     {name: "id", operator: "=", "value": chainId},
-    // ];
-    // await core.dbController.mapLinksTable.setByCondition(condition, {
-    //     countOfPassage: count
-    // });
+    await core.dbController.mapChainPassagesTable.add({
+        mapId: mapId,
+        solarSystemSourceId: source,
+        solarSystemTargetId: target,
+        characterId: characterId,
+        shipTypeId: shipTypeId
+    });
 }
 
 const addCharacterToSystem = async function (mapId, systemId, characterId) {
@@ -104,6 +102,18 @@ const getSystemPosition = async function (mapId, systemId) {
     ];
 
     let result = await core.dbController.mapSystemsTable.getByCondition(conditionOld, ["position"]);
+
+    return result.length > 0 ? result[0] : null;
+}
+
+const getSystemInfo = async function (mapId, systemId) {
+    let conditionOld = [
+        {name: "mapId", operator: "=", value: mapId},
+        {name: "id", operator: "=", value: systemId},
+        {name: "visible", operator: "=", value: true},
+    ];
+
+    let result = await core.dbController.mapSystemsTable.getByCondition(conditionOld, core.dbController.mapSystemsTable.attributes());
 
     return result.length > 0 ? result[0] : null;
 }
@@ -160,6 +170,21 @@ const updateSystemsPosition = async function (mapId, systemsData) {
     }
 
     await Promise.all(prarr);
+}
+
+
+const updateSystemPosition = async function (mapId, solarSystemId, x, y) {
+    let condition = [
+        {name: "mapId", operator: "=", value: mapId},
+        {name: "id", operator: "=", value: solarSystemId},
+    ];
+
+    await core.dbController.mapSystemsTable.setByCondition(condition, {
+        position: {
+            x: x,
+            y: y
+        }
+    });
 }
 
 const getLinkInfo = async function (mapId, linkId) {
@@ -253,9 +278,11 @@ module.exports = {
     updateChain,
     addChainPassageHistory,
     updateSystemsPosition,
+    updateSystemPosition,
 
     getLinkInfo,
     getSystems,
+    getSystemInfo,
     getLinks,
     getLinksWithData,
     getLinkPairs,

@@ -26,6 +26,17 @@ Array.prototype.searchByObjectKey = function (_key, _value) {
     return null;
 };
 
+Array.prototype.eraseByObjectKey = function (_key, _value) {
+    for (var a = 0; a < this.length; a++) {
+        if(exists(this[a][_key]) && this[a][_key] === _value){
+            this.splice(a, 1);
+            return true;
+        }
+    }
+
+    return false;
+};
+
 Array.prototype.merge = function (_arr) {
     // let map = this.convertToMap();
 

@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <a.chichenkov@initi.ru> on 1/16/21.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 1/16/21.
  */
 const CustomPromise = require("./promise.js");
 const Emitter       = require("./tools/emitter.js");

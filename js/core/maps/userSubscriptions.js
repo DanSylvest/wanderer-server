@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <a.chichenkov@initi.ru> on 11/26/20.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 11/26/20.
  */
 const Subscriber = require("./../../utils/subscriber");
 

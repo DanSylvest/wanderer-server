@@ -4,5 +4,6 @@ module.exports = {
     alliance        : require("./alliance/_dir"),
     map             : require("./map/_dir"),
     group           : require("./group/_dir"),
+    universe        : require("./universe/_dir"),
     subscribeStatus : require("./subscribeStatus"),
 };

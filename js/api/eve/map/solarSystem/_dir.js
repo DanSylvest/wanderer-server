@@ -6,4 +6,5 @@ module.exports = {
     update                : require("./update.js"),
     updatePositions       : require("./updatePositions.js"),
     subscribeSolarSystems : require("./subscribeSolarSystems.js"),
+    subscribeData         : require("./subscribeData.js"),
 };

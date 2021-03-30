@@ -85,8 +85,14 @@ var __sso_oath_refresh_token = function (_refresh_token) {
     request.post(options, function (error, body, data) {
         if(error)
             pr.reject(error);
-        else
-            pr.resolve(JSON.parse(data));
+        else {
+            try {
+                pr.resolve(JSON.parse(data));
+            } catch (e) {
+                log(log.ERR, 'THIS IS EXCEPTION: !!!!', JSON.parse(body));
+                throw 'error in __sso_oath_refresh_token'
+            }
+        }
     }.bind(this));
 
     return pr.native;

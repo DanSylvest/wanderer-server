@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <a.chichenkov@initi.ru> on 11/14/20.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 11/14/20.
  */
 
 const exist = require("./tools/exist");

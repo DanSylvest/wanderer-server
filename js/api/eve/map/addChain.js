@@ -14,6 +14,13 @@ const responseName = "responseEveChainAdd";
  * @returns {Promise<void>}
  */
 var request = async function (_connectionId, _responseId, _event) {
+    if(!_event.sourceSolarSystemId || !_event.targetSolarSystemId) {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on create chain", {
+            code: 0
+        });
+        return;
+    }
+
     // we need get token by connection
     let token = core.connectionStorage.get(_connectionId);
 

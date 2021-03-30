@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <a.chichenkov@initi.ru> on 1/9/21.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 1/9/21.
  */
 
 const Path        = require('./../env/tools/path');

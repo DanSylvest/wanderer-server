@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 3/4/20.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 3/4/20.
  */
 
 var classCreator = require("./class");

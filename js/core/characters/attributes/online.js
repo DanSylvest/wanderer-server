@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/22/20.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/22/20.
  */
 
 const classCreator      = require("./../../../env/tools/class");

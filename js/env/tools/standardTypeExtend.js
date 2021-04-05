@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/23/20.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/23/20.
  */
 
 Array.prototype.removeByIndex = function removeByIndex (index) {

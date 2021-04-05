@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 12/11/18.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 12/11/18.
  */
 
 var Connector       = require("./utils/connector");

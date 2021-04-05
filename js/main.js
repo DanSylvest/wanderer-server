@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 4/11/20.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 4/11/20.
  */
 
 global.projectPath = __dirname;

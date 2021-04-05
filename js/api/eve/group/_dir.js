@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <rolahd@yandex.ru> on 5/29/20.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/29/20.
  */
 
 module.exports = {

@@ -1,5 +1,5 @@
 /**
- * Created by Aleksey Chichenkov <a.chichenkov@initi.ru> on 4/4/21.
+ * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 4/4/21.
  */
 const Subscriber    = require("./../../../utils/subscriber");
 const mapSqlActions = require("./../sql/mapSqlActions.js");

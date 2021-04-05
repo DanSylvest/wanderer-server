@@ -13,17 +13,7 @@ const subscriber = async function (_connectionId, _responseId, _event) {
 
     try {
         await core.tokenController.checkToken(token);
-        let linkIds = await core.mapController.get(_event.mapId).getLinks();
-        core.mapController.get(_event.mapId).subscribers.subscribeLinks(_connectionId, _responseId);
-
-        api.send(_connectionId, _responseId, {
-            data: {
-                type: "bulk",
-                list: linkIds
-            },
-            success: true,
-            eventType: responseName
-        });
+        await core.mapController.get(_event.mapId).subscribers.subscribeLinks(_connectionId, _responseId);
     } catch (err) {
         helpers.errResponse(_connectionId, _responseId, responseName, "Error in subscribe links", {
             code: 1,

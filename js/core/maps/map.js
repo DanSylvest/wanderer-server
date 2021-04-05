@@ -3,11 +3,10 @@
  */
 
 
-const  Emitter        = require("./../../env/tools/emitter");
+const Emitter         = require("./../../env/tools/emitter");
 const classCreator    = require("./../../env/tools/class");
 const exist           = require("./../../env/tools/exist");
 const CustomPromise   = require("./../../env/promise");
-const md5             = require("md5");
 const Character       = require("./map/character");
 const User            = require("./map/user");
 const MapSolarSystem  = require("./map/solarSystem.js");
@@ -16,6 +15,7 @@ const solarSystemSql  = require("./sql/solarSystemSql.js");
 const ChainsManager   = require("./map/chainsManager.js");
 const log             = require("./../../utils/log.js");
 const MapSubscribers  = require("./map/mapSubscribers.js");
+const MapChain        = require("./map/chain.js")
 
 const Map = classCreator("Map", Emitter, {
     constructor (_options) {
@@ -41,7 +41,7 @@ const Map = classCreator("Map", Emitter, {
         this.characters = Object.create(null);
         this._systems = Object.create(null);
         this._charactersOnSystem = Object.create(null);
-        this._links = Object.create(null);
+        this._chains = Object.create(null);
         this._users = Object.create(null);
         this._charactersOnUsers = Object.create(null);
 
@@ -64,8 +64,8 @@ const Map = classCreator("Map", Emitter, {
             this._systems[systemId].destructor();
         }
 
-        for(let linkId in this._links) {
-            this._links[linkId].cancel();
+        for(let key in this._chains) {
+            this._chains[key].promise.cancel();
         }
 
         for(let characterId in this.characters) {
@@ -76,7 +76,7 @@ const Map = classCreator("Map", Emitter, {
         this.characters = Object.create(null);
         this._systems = Object.create(null);
         this._charactersOnSystem = Object.create(null);
-        this._links = Object.create(null);
+        this._chains = Object.create(null);
     },
 
     connectionBreak (_connectionId) {
@@ -84,10 +84,29 @@ const Map = classCreator("Map", Emitter, {
 
         for(let solarSystemId in this._systems)
             this._systems[solarSystemId].connectionBreak(_connectionId);
+
+        for(let chainId in this._chains)
+            this._chains[chainId].model.connectionBreak(_connectionId);
     },
     getSolarSystem (solarSystemId) {
         this._createSystemObject(solarSystemId);
         return this._systems[solarSystemId];
+    },
+    async getChain (chainId) {
+        if(!this._chains[chainId]) {
+            let chainInfo = await mapSqlActions.getLinkInfo(this.options.mapId, chainId);
+            if (!chainInfo) {
+                throw `Error "Chain ${chainId} isn't exists."`
+            }
+
+            this._chains[chainId] = {
+                model: new MapChain(this.options.mapId, chainId),
+                promise: new CustomPromise()
+            }
+            this._chains[chainId].promise.resolve();
+        }
+
+        return this._chains[chainId].model;
     },
 
     addCharactersToObserve (_characterIds) {
@@ -224,30 +243,27 @@ const Map = classCreator("Map", Emitter, {
         return solarSystem.loadPromise();
     },
     async _addLink (_sourceSystemId, _targetSystemId) {
-        // Получим промис, который отвечает за то, что уже кто-то загружает этот линк из базы
-        let loadingPromise = this._links[_sourceSystemId + "_" + _targetSystemId] || this._links[_targetSystemId + "_" + _sourceSystemId];
+        let chainInfo = this._chains[_sourceSystemId + "_" + _targetSystemId] || this._chains[_targetSystemId + "_" + _sourceSystemId];
+        if(!chainInfo) {
+            chainInfo = this._chains[_sourceSystemId + "_" + _targetSystemId] = {
+                promise: new CustomPromise()
+            };
 
-        if (!loadingPromise) {
-            loadingPromise = new CustomPromise();
-            this._links[_sourceSystemId + "_" + _targetSystemId] = loadingPromise;
-
-            let link = await mapSqlActions.getLinkByEdges(this.options.mapId, _sourceSystemId, _targetSystemId);
-            if (!link) {
-                let id = md5(config.app.solt + "_" + +new Date);
-
-                await core.dbController.mapLinksTable.add({
-                    id: id,
-                    mapId: this.options.mapId,
-                    solarSystemSource: _sourceSystemId,
-                    solarSystemTarget: _targetSystemId,
-                });
-
-                this.subscribers.notifyLinkAdded(id);
+            let chainData = await mapSqlActions.getLinkByEdges(this.options.mapId, _sourceSystemId, _targetSystemId);
+            if(!chainData) {
+                let newChainId = _sourceSystemId + "_" + _targetSystemId;
+                await mapSqlActions.addLink(this.options.mapId, newChainId, _sourceSystemId, _targetSystemId);
+                this._chains[newChainId].model = new MapChain(this.options.mapId, newChainId);
+                chainInfo.id = newChainId;
+                this.subscribers.notifyLinkAdded(newChainId);
+            } else {
+                this._chains[chainInfo.id].model = new MapChain(this.options.mapId, chainInfo.id);
             }
-            loadingPromise.resolve();
+
+            chainInfo.promise.resolve();
         }
 
-        return loadingPromise.native;
+        return chainInfo.promise.native;
     },
     async _linkPassage (_sourceSystemId, _targetSystemId, _characterId) {
         await this._addLink(_sourceSystemId, _targetSystemId);
@@ -402,7 +418,7 @@ const Map = classCreator("Map", Emitter, {
             let destination = hubs[a];
             let route = arrRoutes[a];
 
-            let arrInfo = await Promise.all(route.systems.map(x => this.getSolarSystem(x).staticInfo()));
+            let arrInfo = await Promise.all(route.systems.map(x => this.getSolarSystem(x).staticInfo(minimumRouteAttrs)));
 
             out.push({
                 hasConnection: route.hasConnection,
@@ -442,14 +458,15 @@ const Map = classCreator("Map", Emitter, {
     async updateSystem (_systemId, _data) {
         this._systems[_systemId].update(_data);
     },
-    async updateLink (_linkId, _data) {
-        for(let attr in _data) {
+    async updateLink (chainId, data) {
+        for(let attr in data) {
             if(attr === "timeStatus")
-                _data = {..._data, updated: new Date}
+                data = {...data, updated: new Date}
         }
 
-        await mapSqlActions.updateChain(this.options.mapId, _linkId, _data);
-        this.subscribers.notifyLinkUpdated(_linkId, _data);
+        await mapSqlActions.updateChain(this.options.mapId, chainId, data);
+        let chain = await this.getChain(chainId);
+        chain.update(data);
     },
     async updateSystemsPosition (_systemsPosition) {
         await Promise.all(_systemsPosition.map(x => this._systems[x.id].updatePositions(x.x, x.y)))
@@ -473,16 +490,19 @@ const Map = classCreator("Map", Emitter, {
     async systemExists (_systemId, checkVisible) {
         return await mapSqlActions.systemExists(this.options.mapId, _systemId, checkVisible);
     },
-    async linkRemove (_linkId) {
+    async linkRemove (chainId) {
         // todo - процес удаления линка может быть только один раз
         // поэтому его надо блокировать
-        let info = await mapSqlActions.linkRemove(this.options.mapId, _linkId);
+        let chainInfo = await mapSqlActions.linkRemove(this.options.mapId, chainId);
+        let info = this._chains[chainInfo.source + "_" + chainInfo.target] || this._chains[chainInfo.target + "_" + chainInfo.source];
+        if(info) {
+            this._chains[chainId].model.destructor();
 
-        // we need remove from this._links
-        delete this._links[info.source + "_" + info.target];
-        delete this._links[info.target + "_" + info.source];
+            delete this._chains[chainInfo.source + "_" + chainInfo.target];
+            delete this._chains[chainInfo.target + "_" + chainInfo.source];
+        }
 
-        this.subscribers.notifyLinkRemoved(_linkId);
+        this.subscribers.notifyLinkRemoved(chainId);
     },
     async systemRemove (_systemId) {
         await this._systems[_systemId].changeVisible(false);
@@ -538,5 +558,13 @@ const Map = classCreator("Map", Emitter, {
 
 const solarSystemTypesNotAbleToEnter = [7,8,9,19,20,21,22,23,24];
 const solarSystemTypesNotAbleToMove = [19,20,21,22,23,24];
+const minimumRouteAttrs = [
+    "systemType",
+    "typeName",
+    "security",
+    "triglavianInvasionStatus",
+    "solarSystemId",
+    "solarSystemName",
+]
 
 module.exports = Map;

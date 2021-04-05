@@ -51,6 +51,15 @@ const getLinkByEdges = async function (mapId, source, target) {
     return result.length > 0 ? result[0] : null;
 }
 
+const addLink = async function (mapId, chainId, source, target) {
+    return await core.dbController.mapLinksTable.add({
+        id: chainId,
+        mapId: mapId,
+        solarSystemSource: source,
+        solarSystemTarget: target,
+    });
+}
+
 const updateChainPassages = async function (mapId, chainId, count) {
     let condition = [
         {name: "mapId", operator: "=", "value": mapId},
@@ -270,6 +279,7 @@ module.exports = {
     linkRemove,
     getLinksBySystem,
     getLinkByEdges,
+    addLink,
     updateChainPassages,
     addCharacterToSystem,
     removeCharacterFromSystem,

@@ -89,9 +89,15 @@ class MapSubscribers {
             this._systemsSubscriber.removeSubscriber(_connectionId, _responseId);
         }
     }
-    subscribeLinks (_connectionId, _responseId) {
+    async subscribeLinks (connectionId, responseId) {
         this._createLinksSubscriber()
-        this._linksSubscriber.addSubscriber(_connectionId, _responseId);
+        this._linksSubscriber.addSubscriber(connectionId, responseId);
+
+        let links = await this.map.getLinks();
+        this._linksSubscriber.notifyFor(connectionId, responseId, {
+            type: "bulk",
+            list: links
+        });
     }
     unsubscribeLinks (_connectionId, _responseId) {
         if (this._linksSubscriber) {
@@ -112,7 +118,7 @@ class MapSubscribers {
         if (this._notifySystems && this._systemsSubscriber) {
             this._systemsSubscriber.notify({
                 type: "add",
-                solarSystemId: solarSystemId
+                solarSystemId: solarSystemId.toString()
             });
         }
     }
@@ -120,35 +126,25 @@ class MapSubscribers {
         if (this._notifySystems && this._systemsSubscriber) {
             this._systemsSubscriber.notify({
                 type: "removed",
-                systemId: solarSystemId
+                solarSystemId: solarSystemId
             });
         }
     }
 
-    notifyLinkAdded (linkId) {
+    notifyLinkAdded (chainId) {
         if (this._notifyLinks) {
             this._linksSubscriber.notify({
                 type: "add",
-                linkId: linkId
+                chainId: chainId
             })
         }
     }
 
-    notifyLinkUpdated (linkId, data) {
-        if (this._notifyLinks) {
-            this._linksSubscriber.notify({
-                type: "linkUpdated",
-                linkId: linkId,
-                data: data
-            });
-        }
-    }
-
-    notifyLinkRemoved (linkId) {
+    notifyLinkRemoved (chainId) {
         if (this._notifyLinks) {
             this._linksSubscriber.notify({
                 type: "removed",
-                linkId: linkId
+                chainId: chainId
             })
         }
     }

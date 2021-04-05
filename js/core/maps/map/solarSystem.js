@@ -5,7 +5,6 @@
 const Emitter       = require("./../../../env/tools/emitter");
 const classCreator  = require("./../../../env/tools/class");
 const CustomPromise = require("./../../../env/promise.js");
-const extend        = require("./../../../env/tools/extend.js");
 const exist         = require("./../../../env/tools/exist.js");
 const Subscriber    = require("./../../../utils/subscriber");
 const mapSqlActions = require("./../sql/mapSqlActions.js");
@@ -26,9 +25,6 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
         this.onlineCharacters = [];
         Emitter.prototype.destructor.call(this);
     },
-    // async init() {
-    //
-    // },
     connectionBreak (_connectionId) {
         this._notifyDynamicInfoSubscriber && this._dynamicInfoSubscriber.removeSubscribersByConnection(_connectionId);
     },
@@ -129,10 +125,10 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
 
         return out;
     },
-    async staticInfo () {
+    async staticInfo (attrs) {
         let result = await core.dbController.solarSystemsTable.getByCondition({
             name: "solarSystemId", operator: "=", value: this.solarSystemId
-        }, core.dbController.solarSystemsTable.attributes());
+        }, exist(attrs) ? attrs : core.dbController.solarSystemsTable.attributes());
 
         return result.length === 1 ? result[0] : null;
     },
@@ -213,6 +209,11 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
 
     async _bulkDynamicInfo (connectionId, responseId) {
         let info = await mapSqlActions.getSystemInfo(this.mapId, this.solarSystemId);
+
+        if(info === null) {
+            // debugger;
+            return ;
+        }
 
         this._dynamicInfoSubscriber.notifyFor(connectionId, responseId, {
             type: "bulk",

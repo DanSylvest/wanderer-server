@@ -2,7 +2,7 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/20/20.
  */
 const helpers = require("./../../../../utils/helpers.js");
-const responseName = "responseEveMapRoutesAddHub";
+const responseName = "responseGetRoutes";
 
 const request = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
@@ -17,7 +17,7 @@ const request = async function (_connectionId, _responseId, _event) {
     try {
         await core.tokenController.checkToken(token);
         let map = core.mapController.get(_event.mapId);
-        let list = await map.getRoutesListForSolarSystem(_event.solarSystemId);
+        let list = await map.getRoutesListForSolarSystem(_event.solarSystemId, _event.hubs);
 
         api.send(_connectionId, _responseId, {
             data: list,
@@ -25,7 +25,7 @@ const request = async function (_connectionId, _responseId, _event) {
             eventType: responseName
         });
     } catch (err) {
-        helpers.errResponse(_connectionId, _responseId, responseName, "Error on load list routes", {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on getting routes", {
             code: 0,
             handledError: err
         });

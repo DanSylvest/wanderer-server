@@ -18,33 +18,35 @@ class MapSubscribers {
         if(this._existenceSubscriber) {
             this._existenceSubscriber.notify(false);
             this._existenceSubscriber.destructor();
-            this._systemsSubscriber = null;
+            delete this._systemsSubscriber;
         }
 
         if(this._systemsSubscriber) {
             this._systemsSubscriber.destructor();
-            this._systemsSubscriber = null;
+            delete this._systemsSubscriber;
+        }
+
+        if(this._hubsSubscriber) {
+            this._hubsSubscriber.destructor();
+            delete this._hubsSubscriber;
         }
 
         if(this._linksSubscriber) {
             this._linksSubscriber.destructor();
-            this._linksSubscriber = null;
+            delete this._linksSubscriber;
         }
     }
     connectionBreak (_connectionId) {
         this._systemsSubscriber && this._systemsSubscriber.removeSubscribersByConnection(_connectionId);
         this._linksSubscriber && this._linksSubscriber.removeSubscribersByConnection(_connectionId);
+        this._hubsSubscriber && this._hubsSubscriber.removeSubscribersByConnection(_connectionId);
     }
     _createExistenceSubscriber () {
         if(!this._existenceSubscriber) {
             this._existenceSubscriber = new Subscriber({
                 responseCommand: "responseEveMapExistence",
-                onStart: function () {
-                    this._notifyExistence = true;
-                }.bind(this),
-                onStop: function () {
-                    this._notifyExistence = false;
-                }.bind(this)
+                onStart: () => this._notifyExistence = true,
+                onStop: () => this._notifyExistence = false
             });
         }
     }
@@ -52,12 +54,17 @@ class MapSubscribers {
         if (!this._systemsSubscriber) {
             this._systemsSubscriber = new Subscriber({
                 responseCommand: "responseEveMapSystems",
-                onStart: function () {
-                    this._notifySystems = true;
-                }.bind(this),
-                onStop: function () {
-                    this._notifySystems = false;
-                }.bind(this)
+                onStart: () => this._notifySystems = true,
+                onStop: () => this._notifySystems = false
+            });
+        }
+    }
+    _createHubsSubscriber () {
+        if (!this._hubsSubscriber) {
+            this._hubsSubscriber = new Subscriber({
+                responseCommand: "responseSubscribeHubs",
+                onStart: () => this._notifyHubs = true,
+                onStop: () => this._notifyHubs = false
             });
         }
     }
@@ -65,15 +72,28 @@ class MapSubscribers {
         if(!this._linksSubscriber) {
             this._linksSubscriber = new Subscriber({
                 responseCommand: "responseEveMapLinks",
-                onStart: function () {
-                    this._notifyLinks = true;
-                }.bind(this),
-                onStop: function () {
-                    this._notifyLinks = false;
-                }.bind(this)
+                onStart: () => this._notifyLinks = true,
+                onStop: () => this._notifyLinks = false
             });
         }
     }
+    async subscribeHubs (connectionId, responseId) {
+        this._createHubsSubscriber();
+        this._hubsSubscriber.addSubscriber(connectionId, responseId);
+
+        let list = await this.map.getHubs();
+        this._hubsSubscriber.notifyFor(connectionId, responseId, {
+            type: "bulk",
+            list: list
+        });
+    }
+
+    unsubscribeHubs (_connectionId, _responseId) {
+        if (this._hubsSubscriber) {
+            this._hubsSubscriber.removeSubscriber(_connectionId, _responseId);
+        }
+    }
+
     async subscribeSystems (connectionId, responseId) {
         this._createSystemsSubscriber();
         this._systemsSubscriber.addSubscriber(connectionId, responseId);
@@ -145,6 +165,24 @@ class MapSubscribers {
             this._linksSubscriber.notify({
                 type: "removed",
                 chainId: chainId
+            })
+        }
+    }
+
+    notifyHubAdded (hubId) {
+        if (this._notifyLinks) {
+            this._hubsSubscriber.notify({
+                type: "add",
+                hubId: hubId.toString()
+            })
+        }
+    }
+
+    notifyHubRemoved (hubId) {
+        if (this._notifyLinks) {
+            this._hubsSubscriber.notify({
+                type: "removed",
+                hubId: hubId.toString()
             })
         }
     }

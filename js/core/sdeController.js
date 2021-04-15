@@ -70,14 +70,28 @@ var SdeController = classCreator("SdeController", Emitter, {
 
         return pr.native;
     },
-    getShipTypeInfo: async function (_shipTypeId) {
-        let query = `SELECT "typeName", "volume"
+    //TODO - Всё это можно пересчитать один раз на установке, и не делать запрос на получение группы шипа
+    // Так же можно будет запросить катеогрию и что-нибудь еще - и сложить это всё в одну таблицу.
+    async getShipTypeInfo (_shipTypeId) {
+        let query = `SELECT "typeName", "volume", "description", "mass", "capacity", "groupID", "typeID"
             FROM public."invTypes"
-            WHERE "typeID"='` + _shipTypeId + `';`;
+            WHERE "typeID"='${_shipTypeId}';`;
 
         counterLog("SQL", query);
-        var result = await core.dbController.sdeDB.custom(query);
-        return result.rowCount > 0 ? result.rows[0] : null;
+        let result = await core.dbController.sdeDB.custom(query);
+        if(result.rowCount > 0) {
+            query = `SELECT "groupName"
+            FROM public."invGroups"
+            WHERE "groupID"='${result.rows[0].groupID}';`;
+            counterLog("SQL", query);
+            let groupResult = await core.dbController.sdeDB.custom(query);
+
+            let out = {...result.rows[0], ...groupResult.rows[0]};
+            delete out.groupID;
+            return out;
+        }
+
+        return null;
     },
     /**
      *

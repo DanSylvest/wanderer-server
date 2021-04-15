@@ -3,7 +3,7 @@
  */
 
 const helpers = require("./../../../utils/helpers.js");
-const responseName = "responseEveCharacterOnline";
+const responseName = "responseEveCharacterShip";
 
 const subscriber = async function (_connectionId, _responseId, _event) {
     // we need get token by connection
@@ -25,14 +25,14 @@ const subscriber = async function (_connectionId, _responseId, _event) {
             return;
         }
 
-        core.charactersController.get(_event.characterId).get("online").subscribe(_connectionId, _responseId);
+        core.charactersController.get(_event.characterId).get("ship").subscribe(_connectionId, _responseId);
     } catch (err) {
-        helpers.errResponse(_connectionId, _responseId, responseName, "Error in subscribe online", {code: 1, handledError: err});
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error in subscribe ship", {code: 1, handledError: err});
     }
 };
 
 subscriber.unsubscribe = function (_connectionId, _responseId, _event) {
-    core.charactersController.get(_event.characterId).get("online").unsubscribe(_connectionId, _responseId);
+    core.charactersController.get(_event.characterId).get("ship").unsubscribe(_connectionId, _responseId);
 };
 
 

@@ -22,6 +22,11 @@ const Controller = classCreator("CharactersController", Emitter, {
     has: function (_characterId) {
         return !!this._characters[_characterId];
     },
+    /**
+     *
+     * @param _characterId
+     * @returns {Character}
+     */
     get: function (_characterId) {
         if (!this.has(_characterId)) {
             this._add(_characterId, new Character({characterId: _characterId}));

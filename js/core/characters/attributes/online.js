@@ -66,7 +66,10 @@ const Online = classCreator("Online", AttributeAbstract, {
             this._value = _isOnline;
             // also we need update database state
             core.dbController.charactersDB.set(this.options.characterId, "online", _isOnline).then(function () {
-                this._subscriber && this._subscriber.notify(_isOnline);
+                this._subscriber && this._subscriber.notify({
+                    type: "update",
+                    data: _isOnline
+                });
                 this.emit("change", _isOnline);
             }.bind(this), function () {
                 // do nothing
@@ -77,6 +80,22 @@ const Online = classCreator("Online", AttributeAbstract, {
         AttributeAbstract.prototype.serverStatusOffline.call(this);
 
         this._updateOnline(false);
+    },
+    async _bulkNotify (_connectionId, _responseId) {
+        if(exist(this._subscriber)) {
+
+            let value = null;
+
+            if(exist(this._value))
+                value = this._value;
+            else
+                value = await core.dbController.charactersDB.get(this.options.characterId, "online");
+
+            this._subscriber.notifyFor(_connectionId, _responseId, {
+                type: "bulk",
+                data: value
+            })
+        }
     }
 });
 

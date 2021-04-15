@@ -30,7 +30,7 @@ const Attribute = classCreator("Online", Emitter, {
         this._innerSubscribers = Object.create(null);
         this._subscribeQueue = [];
         this._awaitSubscribers = [];
-        this._subscriberReadyPromise = new CustomPromise();
+        this._subscriberReadyPromise = null;
 
         this._createObserver();
     },
@@ -64,15 +64,14 @@ const Attribute = classCreator("Online", Emitter, {
     // ============================
     //  SUBSCRIPTIONS METHODS
     // ============================
-    subscribe: function (_connectionId, _responseId) {
+    async subscribe (_connectionId, _responseId) {
         if (this._paused) {
             this._subscribeQueue.push([_connectionId, _responseId]);
         } else {
-            this._createSubscriber().then(function () {
-                this._subscriber.addSubscriber(_connectionId, _responseId);
-            }.bind(this), function () {
-                // do nothing
-            }.bind(this));
+            await this._createSubscriber()
+
+            this._subscriber.addSubscriber(_connectionId, _responseId);
+            this._bulkNotify(_connectionId, _responseId);
         }
     },
     unsubscribe: function (_connectionId, _responseId) {
@@ -80,13 +79,19 @@ const Attribute = classCreator("Online", Emitter, {
             this._subscriber.removeSubscriber(_connectionId, _responseId);
         }
     },
+    _bulkNotify (_connectionId, _responseId) {
+
+    },
     _createObserver: function  () {
 
     },
     _createSubscriber: function () {
         if(!this._subscriberReadyPromise) {
             this._subscriberReadyPromise = new CustomPromise();
-            this.__createSubscriber(this._subscriberReadyPromise.resolve, this._subscriberReadyPromise.reject);
+            this.__createSubscriber(
+                () => this._subscriberReadyPromise.resolve(),
+                () => this._subscriberReadyPromise.reject()
+            );
         }
 
         return this._subscriberReadyPromise.native;

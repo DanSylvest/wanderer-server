@@ -42,7 +42,10 @@ const Ship = classCreator("Ship", AttributeAbstract, {
             this._value = _value;
             // also we need update database state
             core.dbController.charactersDB.set(this.options.characterId, "ship", _value).then(function () {
-                this._subscriber && this._subscriber.notify(_value);
+                this._subscriber && this._subscriber.notify({
+                    type: "update",
+                    data: _value
+                });
                 this.emit("change", _value);
             }.bind(this), function () {
                 // do nothing
@@ -71,6 +74,22 @@ const Ship = classCreator("Ship", AttributeAbstract, {
             }.bind(this));
         } else {
             resolve();
+        }
+    },
+    async _bulkNotify (_connectionId, _responseId) {
+        if(exist(this._subscriber)) {
+
+            let value = null;
+
+            if(exist(this._value))
+                value = this._value;
+            else
+                value = await core.dbController.charactersDB.get(this.options.characterId, "ship");
+
+            this._subscriber.notifyFor(_connectionId, _responseId, {
+                type: "bulk",
+                data: value
+            })
         }
     }
 });

@@ -137,27 +137,29 @@ var Character = classCreator("Character", Emitter, {
 
          let result = await core.dbController.charactersDB.get(this.options.characterId, attrs);
 
-         let shipName = "capsule";
+         let shipId = "670";
          if (result.ship) {
              let shipInfo = await core.sdeController.getShipTypeInfo(result.ship);
-             shipName = shipInfo.typeName;
+             shipId = shipInfo.typeID;
          }
 
          let out = {
              name: result.name,
              online: result.online,
-             ship: shipName,
+             ship: shipId,
              addDate: result.addDate
          }
 
          if (result.info.corporationId) {
              out.corporation = result.info.corporation.name;
              out.corporationId = result.info.corporationId;
+             out.corporationTicker = result.info.corporation.ticker;
          }
 
          if (result.info.allianceId) {
              out.alliance = result.info.alliance.name;
              out.allianceId = result.info.allianceId;
+             out.allianceTicker = result.info.alliance.ticker;
          }
 
          return out;

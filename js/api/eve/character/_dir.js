@@ -3,12 +3,14 @@
  */
 
 module.exports = {
-    add        : require("./add"),
-    list       : require("./list"),
-    online     : require("./online"),
-    fastSearch : require("./fastSearch"),
-    info       : require("./info"),
-    getName    : require("./getName"),
-    remove     : require("./remove"),
-    byUser     : require("./byUser"),
+    add               : require("./add"),
+    list              : require("./list"),
+    online            : require("./online"),
+    subscribeLocation : require("./subscribeLocation"),
+    subscribeShip     : require("./subscribeShip"),
+    fastSearch        : require("./fastSearch"),
+    info              : require("./info"),
+    getName           : require("./getName"),
+    remove            : require("./remove"),
+    byUser            : require("./byUser"),
 };

@@ -390,6 +390,8 @@ const Map = classCreator("Map", Emitter, {
         if(!hasSystem) {
             hubs.push(solarSystemId.toString());
             await core.dbController.mapsDB.set(this.options.mapId, "hubs", hubs);
+
+            this.subscribers.notifyHubAdded(solarSystemId);
         }
     },
     async removeHub (solarSystemId) {
@@ -399,14 +401,15 @@ const Map = classCreator("Map", Emitter, {
         if(index !== -1) {
             hubs.removeByIndex(index);
             await core.dbController.mapsDB.set(this.options.mapId, "hubs", hubs);
+            this.subscribers.notifyHubRemoved(solarSystemId);
         }
     },
     async getHubs () {
         return await core.dbController.mapsDB.get(this.options.mapId, "hubs");
     },
-    async getRoutesListForSolarSystem (solarSystemId) {
+    async getRoutesListForSolarSystem (solarSystemId, hubs) {
         let out = [];
-        let hubs = await this.getHubs();
+        // let hubs = await this.getHubs();
 
         let links = await this.getLinkPairs();
         let connections = links.map(x => x.first + "|" + x.second)
@@ -557,7 +560,7 @@ const Map = classCreator("Map", Emitter, {
 });
 
 const solarSystemTypesNotAbleToEnter = [7,8,9,19,20,21,22,23,24];
-const solarSystemTypesNotAbleToMove = [19,20,21,22,23,24];
+// const solarSystemTypesNotAbleToMove = [19,20,21,22,23,24];
 const minimumRouteAttrs = [
     "systemType",
     "typeName",

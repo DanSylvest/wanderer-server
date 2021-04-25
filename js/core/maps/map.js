@@ -407,15 +407,66 @@ const Map = classCreator("Map", Emitter, {
     async getHubs () {
         return await core.dbController.mapsDB.get(this.options.mapId, "hubs");
     },
-    async getRoutesListForSolarSystem (solarSystemId, hubs) {
+    async getRoutesListForSolarSystemAdvanced (solarSystemId, hubs, settings) {
+        let defaultSettings = {
+            pathType: "shortest",
+            includeMassCrit: true,
+            includeEol: true,
+            includeFrig: true,
+            includeCruise: true,
+            avoidWormholes: false,
+            avoidPochven: false,
+            avoidEdencom: false,
+            avoidTriglavian: false,
+            includeThera: true,
+
+            ...settings
+        };
+
+        let connections = [];
+
+        // If we avoid wormholes - map links will be avoiding
+        // if we avoid wormholes - we avoiding also Thera
+        if(!defaultSettings.avoidWormholes) {
+            let mapChains = await this.getLinkPairsAdvanced(
+                defaultSettings.includeFrig,
+                defaultSettings.includeEol,
+                defaultSettings.includeMassCrit,
+            );
+
+            let theraChains = [];
+            if(defaultSettings.includeThera) {
+                theraChains = core.thera.getChainPairs(
+                    defaultSettings.includeFrig,
+                    defaultSettings.includeEol,
+                    defaultSettings.includeMassCrit,
+                );
+            }
+
+            let chains = removeIntersection(mapChains.concat(theraChains));
+            if(!defaultSettings.includeCruise) {
+                chains = chains.filter(x => {
+                    return !core.cachedDBData.wormholeClassAIndexed[x.first] && !core.cachedDBData.wormholeClassAIndexed[x.second];
+                })
+            }
+
+            connections = chains.map(x => x.first + "|" + x.second)
+                .concat(chains.map(x => x.second + "|" + x.first));
+        }
+
+        let avoidanceList = [];
+        if(defaultSettings.avoidEdencom)
+            avoidanceList = avoidanceList.concat(core.cachedDBData.edencomSolarSystems);
+
+        if(defaultSettings.avoidTriglavian)
+            avoidanceList = avoidanceList.concat(core.cachedDBData.triglavianSolarSystems);
+
+        if(defaultSettings.avoidPochven)
+            avoidanceList = avoidanceList.concat(core.cachedDBData.pochvenSolarSystems);
+
         let out = [];
-        // let hubs = await this.getHubs();
 
-        let links = await this.getLinkPairs();
-        let connections = links.map(x => x.first + "|" + x.second)
-            .concat(links.map(x => x.second + "|" + x.first));
-
-        let arrRoutes = await Promise.all(hubs.map(destination => this.loadRoute(destination, solarSystemId, "shortest", connections)));
+        let arrRoutes = await Promise.all(hubs.map(destination => this.loadRoute(destination, solarSystemId, defaultSettings.pathType, connections, avoidanceList)));
 
         for(let a = 0; a < arrRoutes.length; a++) {
             let destination = hubs[a];
@@ -433,13 +484,16 @@ const Map = classCreator("Map", Emitter, {
 
         return out;
     },
-    loadRoute (dest, origin, flag, connections) {
+    loadRoute (dest, origin, flag, connections, avoidanceList) {
         let pr = new CustomPromise();
 
-        core.esiApi.routes(dest, origin, flag, connections)
+        if (avoidanceList === undefined)
+            avoidanceList = [];
+
+        core.esiApi.routes(dest, origin, flag, connections, avoidanceList)
             .then(
-                event => pr.resolve({hasConnection: true,systems: event}),
-                err => pr.resolve({hasConnection: false,systems: [dest]})
+                event => pr.resolve({hasConnection: true, systems: event}),
+                err => pr.resolve({hasConnection: false, systems: [dest]})
             );
 
         return pr.native;
@@ -489,6 +543,9 @@ const Map = classCreator("Map", Emitter, {
     },
     async getLinkPairs () {
         return await mapSqlActions.getLinkPairs(this.options.mapId);
+    },
+    async getLinkPairsAdvanced (includeFrig, includeEol, includeMassCrit) {
+        return await mapSqlActions.getLinkPairsAdvanced(this.options.mapId, includeFrig, includeEol, includeMassCrit);
     },
     async systemExists (_systemId, checkVisible) {
         return await mapSqlActions.systemExists(this.options.mapId, _systemId, checkVisible);
@@ -558,6 +615,20 @@ const Map = classCreator("Map", Emitter, {
     }
 
 });
+
+const removeIntersection = function (pairsArr) {
+    let checkObj = Object.create(null);
+    let out = [];
+
+    pairsArr.map(x => {
+        if(!checkObj[x.first + "_" + x.second] && !checkObj[x.second + "_" + x.first]) {
+            checkObj[x.first + "_" + x.second] = true;
+            out.push(x);
+        }
+    });
+
+    return out;
+}
 
 const solarSystemTypesNotAbleToEnter = [7,8,9,19,20,21,22,23,24];
 // const solarSystemTypesNotAbleToMove = [19,20,21,22,23,24];

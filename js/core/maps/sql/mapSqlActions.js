@@ -237,6 +237,26 @@ const getLinkPairs = async function (mapId) {
     return result.map(item => ({first: item.solarSystemSource, second: item.solarSystemTarget}));
 };
 
+
+const getLinkPairsAdvanced = async function (mapId, includeFrig, includeEol, includeMassCrit) {
+    let condition = [{name: "mapId", operator: "=", value: mapId}];
+
+    if(!includeMassCrit) {
+        condition.push({name: "massStatus", operator: "!=", value: 2})
+    }
+
+    if(!includeEol) {
+        condition.push({name: "timeStatus", operator: "!=", value: 1})
+    }
+
+    if(!includeFrig) {
+        condition.push({name: "shipSizeType", operator: "!=", value: 0});
+    }
+
+    let result = await core.dbController.mapLinksTable.getByCondition(condition, ["id", "solarSystemSource", "solarSystemTarget"]);
+    return result.map(item => ({first: item.solarSystemSource, second: item.solarSystemTarget}));
+};
+
 const systemExists = async function (mapId, systemId, checkVisible) {
     let condition = [
         {name: "mapId", operator: "=", value: mapId},
@@ -294,6 +314,7 @@ module.exports = {
     getSystems,
     getSystemInfo,
     getLinks,
+    getLinkPairsAdvanced,
     getLinksWithData,
     getLinkPairs,
     systemExists,

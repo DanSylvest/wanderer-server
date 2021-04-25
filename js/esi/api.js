@@ -167,12 +167,13 @@ var _search = function (_categories, _match) {
     return pr.native;
 };
 
-const _routes = function (destination, origin, flag, connections) {
+const _routes = function (destination, origin, flag, connections, avoidanceList) {
     let pr = new CustomPromise();
 
     let base = extend(publicData, {
         flag: flag || "secure",
-        connections: connections || []
+        connections: connections || [],
+        avoid: avoidanceList || []
     });
 
     routesApi.getRouteOriginDestination(destination, origin, base, function (error, data, response) {

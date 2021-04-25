@@ -102,7 +102,7 @@ const MapController = classCreator("MapController", Emitter, {
 
         // Загружаем все карты, для которых данная группа присоеденена
         // /** @type {Array<Array<mapId>>} */
-        let arr = await Promise.all(groups.map(x => this.getMapsByGroup(x)));
+        let arr = await Promise.all(groups.map(x => core.groupsController.getMapsByGroup(x)));
 
         // Все карты, которые по другим группам отслеживаются
         // {Array<mapId>}
@@ -132,7 +132,7 @@ const MapController = classCreator("MapController", Emitter, {
         let infoGroups = [];
         for (let groupId in _input) {
             infoGroups.push({groupId: groupId, characterIds: _input[groupId]});
-            prarr.push(this.getMapsByGroup(groupId));
+            prarr.push(core.groupsController.getMapsByGroup(groupId));
         }
 
         // Получаем массив идентификаторов карт
@@ -431,14 +431,6 @@ const MapController = classCreator("MapController", Emitter, {
         return result.map(x => x.second);
     },
 
-    async getMapsByGroup (_groupId) {
-        let condition = [
-            {name: "type", operator: "=", value: DBController.linksTableTypes.mapToGroups},
-            {name: "second", operator: "=", value: _groupId}
-        ];
-        let result = await core.dbController.linksTable.getByCondition(condition, ["first"])
-        return result.map(x => x.first);
-    },
     async getAllMaps () {
         return await core.dbController.mapsDB.all();
     },
@@ -516,7 +508,7 @@ const MapController = classCreator("MapController", Emitter, {
             }
 
             let dbRes = await core.dbController.groupToCharacterTable.getByCondition(condition, ["groupId"]);
-            let mapsArr = await Promise.all(dbRes.map(x => this.getMapsByGroup(x.groupId)));
+            let mapsArr = await Promise.all(dbRes.map(x => core.groupsController.getMapsByGroup(x.groupId)));
             mapsArr.map(x => maps.merge(x));
         }
 

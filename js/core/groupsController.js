@@ -81,7 +81,9 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         // after we should remove links corporations to group +
         // after we should remove links alliances to group -
 
-        let maps = await this.getMapsWhereGroup(_groupId);
+        let mapsIds = await this.getMapsByGroup(_groupId);
+        let maps = await Promise.all(mapsIds.map(mapId => core.dbController.mapsDB.get(mapId, "name")));
+
         if (maps.length > 0) {
             throw {
                 message: `Group can not be removed: map(s) [${maps.join(", ")}] use this group`
@@ -118,7 +120,7 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         let affectedCharactersOffline = await affectedCharactersOfflinePr;
         let affectedCharactersOnline = await affectedCharactersOnlinePr;
 
-        let maps = await core.mapController.getMapsByGroup(_groupId);
+        let maps = await core.groupsController.getMapsByGroup(_groupId);
         await core.mapController.actualizeOfflineCharactersForMaps(maps, affectedCharactersOffline);
         await core.mapController.actualizeOnlineCharactersForMaps(maps, affectedCharactersOnline);
         await this.removeCharactersFromTracking(_groupId, affectedCharactersOffline);
@@ -298,24 +300,6 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         }
         return groupList;
     },
-    // TODO need remove it?
-    // existsCharacterInGroup: function (_groupId, _characterId) {
-    //     let pr = new CustomPromise();
-    //
-    //     let condition = [
-    //         {name: "type",operator: "=",value: DBController.linksTableTypes.groupToCharacter},
-    //         {name: "first",operator: "=",value: _groupId},
-    //         {name: "second",operator: "=",value: _characterId}
-    //     ];
-    //
-    //     core.dbController.linksTable.existsByCondition(condition).then(function (_exists) {
-    //         pr.resolve(_exists);
-    //     }.bind(this), function (_err) {
-    //         pr.reject(_err);
-    //     }.bind(this));
-    //
-    //     return pr.native;
-    // },
      async getGroupCharacters (_groupId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCharacter},
@@ -348,13 +332,6 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         allowedGroups.map(_arr => groups.merge(_arr));
 
         let groupsInfo = await Promise.all(groups.map(_groupId => this.get(_groupId).getInfo()));
-
-        let prarr = [];
-        for (let a = 0; a < groupsInfo.length; a++) {
-            groupsInfo[a].id = groups[a];
-            prarr.push(core.userController.getUserName(groupsInfo[a].owner));
-        }
-
         return groupsInfo;
     },
 
@@ -400,56 +377,6 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
         return result.map(_x => _x.first);
     },
-    // /**
-    //  * TODO ?deprecated
-    //  * Этот метод должен вернуть список карт, которые доступны для пользователя
-    //  *
-    //  * по идее - надо пройтись по всем картам, которые есть
-    //  * потом испросить для каждой карты группы
-    //  * потом профильтровать для каждой группы персонажей пользователя
-    //  * звучит как-то накладно
-    //  *
-    //  * ИЛИ быть умнее
-    //  * найти все доступные для пользователя группы, и вернуть карты, которые для них соответствуют (Гениально!)
-    //  * @param _userId
-    //  */
-    // getAllowedMapsByUser: async function (_userId) {
-    //     let pr = new CustomPromise();
-    //
-    //     try {
-    //         let groups = await this.getAllowedGroupListByOwner(_userId);
-    //
-    //         /**
-    //          * output of this operations is
-    //          * @type {Array<Array<Number>>}
-    //          */
-    //         let mapsArr = await Promise.all(groups.map(_group => core.mapController.getMapsByGroup(_group.id)))
-    //
-    //         let maps = [];
-    //         mapsArr.map(_maps => maps.merge(_maps));
-    //
-    //         let filteredMaps = maps.filter(_map => _map !== null);
-    //
-    //         let outMaps = [];
-    //         let filterObj = Object.create(null);
-    //
-    //         for (let a = 0; a < filteredMaps.length; a++) {
-    //             let mapId = filteredMaps[a];
-    //
-    //             if(!filterObj[mapId]) {
-    //                 filterObj[mapId] = true;
-    //                 outMaps.push(mapId);
-    //             }
-    //         }
-    //
-    //         pr.resolve(outMaps);
-    //     } catch (_err) {
-    //         debugger;
-    //         pr.reject(_err);
-    //     }
-    //
-    //     return pr.native;
-    // },
     /**
      * Этот метод вернет всех персонажей, которые удовлетворяют условиям группы и принадлежат переданному пользователю
      * - добавлены в список перснонажей
@@ -464,32 +391,6 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         let userCharacters = await core.userController.getUserCharacters(_userId);
         return await this.getAllowedCharactersForGroup(_groupId, userCharacters);
     },
-
-    // /**
-    //  * Этот метод вернет всех персонажей, которые удовлетворяют условиям группы т.е.:
-    //  * - при этом, пользователь должен быть онлайн
-    //  * - добавлены в список перснонажей
-    //  * - находятся в корпорации, которая добавлена в список корпораций
-    //  * - находятся в альянсе, который добавлен в список альянсов
-    //  *
-    //  * @param {string} _groupId
-    //  * @returns {Promise<Array<string>>}
-    //  */
-    // getAllAllowedCharactersForGroupByOnlineUser: async function (_groupId) {
-    //     let pr = new CustomPromise();
-    //
-    //     // todo - почему-то пользователей на онлайн я не проверяю
-    //     let userCharacters = await core.charactersController.getAllCharactersByOnlineUser();
-    //
-    //     try {
-    //         let out = await this.getAllowedCharactersForGroup(_groupId, userCharacters);
-    //         pr.resolve(out);
-    //     } catch (_err) {
-    //         pr.resolve(_err);
-    //     }
-    //
-    //     return pr.native;
-    // },
 
     /**
      * Этот метод профильтрует всех персонажей, которые туда будут переданы
@@ -528,50 +429,6 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         let namesArr = await Promise.all(prarrCharacterNames);
         return characterIds.map((id, index) => ({id: characterIds[index], track: trackArr[index], name: namesArr[index]}));
     },
-    // getAllowedCharactersForGroups: async function (_groups) {
-    //     let pr = new CustomPromise();
-    //
-    //     try {
-    //         // we need take all allowed characters in this game
-    //         let characterIds = await core.charactersController.getAllCharacters();
-    //         let arrCharacters = await Promise.all(_groups.map(_groupId => this.getAllowedCharactersForGroup(_groupId, characterIds)));
-    //         let filteredCharactersObj = Object.create(null);
-    //         let outCharacterIds = [];
-    //         //todo необходимо убрать все пересечения
-    //         for (let a = 0; a < arrCharacters.length; a++) {
-    //             let characters = arrCharacters[a];
-    //
-    //             for (let b = 0; b < characters.length; b++) {
-    //                 let charInfo = characters[b];
-    //                 if(!filteredCharactersObj[charInfo.id]) {
-    //                     filteredCharactersObj[charInfo.id] = true;
-    //                     outCharacterIds.push(charInfo);
-    //                 }
-    //             }
-    //
-    //         }
-    //
-    //         pr.resolve(outCharacterIds);
-    //     } catch (_err) {
-    //         pr.reject();
-    //     }
-    //
-    //     return pr.native;
-    // },
-    // getAllGroups: async function () {
-    //     let pr = new CustomPromise();
-    //
-    //     try {
-    //         let groups = await core.groupsDB.all();
-    //
-    //         pr.resolve(groups.map(_group => _group.id));
-    //     } catch (_err) {
-    //         pr.reject(_err);
-    //     }
-    //
-    //     return pr.native;
-    // },
-
     async getAllowedCharactersForGroupByCorporations (_groupId, _characterIds) {
         let corporationIdsPr = Promise.all(_characterIds.map(_characterId => core.charactersController.get(_characterId).getCorporationId()));
         let groupCorporationsPr = this.getGroupCorporations(_groupId);
@@ -602,15 +459,13 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         await Promise.all(_characters.map(_character => this.updateCharacterTrack(_groupId, _character.id, _character.track)));
         await core.mapController.notifyAllowedMapsByUser(_userId);
     },
-    async getMapsWhereGroup (_groupId) {
+    async getMapsByGroup (_groupId) {
         var cond = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.mapToGroups},
             {name: "second", operator: "=", value: _groupId}
         ];
-
-        let result = await core.dbController.linksTable.getByCondition(cond, ["first", "second"]);
-        let maps = await Promise.all(result.map(_data => core.dbController.mapsDB.get(_data.first, "name")));
-        return maps;
+        let result = await core.dbController.linksTable.getByCondition(cond, ["first"]);
+        return result.map(x => x.first);
     },
     async getCharacterTrack (_groupId, _characterId) {
         let condition = [
@@ -620,19 +475,6 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         let result = await core.dbController.groupToCharacterTable.getByCondition(condition, ["track"]);
         return result.length === 1 ? result[0].track : false;
     },
-    // removeCharacterFromTracking: async function (_groupId, _characterId) {
-    //     let pr = new CustomPromise();
-    //
-    //     try {
-    //         let gtCondition = [{name: "characterId", operator: "=", value: _characterId}];
-    //         await core.dbController.groupToCharacterTable.removeByCondition(gtCondition);
-    //         pr.resolve();
-    //     } catch (_err) {
-    //         pr.reject(_err);
-    //     }
-    //
-    //     return pr.native;
-    // },
     async removeCharactersFromTracking (_groupId, _characterIds) {
         if(_characterIds.length > 0) {
             await core.dbController.groupToCharacterTable.removeByCondition({
@@ -653,15 +495,6 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         let result = await core.dbController.groupToCharacterTable.getByCondition(condition, ["characterId"]);
         return result.map(_data => _data.characterId);
     },
-    // async getTrackedCharactersByGroups (groups) {
-    //     let condition = {
-    //         operator: "OR",
-    //         cond: groups.map(groupId => ({name: "groupId", operator: "=", value: groupId}))
-    //     };
-    //
-    //     let result = await core.dbController.groupToCharacterTable.getByCondition(condition, ["characterId"]);
-    //     return result.map(x => x.characterId);
-    // },
     async getGroupsByTrackedCharacterId (_characterId) {
         let condition = [
             {name: "characterId",operator: "=",value: _characterId},
@@ -679,11 +512,11 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         let result = await core.dbController.groupToCharacterTable.getByCondition(condition, ["track"]);
         let isExist = result.length > 0;
         if (isExist && result[0].track !== _track) {
-            let maps = await core.mapController.getMapsByGroup(_groupId);
+            let maps = await core.groupsController.getMapsByGroup(_groupId);
             await core.dbController.groupToCharacterTable.setByCondition(condition, {track: _track});
             await core.mapController.updateCharacterTrackStatus(maps, _characterId, _track);
         } else if(!isExist && _track) {
-            let maps = await core.mapController.getMapsByGroup(_groupId);
+            let maps = await core.groupsController.getMapsByGroup(_groupId);
             await core.dbController.groupToCharacterTable.add({
                 groupId: _groupId,
                 characterId: _characterId,

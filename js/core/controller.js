@@ -15,6 +15,8 @@ const GroupsController       = require("./groupsController");
 const TokenController        = require("./tokenController");
 const SDEController          = require("./sdeController");
 const TempStorage            = require("./storage");
+const Thera                  = require("./other/thera");
+const CachedDBData           = require("./other/cachedDBData");
 const ESI_API                = require("./../esi/api");
 
 var Controller = classCreator("Controller", Emitter, {
@@ -33,6 +35,8 @@ var Controller = classCreator("Controller", Emitter, {
         this.groupsController       = new GroupsController();
         this.sdeController          = new SDEController();
         this.connectionStorage      = new TempStorage();
+        this.thera                  = new Thera();
+        this.cachedDBData           = new CachedDBData();
     },
     destructor: function () {
         Emitter.prototype.destructor.call(this);
@@ -45,6 +49,8 @@ var Controller = classCreator("Controller", Emitter, {
 
         var prarr = [];
         prarr.push(this.mapController.init());
+        prarr.push(this.thera.init());
+        prarr.push(this.cachedDBData.init());
 
         await Promise.all(prarr);
 

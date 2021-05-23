@@ -36,10 +36,8 @@ const request = async function (_connectionId, _responseId, _event) {
             characterId: _event.characterId
         };
 
-        let resultPr = core.mapController.createMapFast(userId, props);
-        let userNamePr = core.userController.getUserName(userId);
-        let result = await resultPr;
-        result.owner = await userNamePr;
+        let result = await core.mapController.createMapFast(userId, props);
+        result.owner = userId;
 
         api.send(_connectionId, _responseId, {
             data: result,

@@ -405,16 +405,12 @@ const MapController = classCreator("MapController", Emitter, {
         let condition = [{name: "owner", operator: "=", value: _ownerId}];
         let attributes = ["id", "name", "description", "owner"];
 
-        let mapListPr = core.dbController.mapsDB.getByCondition(condition, attributes);
-        let userNamePr = core.userController.getUserName(_ownerId);
-
-        let mapList = await mapListPr;
-        let userName = await userNamePr;
-        let mapsGroups = await Promise.all(mapList.map(_mapInfo => this.getMapGroups(_mapInfo.id)));
+        let mapList = await core.dbController.mapsDB.getByCondition(condition, attributes);
+        // let mapsGroups = await Promise.all(mapList.map(_mapInfo => this.getMapGroups(_mapInfo.id)));
 
         for (let a = 0; a < mapList.length; a++) {
-            mapList[a].groups = mapsGroups[a];
-            mapList[a].owner = userName;
+            // mapList[a].groups = mapsGroups[a];
+            mapList[a].owner = _ownerId;
         }
 
         return mapList

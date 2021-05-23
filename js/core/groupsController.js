@@ -43,32 +43,31 @@ const GroupsController = classCreator("GroupsController", Emitter, {
     },
     /**
      *
-     * @param _owner - is group user id
+     * @param owner - is group user id
      * @param _data
      * @param _data.characters {Array<string>}
      * @param _data.corporations {Array<string>}
      * @param _data.alliances {Array<string>}
+     * @param _data.moderators {Array<string>}
      * @param _data.name {string}
      * @param _data.description {string}
      * @returns {Promise<any> | Promise<unknown>}
      */
-    async createGroup (_owner, _data) {
+    async createGroup (owner, {name, description, characters, corporations, alliances, moderators}) {
         let id = md5(config.app.solt + "_" + +new Date);
 
-        await this._updateCharacters(id, _data.characters);
+        await this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCharacter, id, characters);
 
-        if (exist(_data.corporations))
-            await this._updateCorporations(id, _data.corporations);
+        if (exist(corporations))
+            await this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCorporation, id, corporations);
 
-        if (exist(_data.alliances))
-            await this._updateAlliances(id, _data.alliances);
+        if (exist(alliances))
+            await this._abstractUpdateGroupList(DBController.linksTableTypes.groupToAlliance, id, alliances);
 
-        await core.dbController.groupsDB.add({
-            id: id,
-            owner: _owner,
-            name: _data.name,
-            description: _data.description
-        });
+        // if (exist(moderators))
+        //     await this._abstractUpdateGroupList(DBController.linksTableTypes.groupToModerator, id, moderators);
+
+        await core.dbController.groupsDB.add({id, owner, name, description});
 
         return id;
     },
@@ -105,13 +104,15 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         await core.mapController.notifyAllowedMapsByAffectedCharacters(affectedCharacters);
     },
     async editGroup (_groupId, _props) {
-        let updCharactersPr = this._updateCharacters(_groupId, _props.characters);
-        let updCorporationsPr = this._updateCorporations(_groupId, _props.corporations);
-        let updAlliancesPr = this._updateAlliances(_groupId, _props.alliances);
+        let updCharactersPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCharacter, _groupId, _props.characters);
+        let updCorporationsPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCorporation, _groupId, _props.corporations);
+        let updAlliancesPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToAlliance, _groupId, _props.alliances);
+        // let updModeratorsPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToAlliance, _groupId, _props.moderators);
 
         let characters = await updCharactersPr;
         let corporations = await updCorporationsPr;
         let alliances = await updAlliancesPr;
+        // let moderators = await updModeratorsPr;
 
         // надо получить всех персонажей, которые в результате данной операции,
         // должны быть отключены от наблюдения со всех карт, к которым прикреплена данная группа
@@ -166,141 +167,83 @@ const GroupsController = classCreator("GroupsController", Emitter, {
 
         return affected;
     },
-    async _updateCharacters (_groupId, _characters) {
+
+
+    async _abstractUpdateGroupList (type, groupId, arr) {
         let condition = [
-            {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCharacter},
-            {name: "first", operator: "=", value: _groupId}
+            {name: "type", operator: "=", value: type},
+            {name: "first", operator: "=", value: groupId}
         ];
 
         let _result = await core.dbController.linksTable.getByCondition(condition, ["second"]);
 
-        let addedCharacterIds = [];
-        let removedCharacterIds = [];
+        let addedIds = [];
+        let removedIds = [];
         let transactionArr = [];
-        for (let a = 0; a < _characters.length; a++) {
-            if (_result.searchByObjectKey("second", _characters[a]) === null) {
+        for (let a = 0; a < arr.length; a++) {
+            if (_result.searchByObjectKey("second", arr[a]) === null) {
                 transactionArr.push(core.dbController.linksTable.add({
-                    type: DBController.linksTableTypes.groupToCharacter,
-                    first: _groupId,
-                    second: _characters[a]
+                    type: type,
+                    first: groupId,
+                    second: arr[a]
                 }, true));
-                addedCharacterIds.push(_characters[a]);
+                addedIds.push(arr[a]);
             }
         }
 
         for (let b = 0; b < _result.length; b++) {
-            if (_characters.indexOf(_result[b].second) === -1) {
+            if (arr.indexOf(parseInt(_result[b].second)) === -1) {
                 transactionArr.push(core.dbController.linksTable.removeByCondition([
-                    {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCharacter},
-                    {name: "first", operator: "=", value: _groupId},
+                    {name: "type", operator: "=", value: type},
+                    {name: "first", operator: "=", value: groupId},
                     {name: "second", operator: "=", value: _result[b].second},
                 ], true));
-                removedCharacterIds.push(_result[b].second);
+                removedIds.push(_result[b].second);
             }
         }
 
         await core.dbController.db.transaction(transactionArr);
-        return {
-            added: addedCharacterIds,
-            removed: removedCharacterIds
-        }
+        return {addedIds, removedIds}
     },
-    async _updateCorporations (_groupId, _corporations) {
-        let condition = [
-            {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCorporation},
-            {name: "first", operator: "=", value: _groupId}
-        ];
 
-        // HERE may be we need make transaction
-        let result = await core.dbController.linksTable.getByCondition(condition, ["second"]);
-        let added = [], removed = [], transactionArr = [];
-        for (let a = 0; a < _corporations.length; a++) {
-            if (result.searchByObjectKey("second", _corporations[a].toString()) === null) {
-                transactionArr.push(core.dbController.linksTable.add({
-                    type: DBController.linksTableTypes.groupToCorporation,
-                    first: _groupId,
-                    second: _corporations[a]
-                }, true))
-                added.push(_corporations[a]);
-            }
-        }
-
-        for (let b = 0; b < result.length; b++) {
-            if (_corporations.indexOf(parseInt(result[b].second)) === -1) {
-                transactionArr.push(core.dbController.linksTable.removeByCondition([
-                    {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCorporation},
-                    {name: "first", operator: "=", value: _groupId},
-                    {name: "second", operator: "=", value: result[b].second},
-                ], true));
-                removed.push(result[b].second);
-            }
-        }
-
-        await core.dbController.db.transaction(transactionArr);
-
-        return {added: added, removed: removed};
+    // async getGroupListByOwner (_ownerId) {
+    //     let groupList = await core.dbController.groupsDB.getByCondition([{name: "owner", operator: "=", value: _ownerId}], ["id", "name", "description", "owner"]);
+    //
+    //     let prarrCharacters = [], prarrCorporations = [], prarrAlliances = [];
+    //     for (let a = 0; a < groupList.length; a++) {
+    //         prarrCharacters.push(this.getGroupCharacters(groupList[a].id));
+    //         prarrCorporations.push(this.getGroupCorporations(groupList[a].id));
+    //         prarrAlliances.push(this.getGroupAlliances(groupList[a].id));
+    //     }
+    //
+    //     let characterIds = await Promise.all(prarrCharacters);
+    //     let corporationIds = await Promise.all(prarrCorporations);
+    //     let allianceIds = await Promise.all(prarrAlliances);
+    //
+    //     for (let a = 0; a < groupList.length; a++) {
+    //         groupList[a].characters = characterIds[a];
+    //         groupList[a].corporations = corporationIds[a];
+    //         groupList[a].alliances = allianceIds[a];
+    //         groupList[a].owner = _ownerId;
+    //     }
+    //     return groupList;
+    // },
+    async getGroupsByOwner (ownerId) {
+        return await core.dbController.groupsDB.getByCondition([{name: "owner", operator: "=", value: ownerId}], ["id", "name", "description", "owner"]);
     },
-    async _updateAlliances (_groupId, _alliances) {
-        let condition = [
-            {name: "type", operator: "=", value: DBController.linksTableTypes.groupToAlliance},
-            {name: "first", operator: "=", value: _groupId}
-        ];
+    async getProtectedInfo (groupId) {
+        let charPr = this.getGroupCharacters(groupId);
+        let corpPr = this.getGroupCorporations(groupId);
+        let allyPr = this.getGroupAlliances(groupId);
 
-        // HERE may be we need make transaction
-        let result = await core.dbController.linksTable.getByCondition(condition, ["second"]);
-        let added = [], removed = [], transactionArr = [];
-        for (let a = 0; a < _alliances.length; a++) {
-            if (result.searchByObjectKey("second", _alliances[a].toString()) === null) {
-                transactionArr.push(core.dbController.linksTable.add({
-                    type: DBController.linksTableTypes.groupToAlliance,
-                    first: _groupId,
-                    second: _alliances[a]
-                }, true))
-                added.push(_alliances[a]);
-            }
-        }
+        let characters = await charPr;
+        let corporations = await corpPr;
+        let alliances = await allyPr;
 
-        for (let b = 0; b < result.length; b++) {
-            if (_alliances.indexOf(parseInt(result[b].second)) === -1) {
-                transactionArr.push(core.dbController.linksTable.removeByCondition([
-                    {name: "type", operator: "=", value: DBController.linksTableTypes.groupToAlliance},
-                    {name: "first", operator: "=", value: _groupId},
-                    {name: "second", operator: "=", value: result[b].second},
-                ], true));
-                removed.push(result[b].second);
-            }
-        }
-
-        await core.dbController.db.transaction(transactionArr);
-
-        return {added: added, removed: removed};
+        return {characters, corporations, alliances};
     },
-    async getGroupListByOwner (_ownerId) {
-        let ownerNamePr = core.userController.getUserName(_ownerId);
-        let groupListPr = core.dbController.groupsDB.getByCondition([{name: "owner", operator: "=", value: _ownerId}], ["id", "name", "description", "owner"]);
-        let groupList = await groupListPr;
-        let ownerName = await ownerNamePr;
 
-        let prarrCharacters = [], prarrCorporations = [], prarrAlliances = [];
-        for (let a = 0; a < groupList.length; a++) {
-            prarrCharacters.push(this.getGroupCharacters(groupList[a].id));
-            prarrCorporations.push(this.getGroupCorporations(groupList[a].id));
-            prarrAlliances.push(this.getGroupAlliances(groupList[a].id));
-        }
-
-        let characterIds = await Promise.all(prarrCharacters);
-        let corporationIds = await Promise.all(prarrCorporations);
-        let allianceIds = await Promise.all(prarrAlliances);
-
-        for (let a = 0; a < groupList.length; a++) {
-            groupList[a].characters = characterIds[a];
-            groupList[a].corporations = corporationIds[a];
-            groupList[a].alliances = allianceIds[a];
-            groupList[a].owner = ownerName;
-        }
-        return groupList;
-    },
-     async getGroupCharacters (_groupId) {
+    async getGroupCharacters (_groupId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCharacter},
             {name: "first", operator: "=", value: _groupId}

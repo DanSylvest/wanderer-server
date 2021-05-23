@@ -10,6 +10,7 @@ const helpers = require("./../../../utils/helpers.js");
  * @param _responseId
  * @param _event
  * @param _event.allianceId
+ * @param _event.allianceIds
  * @param _event.type * @returns {Promise<void>}
  */
 const request = async function (_connectionId, _responseId, _event) {
@@ -30,7 +31,14 @@ const request = async function (_connectionId, _responseId, _event) {
             return;
         }
 
-        let info = await core.alliancesController.getInfo(_event.allianceId);
+        let info;
+        if (_event.allianceIds) {
+            info = await Promise.all(_event.allianceIds.map(id => core.alliancesController.getPublicAllianceInfo(id)));
+            _event.allianceIds.map((x, i) => info[i].id = x.toString());
+        } else if (_event.allianceId) {
+            info = await core.alliancesController.getPublicAllianceInfo(_event.allianceId);
+        }
+
 
         api.send(_connectionId, _responseId, {
             result: info,

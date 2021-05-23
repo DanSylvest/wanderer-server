@@ -12,4 +12,5 @@ module.exports = {
     getAllowedCharacters            : require("./getAllowedCharacters"),
     updateAllowedCharacters         : require("./updateAllowedCharacters"),
     mapsByGroup                     : require("./mapsByGroup"),
+    getOwnInfo                      : require("./getOwnInfo"),
 };

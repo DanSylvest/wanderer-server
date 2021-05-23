@@ -23,7 +23,7 @@ var request = async function (_connectionId, _responseId, _event) {
             return;
         }
 
-        let info = await core.charactersController.getCharInfo(_event.characterId);
+        let info = await core.charactersController.getProtectedCharacterInfo(_event.characterId);
 
         if (!core.eveServer.isOnline()) {
             helpers.errResponse(_connectionId, _responseId, responseName, "TQ is offline", {code: 1001});

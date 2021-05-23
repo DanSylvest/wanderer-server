@@ -4,12 +4,17 @@
 
 var Emitter       = require("./../../env/tools/emitter");
 var classCreator  = require("./../../env/tools/class");
-
-const SEARCH_LIMIT = 12;
+const NodeCache   = require( "node-cache" );
 
 var Controller = classCreator("AlliancesController", Emitter, {
     constructor: function AlliancesController() {
         Emitter.prototype.constructor.call(this);
+
+        this.infoCache = new NodeCache({
+            stdTTL: 60 * 60,
+            checkperiod: 60 * 10,
+            useClones: false
+        });
     },
     destructor: function () {
         Emitter.prototype.destructor.call(this);
@@ -23,28 +28,27 @@ var Controller = classCreator("AlliancesController", Emitter, {
             return [];
         }
 
-        let ids = result.alliance || [];
-
-        if(ids.length > SEARCH_LIMIT)
-            ids = ids.slice(0, SEARCH_LIMIT);
-
-        let infoArr = await Promise.all(ids.map(x => core.esiApi.alliance.info(x)));
+        let ids = result.alliance && result.alliance.slice(0, 15) || [];
+        let infoArr = await Promise.all(ids.map(x => this.getPublicAllianceInfo(x)));
 
         let out = infoArr.map((x, index) => ({
             id: ids[index],
             name: x.name
         }));
 
-        out.sort((a, b) => {
-            return a.name > b.name ? 1 : a.name < b.name ? -1 : 0;
-        });
+        out.sort((a, b) => (a.name > b.name ? 1 : a.name < b.name ? -1 : 0));
 
         return out;
     },
 
-    async getInfo (_allianceId) {
-        let result = await core.esiApi.alliance.info(_allianceId);
-        return {name: result.name};
+    async getPublicAllianceInfo (allianceId) {
+        if(this.infoCache.has(allianceId)) {
+            return this.infoCache.get(allianceId);
+        } else {
+            let info = await core.esiApi.alliance.info(allianceId);
+            this.infoCache.set(allianceId, info);
+            return info;
+        }
     },
 
     fastSearch: function (_options) {

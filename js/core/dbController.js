@@ -351,6 +351,7 @@ DBController.linksTableTypes = {
      * Here it's mean what a corporation have permission to see this group
      */
     groupToAlliance: "groupToAlliance",
+    groupToModerator: "groupToModerator",
     /**
      * This type allow find group what bind to map
      */

@@ -54,7 +54,7 @@ const ServerStatusController = classCreator("GroupsController", Emitter, {
 
         this.subscriptionStatus.addSubscriber(connectionId, responseId);
         this.subscriptionStatus.notifyFor(connectionId, responseId, {
-            type: "status",
+            type: "bulk",
             isOnline: this.statusData.online
         });
     },

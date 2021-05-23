@@ -63,10 +63,21 @@ const theraAPIRequest = function () {
     let pr = new CustomPromise();
 
     request.get({url: 'https://www.eve-scout.com/api/wormholes'}, function (error, response, body) {
-        if(error)
+
+        if(!error) {
+            switch (response.statusCode) {
+                case 200:
+                    pr.resolve(JSON.parse(body));
+                    break;
+                default:
+                    pr.reject({
+                        error: response.statusCode,
+                        message: body
+                    });
+            }
+        } else {
             pr.reject(error);
-        else
-            pr.resolve(JSON.parse(body));
+        }
     }.bind(this));
 
     return pr.native;

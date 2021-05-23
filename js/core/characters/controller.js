@@ -7,14 +7,20 @@ const Character     = require("./character");
 const classCreator  = require("./../../env/tools/class");
 const CustomPromise = require("./../../env/promise");
 const DBController  = require("./../../core/dbController");
+const NodeCache     = require( "node-cache" );
 
-const SEARCH_LIMIT = 12;
+// const SEARCH_LIMIT = 12;
 
 const Controller = classCreator("CharactersController", Emitter, {
     constructor: function CharactersController() {
         Emitter.prototype.constructor.call(this);
 
         this._characters = Object.create(null);
+        this.infoCache = new NodeCache({
+            stdTTL: 60 * 60,
+            checkperiod: 60 * 10,
+            useClones: false
+        });
     },
     destructor: function () {
         Emitter.prototype.destructor.call(this);
@@ -46,6 +52,18 @@ const Controller = classCreator("CharactersController", Emitter, {
             this._characters[characterId].connectionBreak(_connectionId);
         }
     },
+    async getPublicCharacterInfo (characterId) {
+        if(this.infoCache.has(characterId)) {
+            return this.infoCache.get(characterId);
+        } else {
+            let info = await core.esiApi.characters.info(characterId);
+            this.infoCache.set(characterId, info);
+            return info;
+        }
+    },
+    async getProtectedCharacterInfo (_characterId) {
+        return await this.get(_characterId).getInfo();
+    },
     async searchInEve (_match) {
         let result = Object.create(null);
 
@@ -55,21 +73,15 @@ const Controller = classCreator("CharactersController", Emitter, {
             return [];
         }
 
-        let characterIds = result.character || [];
-
-        if(characterIds.length > SEARCH_LIMIT)
-            characterIds = characterIds.slice(0, SEARCH_LIMIT);
-
-        let infoArr = await Promise.all(characterIds.map(x => core.esiApi.characters.info(x)));
+        let characterIds = result.character && result.character.slice(0, 15) || [];
+        let infoArr = await Promise.all(characterIds.map(x => this.getPublicCharacterInfo(x)));
 
         let out = infoArr.map((x, index) => ({
             id: characterIds[index],
             name: x.name
         }));
 
-        out.sort(function (a, b) {
-            return a.name > b.name ? 1 : a.name < b.name ? -1 : 0
-        });
+        out.sort((a, b) => (a.name > b.name ? 1 : a.name < b.name ? -1 : 0));
 
         return out;
     },
@@ -81,16 +93,6 @@ const Controller = classCreator("CharactersController", Emitter, {
             case "byUser":
                 break;
         }
-    },
-    /**
-     *
-     * @param _characterId
-     * @param {string} _type - may be "local", or "global" - when local will be get info by added character
-     * default "global"
-     * @returns {*}
-     */
-    getCharInfo: async function (_characterId) {
-        return await this.get(_characterId).getInfo();
     },
     async getCharacterName (characterId) {
         let result = await core.esiApi.characters.info(characterId);
@@ -162,40 +164,6 @@ const Controller = classCreator("CharactersController", Emitter, {
             this._characters[id].serverStatusOnline();
         }
     }
-    // getAllCharacters: async function () {
-    //     var pr = new CustomPromise();
-    //
-    //     var condition = [
-    //         {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter}
-    //     ]
-    //
-    //     try {
-    //         var characterIds = await core.dbController.linksTable.getByCondition(condition, ["second"]);
-    //         var out = characterIds.map(characterId => characterId.second)
-    //         pr.resolve(out);
-    //     } catch (_err) {
-    //         pr.reject(_err);
-    //     }
-    //
-    //     return pr.native;
-    // },
-    // getAllCharactersByOnlineUser: async function () {
-    //     var pr = new CustomPromise();
-    //
-    //     var condition = [
-    //         {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter}
-    //     ]
-    //
-    //     try {
-    //         var characterIds = await core.dbController.linksTable.getByCondition(condition, ["second"]);
-    //         var out = characterIds.map(characterId => characterId.second)
-    //         pr.resolve(out);
-    //     } catch (_err) {
-    //         pr.reject(_err);
-    //     }
-    //
-    //     return pr.native;
-    // }
 });
 
 

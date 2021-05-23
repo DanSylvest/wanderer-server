@@ -19,10 +19,8 @@ const Thera                  = require("./other/thera");
 const CachedDBData           = require("./other/cachedDBData");
 const ESI_API                = require("./../esi/api");
 
-var Controller = classCreator("Controller", Emitter, {
-    constructor: function Controller() {
-        Emitter.prototype.constructor.call(this);
-
+class Controller {
+    constructor () {
         this.esiApi                 = ESI_API;
         this.dbController           = new DbController();
         this.eveServer              = new ServerController();
@@ -37,11 +35,8 @@ var Controller = classCreator("Controller", Emitter, {
         this.connectionStorage      = new TempStorage();
         this.thera                  = new Thera();
         this.cachedDBData           = new CachedDBData();
-    },
-    destructor: function () {
-        Emitter.prototype.destructor.call(this);
-    },
-    init: async function () {
+    }
+    async init () {
         var pr = new CustomPromise();
         log(log.DEBUG, "start controller loading...");
 
@@ -61,14 +56,14 @@ var Controller = classCreator("Controller", Emitter, {
         pr.resolve();
 
         return pr.native;
-    },
+    }
     initHandlers () {
         this.eveServer.on("changedStatus", this._onServerStatusChanged.bind(this));
-    },
-    postInit: function ( ){
+    }
+    postInit ( ){
         api.on("connectionClosed", this._onConnectionClosed.bind(this));
-    },
-    _onConnectionClosed: async function (_connectionId) {
+    }
+    async _onConnectionClosed (_connectionId) {
         if(this.connectionStorage.has(_connectionId)) {
             let token = this.connectionStorage.get(_connectionId);
 
@@ -78,7 +73,7 @@ var Controller = classCreator("Controller", Emitter, {
             this.mapController.connectionBreak(_connectionId);
             this.eveServer.connectionBreak(_connectionId);
         }
-    },
+    }
     _onServerStatusChanged (isOnline) {
         if(!isOnline) {
             this.charactersController.serverStatusOffline();
@@ -86,6 +81,6 @@ var Controller = classCreator("Controller", Emitter, {
             this.charactersController.serverStatusOnline();
         }
     }
-});
+}
 
 module.exports = Controller;

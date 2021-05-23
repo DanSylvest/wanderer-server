@@ -23,7 +23,8 @@ const request = async function (_connectionId, _responseId, _event) {
             description: _event.description,
             characters: _event.characters,
             corporations: _event.corporations,
-            alliances: _event.alliances
+            alliances: _event.alliances,
+            moderators: _event.moderators,
         };
 
         if (!core.eveServer.isOnline()) {

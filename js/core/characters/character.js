@@ -133,20 +133,12 @@ var Character = classCreator("Character", Emitter, {
         }
     },
     getInfo: async function () {
-         let attrs = ["name", "online", "ship", "info", "addDate"];
+         let attrs = ["name", "info", "addDate"];
 
          let result = await core.dbController.charactersDB.get(this.options.characterId, attrs);
 
-         let shipId = "670";
-         if (result.ship) {
-             let shipInfo = await core.sdeController.getShipTypeInfo(result.ship);
-             shipId = shipInfo.typeID;
-         }
-
          let out = {
              name: result.name,
-             online: result.online,
-             ship: shipId,
              addDate: result.addDate
          }
 

@@ -4,12 +4,18 @@
 
 const Emitter       = require("./../../env/tools/emitter");
 const classCreator  = require("./../../env/tools/class");
-const CustomPromise = require("./../../env/promise");
-const SEARCH_LIMIT = 12;
+const NodeCache     = require( "node-cache" );
+// const SEARCH_LIMIT = 12;
 
 const Controller = classCreator("CorporationsController", Emitter, {
     constructor: function CorporationsController() {
         Emitter.prototype.constructor.call(this);
+
+        this.infoCache = new NodeCache({
+            stdTTL: 60 * 60,
+            checkperiod: 60 * 10,
+            useClones: false
+        });
     },
     destructor: function () {
         Emitter.prototype.destructor.call(this);
@@ -23,35 +29,26 @@ const Controller = classCreator("CorporationsController", Emitter, {
             return [];
         }
 
-        let ids = result.corporation || [];
-
-        if(ids.length > SEARCH_LIMIT)
-            ids = ids.slice(0, SEARCH_LIMIT);
-
-        let infoArr = await Promise.all(ids.map(x => core.esiApi.corporation.info(x)));
-
+        let ids = result.corporation && result.corporation.slice(0, 15) || [];
+        let infoArr = await Promise.all(ids.map(x => this.getPublicCorporationInfo(x)));
         let out = infoArr.map((x, index) => ({
             id: ids[index],
             name: x.name
         }));
 
-        out.sort((a, b) => {
-            return a.name > b.name ? 1 : a.name < b.name ? -1 : 0;
-        });
+        out.sort((a, b) => (a.name > b.name ? 1 : a.name < b.name ? -1 : 0));
 
         return out;
     },
 
-    getCorporationInfo: function (_corporationId) {
-        var pr = new CustomPromise();
-
-        core.esiApi.corporation.info(_corporationId).then(function(_result){
-            pr.resolve({name: _result.name});
-        }.bind(this), function(_err){
-            pr.reject(_err);
-        }.bind(this));
-
-        return pr.native;
+    async getPublicCorporationInfo (corporationId) {
+        if(this.infoCache.has(corporationId)) {
+            return this.infoCache.get(corporationId);
+        } else {
+            let info = await core.esiApi.corporation.info(corporationId);
+            this.infoCache.set(corporationId, info);
+            return info;
+        }
     },
 
     fastSearch: function (_options) {

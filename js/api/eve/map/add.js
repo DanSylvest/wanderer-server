@@ -22,15 +22,11 @@ const request = async function (_connectionId, _responseId, _event) {
             groups: _event.groups
         };
 
-        let mapIdPr = core.mapController.createMap(userId, props);
-        let userNamePr = core.userController.getUserName(userId);
-        let mapId = await mapIdPr;
-        let userName = await userNamePr;
-
+        let mapId = await core.mapController.createMap(userId, props);
         api.send(_connectionId, _responseId, {
             data: {
                 mapId: mapId,
-                owner: userName,
+                owner: userId,
             },
             eventType: responseName,
             success: true

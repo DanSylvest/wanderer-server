@@ -30,12 +30,10 @@ const request = async function (_connectionId, _responseId, _event) {
             return;
         }
 
-        let owner = await core.userController.getUserName(userId);
-
         api.send(_connectionId, _responseId, {
             data: {
                 groupId: groupId,
-                owner: owner,
+                owner: userId,
             },
             eventType: responseName,
             success: true

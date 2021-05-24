@@ -2,21 +2,20 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 6/19/20.
  */
 
-var request       = require('request');
-var CustomPromise = require("./../env/promise");
+const request       = require('request');
+const CustomPromise = require("./../env/promise");
 
+const CLIENT_ID = config.eve.app.client_id;
+const SECRET_KEY = config.eve.app.secret_key;
 
-var CLIENT_ID = config.eve.app.client_id;
-var SECRET_KEY = config.eve.app.secret_key;
+const SSO_HOST = config.eve.sso.server.host;
+const SSO_PROTO = config.eve.sso.server.proto;
+const SSO_CONTENT_TYPE = config.eve.sso.server.content_type;
 
-var SSO_HOST = config.eve.sso.server.host;
-var SSO_PROTO = config.eve.sso.server.proto;
-var SSO_CONTENT_TYPE = config.eve.sso.server.content_type;
-
-var __esi_oauth_token = function (_code) {
-    var res = CLIENT_ID + ":" + SECRET_KEY;
-    var encoded = Buffer.from(res).toString('base64');
-    var options = {
+const __esi_oauth_token = function (_code) {
+    let res = CLIENT_ID + ":" + SECRET_KEY;
+    let encoded = Buffer.from(res).toString('base64');
+    let options = {
         url: SSO_PROTO + "//" + SSO_HOST + "/oauth/token",
         headers: {
             Authorization: "Basic " + encoded,
@@ -29,22 +28,28 @@ var __esi_oauth_token = function (_code) {
         }
     };
 
-    var pr = new CustomPromise();
+    let pr = new CustomPromise();
 
     request.post(options, function (error, response, body) {
-        var responseData = JSON.parse(body);
 
-        if(responseData.error)
-            pr.reject(responseData.error_description);
-        else
-            pr.resolve(body && JSON.parse(body));
+        if(body) {
+            let responseData = JSON.parse(body);
+
+            if(responseData.error) {
+                pr.reject(responseData.error_description);
+            } else {
+                pr.resolve(responseData);
+            }
+        } else {
+            pr.resolve(error);
+        }
     }.bind(this));
 
     return pr.native;
 };
 
-var __esi_oauth_verify = function (_access_token) {
-    var options = {
+const __esi_oauth_verify = function (_access_token) {
+    let options = {
         url: SSO_PROTO + "//" + SSO_HOST + "/oauth/verify",
         headers: {
             Authorization: "Bearer " + _access_token,
@@ -52,22 +57,27 @@ var __esi_oauth_verify = function (_access_token) {
         }
     };
 
-    var pr = new CustomPromise();
+    let pr = new CustomPromise();
 
     request.get(options, function (error, response, body) {
         if(error)
             pr.reject(error);
-        else
-            pr.resolve(JSON.parse(body));
+        else {
+            try {
+                pr.resolve(JSON.parse(body));
+            } catch (e) {
+                pr.reject("No data");
+            }
+        }
     }.bind(this));
 
     return pr.native;
 };
 
-var __sso_oath_refresh_token = function (_refresh_token) {
-    var res = CLIENT_ID + ":" + SECRET_KEY;
-    var encoded = Buffer.from(res).toString('base64');
-    var options = {
+const __sso_oath_refresh_token = function (_refresh_token) {
+    let res = CLIENT_ID + ":" + SECRET_KEY;
+    let encoded = Buffer.from(res).toString('base64');
+    let options = {
         url: SSO_PROTO + "//" + SSO_HOST + "/oauth/token",
         headers: {
             Authorization: "Basic " + encoded,
@@ -80,7 +90,7 @@ var __sso_oath_refresh_token = function (_refresh_token) {
         }
     };
 
-    var pr = new CustomPromise();
+    let pr = new CustomPromise();
 
     request.post(options, function (error, body, data) {
         if(error)
@@ -89,8 +99,7 @@ var __sso_oath_refresh_token = function (_refresh_token) {
             try {
                 pr.resolve(JSON.parse(data));
             } catch (e) {
-                log(log.ERR, 'THIS IS EXCEPTION: !!!!', JSON.parse(body));
-                throw 'error in __sso_oath_refresh_token'
+                pr.reject("No data");
             }
         }
     }.bind(this));

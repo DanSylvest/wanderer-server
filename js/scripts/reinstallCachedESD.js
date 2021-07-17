@@ -10,7 +10,6 @@ require("./../env/tools/standardTypeExtend");
 const config = new ConfReader("conf").build();
 const CACHED_DB = config.db.names.cachedESD;
 const EVE_STATIC_DATA_DB = config.db.names.eveSde;
-const EVE_MANUAL_DB_NAME = config.db.names.eveManual;
 const dirPath  = Path.fromBackSlash(__dirname);
 dirPath.pop();
 
@@ -36,21 +35,21 @@ class buildSolarSystemTable {
 
         log(log.INFO, `${conString}/${CACHED_DB}`);
         log(log.INFO, `${conString}/${EVE_STATIC_DATA_DB}`);
-        log(log.INFO, `${conString}/${EVE_MANUAL_DB_NAME}`);
         this.staticDb = new Client(`${conString}/${EVE_STATIC_DATA_DB}`);
-        this.manualDb = new Client(`${conString}/${EVE_MANUAL_DB_NAME}`);
 
 
         let path =  dirPath["+"](["db", "json"]);
         this.wormholeClassesInfo = JSON.parse(fs.readFileSync(path["+"]("wormholeClassesInfo.json").toString(), "utf8"));
-        this.effectNames = JSON.parse(fs.readFileSync(path["+"]("effectNames.json").toString(), "utf8"));
         this.shatteredConstellations = JSON.parse(fs.readFileSync(path["+"]("shatteredConstellations.json").toString(), "utf8"));
-        this.triglavianInvasion = JSON.parse(fs.readFileSync(path["+"]("triglavianInvasion.json").toString(), "utf8"));
+
+        this.effects = JSON.parse(fs.readFileSync(path["+"]("effects.json").toString(), "utf8"));
+        this.wormholeClasses = JSON.parse(fs.readFileSync(path["+"]("wormholeClasses.json").toString(), "utf8"));
+        // this.wormholes = JSON.parse(fs.readFileSync(path["+"]("wormholes.json").toString(), "utf8"));
+        this.wormholeSystems = JSON.parse(fs.readFileSync(path["+"]("wormholeSystems.json").toString(), "utf8"));
+        this.triglavianSystems = JSON.parse(fs.readFileSync(path["+"]("triglavianSystems.json").toString(), "utf8"));
 
         this.staticDb.connect();
-        this.manualDb.connect();
         await this.staticDb.query('SELECT NOW()');
-        await this.manualDb.query('SELECT NOW()');
         await this.cacheDb.init();
     }
 
@@ -68,34 +67,21 @@ class buildSolarSystemTable {
                 {name: "solarSystemName",          type: String},
                 {name: "constellationName",        type: String},
                 {name: "regionName",               type: String},
-                {name: "systemType",               type: Number},
                 {name: "typeDescription",          type: String},
-                {name: "typeName",                 type: String},
+                {name: "classTitle",               type: String},
                 {name: "isShattered",              type: Boolean},
-                {name: "effectType",               type: String},
                 {name: "effectName",               type: String},
-                {name: "effectData",               type: Array},
+                {name: "effectPower",              type: Number},
                 {name: "statics",                  type: Array},
+                {name: "wanderers",                type: Array},
                 {name: "solarSystemNameLC",        type: String},
                 {name: "triglavianInvasionStatus", type: String},
-                {name: "factionName",              type: String},
             ]
         });
         await this.solarSystemsTable.init();
     }
 
     async pass () {
-        /**
-         *  {
-          "regionID": 10000004,
-          "constellationID": 20000057,
-          "solarSystemID": 30000401,
-          "solarSystemName": "N-9EOQ",
-          "security": -0.00003139919730310581,
-          factionID:
-       },
-         */
-            // try {
         let result = await this.staticDb.query(`SELECT t."regionID"
      , t."constellationID"
      , t."solarSystemID"
@@ -112,73 +98,50 @@ ORDER BY t."solarSystemID"`);
             let solarSystemInfo = result.rows[a];
             let constellationName = await this.constellationName(solarSystemInfo.constellationID);
             let regionName = await this.regionName(solarSystemInfo.regionID);
-            let wormholeSystemClass = await this.systemClass(solarSystemInfo.regionID, solarSystemInfo.constellationID, solarSystemInfo.solarSystemID);
-            let additionalSystemInfo = await this.getCompiledInfo(solarSystemInfo.solarSystemID);
+            let wormholeClassID = await this.systemClass(solarSystemInfo.regionID, solarSystemInfo.constellationID, solarSystemInfo.solarSystemID);
 
-            let factionName = "";
-            if(exist(solarSystemInfo.factionID))
-                factionName = await this.factionName(solarSystemInfo.factionID);
+            let security = solarSystemInfo.security;
+            let effectPower = 0;
 
-            let systemTypeInfo = this.wormholeClassesInfo[wormholeSystemClass];
+            security = solarSystemInfo.security;
+            if(security === -0.99)
+                security = -1.0;
 
-            if(solarSystemInfo.security === -0.99)
-                solarSystemInfo.security = -1.0;
+            security = security.toFixed(1);
 
-            solarSystemInfo.security = solarSystemInfo.security.toFixed(1);
-
-            let typeName = systemTypeInfo.shortName;
-            switch (systemTypeInfo.type) {
-                case 0:
-                case 1:
-                case 2:
-                    typeName = solarSystemInfo.security.toString();
+            let wormholeClass = this.wormholeClasses.searchByObjectKey("wormholeClassID", wormholeClassID);
+            let classTitle = wormholeClass.shortName;
+            switch (wormholeClassID) {
+                case this.wormholeClassesInfo.names.hs:
+                case this.wormholeClassesInfo.names.ls:
+                case this.wormholeClassesInfo.names.ns:
+                    classTitle = security.toString();
                     break;
             }
 
-            let systemData = {
-                typeName: typeName,
-                typeDescription: systemTypeInfo.fullName,
-                isShattered: !!this.shatteredConstellations[solarSystemInfo.constellationID]
+            let typeDescription = wormholeClass.title;
+            let isShattered = !!this.shatteredConstellations[solarSystemInfo.constellationID];
+            let effectName = "", statics = [], wanderers = [];
+
+            let wormholeData = this.wormholeSystems.searchByObjectKey("solarSystemID", solarSystemInfo.solarSystemID);
+            if(wormholeData) {
+                effectPower = wormholeClass.effectPower;
+                effectName = wormholeData.effectName;
+                statics = wormholeData.statics;
+                wanderers = wormholeData.wanderers;
             }
 
-            if(exist(additionalSystemInfo) && exist(additionalSystemInfo.effect)) {
-                let effectData = await this.getSolarSystemEffectInfo(additionalSystemInfo.effect, wormholeSystemClass);
-
-                systemData.effectType = this.effectNames[additionalSystemInfo.effect];
-                systemData.effectName = additionalSystemInfo.effect;
-                systemData.effectData = effectData;
-            }
-
-            if(exist(additionalSystemInfo) && exist(additionalSystemInfo.statics)) {
-                systemData.statics = additionalSystemInfo.statics;
-            }
-
-            let trigInfo = this.triglavianInvasion.searchByObjectKey("solarSystemName", solarSystemInfo.solarSystemName);
-            let trigStatus = "Normal";
+            let trigInfo = this.triglavianSystems.searchByObjectKey("solarSystemID", solarSystemInfo.solarSystemID);
+            let triglavianInvasionStatus = "Normal";
             if(exist(trigInfo)) {
-                switch (trigInfo.invasionStatus) {
-                    case "Final":
-                        constellationName = trigInfo.constellationName;
-                        regionName = trigInfo.regionName;
-                        break;
-                    case "Edencom":
-                    case "Triglavian":
-                        break;
-                }
-
-                trigStatus = trigInfo.invasionStatus;
-
-                if(factionName !== "" && trigStatus !== "Normal") {
-                    let effectInfo = this.getEffectByFaction(factionName, trigInfo.invasionStatus === "Edencom")
-                    systemData.effectType = effectInfo.effectType;
-                    systemData.effectName = effectInfo.effectName;
-                    systemData.effectData = effectInfo.effectData;
-                }
+                triglavianInvasionStatus = trigInfo.invasionStatus;
+                effectPower = trigInfo.effectPower;
+                effectName = trigInfo.effectName;
             }
 
             prarr.push(this.solarSystemsTable.add({
-                systemClass: wormholeSystemClass,
-                security: solarSystemInfo.security,
+                systemClass: wormholeClassID,
+                security: security,
                 solarSystemId: solarSystemInfo.solarSystemID,
                 constellationId: solarSystemInfo.constellationID,
                 regionId: solarSystemInfo.regionID,
@@ -186,91 +149,21 @@ ORDER BY t."solarSystemID"`);
                 solarSystemNameLC: solarSystemInfo.solarSystemName.toLowerCase(),
                 constellationName: constellationName,
                 regionName: regionName,
-                systemType: systemTypeInfo.type,
 
-                typeName: systemData.typeName,
-                typeDescription: systemData.typeDescription,
-                isShattered: systemData.isShattered,
-                effectType: systemData.effectType,
-                effectName: systemData.effectName,
-                effectData: systemData.effectData,
-                statics: systemData.statics,
-                triglavianInvasionStatus: trigStatus,
-                factionName: factionName,
+                classTitle: classTitle,
+                typeDescription: typeDescription,
+                isShattered: isShattered,
+                effectName: effectName,
+                effectPower: effectPower,
+                statics: statics,
+                wanderers: wanderers,
+                triglavianInvasionStatus: triglavianInvasionStatus,
             }));
         }
 
         await Promise.all(prarr);
 
         log(log.INFO, "passed");
-    }
-
-    async factionName (factionId) {
-        let query = `SELECT "factionName"
-            FROM public."chrFactions"
-            WHERE "factionID"='${factionId}';`;
-
-        let result = await this.staticDb.query(query);
-
-        return result.rows[0].factionName;
-    }
-
-    getEffectByFaction (faction, isEdencom) {
-        let effectType, effectName, effectData;
-
-        if (isEdencom) {
-            switch (faction) {
-                case "Ammatar Mandate":
-                case "Amarr Empire":
-                case "Khanid Kingdom":
-                    effectType = "imperialStellarObservatory";
-                    effectName = "Imperial Stellar Observatory";
-                    effectData = [
-                        {description: "10% bonus to armor capacity", positive: true},
-                        {description: "10% bonus to energy warfare capacitor drain", positive: true},
-                        {description: "10% bonus to mining speed", positive: true},
-                    ]
-                    break;
-                case "Caldari State":
-                    effectType = "stateStellarObservatory";
-                    effectName = "State Stellar Observatory";
-                    effectData = [
-                        {description: "10% bonus to shield capacity", positive: true},
-                        {description: "10% bonus to ECM range", positive: true},
-                        {description: "10% bonus to mining speed", positive: true},
-                    ]
-                    break;
-                case "Minmatar Republic":
-                    effectType = "republicStellarObservatory";
-                    effectName = "Republic Stellar Observatory";
-                    effectData = [
-                        {description: "10% bonus to shield capacity", positive: true},
-                        {description: "10% bonus to stasis webifier strength", positive: true},
-                        {description: "10% bonus to mining speed", positive: true},
-                    ]
-                    break;
-                case "Gallente Federation":
-                    effectType = "federalStellarObservatory";
-                    effectName = "Federal Stellar Observatory";
-                    effectData = [
-                        {description: "10% bonus to armor capacity", positive: true},
-                        {description: "+1 bonus to warp scramble strength", positive: true},
-                        {description: "10% bonus to mining speed", positive: true},
-                    ]
-                    break;
-            }
-        } else {
-            effectType = "dazhLiminalityLocus";
-            effectName = "Dazh Liminality Locus";
-            effectData = [
-                {description: "25% bonus to remote armor repair", positive: true},
-                {description: "25% bonus to remote shield boost", positive: true},
-                {description: "30% penalty to warp speed", positive: false},
-                {description: "50% penalty to maximum locked targets", positive: false},
-            ]
-        }
-
-        return {effectType: effectType, effectName: effectName, effectData: effectData}
     }
 
     async constellationName (constellationId) {
@@ -311,122 +204,6 @@ ORDER BY t."solarSystemID"`);
         let result = await this.staticDb.query(query);
 
         return result.rows.length !== 0 ? result.rows[0].wormholeClassID : -1;
-    }
-
-    async getAdditionalSystemInfo (solarSystemId) {
-        let query = `SELECT t.solarsystemid ,
-                   t.system ,
-                   t.class ,
-                   t.star ,
-                   t.planets ,
-                   t.moons ,
-                   t.effect ,
-                   t.statics
-            FROM public.wormholesystems_new t
-            WHERE solarsystemid='${solarSystemId}'
-            ORDER BY t.solarsystemid`;
-
-
-        let result = await this.manualDb.query(query);
-
-        return result.rows[0];
-    }
-
-    async getCompiledInfo (solarSystemId) {
-        var info = await this.getAdditionalSystemInfo(solarSystemId);
-
-        if(info && (info.statics === null || info.statics === ""))
-            info.statics = [];
-
-        if(info && info.statics && info.statics.length > 0) {
-            var staticArr = info.statics.split(",");
-            var arrResults = await Promise.all(staticArr.map(_hole => this.getWormholeClassInfo(_hole)));
-            info.statics = arrResults.map(function(_info, _index) {
-                return {
-                    id: staticArr[_index],
-                    type: this.wormholeClassesInfo[_info.in_class].shortName,
-                    fullName: this.wormholeClassesInfo[_info.in_class].fullName,
-                    class: _info.in_class
-                };
-            }.bind(this));
-        }
-
-        return info;
-    }
-
-    async getWormholeClassInfo (_wormholeClass) {
-        let query = `SELECT t.id
-                 , t.hole
-                 , t.in_class
-                 , t.maxstabletime
-                 , t.maxstablemass
-                 , t.massregeneration
-                 , t.maxjumpmass
-            FROM public.wormholeclassifications t
-            WHERE hole='${_wormholeClass}'
-            ORDER BY t.id`;
-
-        let result = await this.manualDb.query(query);
-
-        if(result.rows.length === 0)
-            throw "error"
-
-        return result.rows[0];
-    }
-
-    async getSolarSystemEffectInfo (_effectName, _wormholeClass) {
-        switch (_wormholeClass) {
-            case 14:
-            case 15:
-            case 16:
-            case 17:
-            case 18:
-                _wormholeClass = 2;
-                break;
-        }
-
-        let query = `SELECT t.id
-             , t.positive
-             , t.id_type
-             , t.hole
-             , t.effect
-             , t.icon
-             , t.c1
-             , t.c2
-             , t.c3
-             , t.c4
-             , t.c5
-             , t.c6
-        FROM public.effects_new t
-        WHERE t.hole='${_effectName}'
-        ORDER BY t.id`;
-
-        var result = await this.manualDb.query(query);
-
-        let out = [];
-        for (var a = 0; a < result.rows.length; a++) {
-            let rowData = result.rows[a];
-
-            let effectName = rowData.effect;
-            let effectStrength;
-            switch (_wormholeClass) {
-                case 1:
-                case 2:
-                case 3:
-                case 4:
-                case 5:
-                case 6:
-                    effectStrength = rowData["c" + _wormholeClass];
-                    break;
-            }
-
-            if(effectStrength[0] !== "-")
-                effectStrength = "+" + effectStrength;
-
-            out.push({description: `${effectName}: ${effectStrength}`, positive: rowData.positive});
-        }
-
-        return out;
     }
 }
 

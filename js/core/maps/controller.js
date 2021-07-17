@@ -578,8 +578,7 @@ const MapController = classCreator("MapController", Emitter, {
             solarSystemName: x.data.solarSystemName,
             constellationName: x.data.constellationName,
             regionName: x.data.regionName,
-            systemType: x.data.systemType,
-            typeName: x.data.typeName,
+            classTitle: x.data.classTitle,
             isShattered: x.data.isShattered,
         }))
     }

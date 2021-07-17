@@ -1,7 +1,6 @@
 const pg                = require('pg');
 const ConfReader        = require("./../utils/configReader");
 const reinstallEveDb    = require("./reinstallEveDb");
-const reinstallManualDb = require("./reinstallManualDb");
 const reinstallMapperDb = require("./reinstallMapperDb");
 const reinstallCachedDB = require("./reinstallCachedESD");
 const generateSwagger   = require("./generateSwagger.js");
@@ -18,6 +17,7 @@ client.connect();
 
 var installRole = async function () {
     log(log.INFO, "Create role yaml (for sde restore)...");
+    console.log(conString);
     var queryRole = `DO
     $do$
     BEGIN
@@ -56,13 +56,9 @@ const processUpdateCommand = async function (_command, _flags) {
                 case "eve":
                     await reinstallEveDb(client, conString);
                     break;
-                case "other":
-                    await reinstallManualDb(client, conString);
-                    break;
                 case "all":
                     await reinstallMapperDb(client, conString);
                     await reinstallEveDb(client, conString);
-                    await reinstallManualDb(client, conString);
                     await generateSwagger();
                     break;
             }
@@ -78,7 +74,6 @@ const processUpdateCommand = async function (_command, _flags) {
 const processInstall = async function () {
     try {
         await installRole();
-        await reinstallManualDb(client, conString);
         await reinstallEveDb(client, conString);
         await reinstallMapperDb(client, conString);
         await reinstallCachedDB(client, conString);

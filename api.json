@@ -204,26 +204,9 @@
 									}
 								}
 							},
-							"effectType": {
-								"type": "string"
-							},
 							"effectName": {
 								"type": "string"
 							},
-							"effectData": {
-								"type": "array",
-								"items": {
-									"type": "object",
-									"properties": {
-										"description": {
-											"type": "string"
-										},
-										"positive": {
-											"type": "boolean"
-										}
-									}
-								}
-							}
 						}
 					}
 				}

@@ -34,16 +34,6 @@ var DBController = classCreator("DBController", Emitter, {
             })
         });
 
-        this.mdDB = new DB({
-            client: new Client({
-                user: config.db.user,
-                host: config.db.host,
-                database: config.db.names.eveManual,
-                password: config.db.password,
-                port: config.db.port,
-            })
-        });
-
         this.cacheDb = new DB({
             client: new Client({
                 user: config.db.user,
@@ -76,7 +66,6 @@ var DBController = classCreator("DBController", Emitter, {
         var pr = new CustomPromise();
 
         await this.sdeDB.init();
-        await this.mdDB.init();
         await this.db.init();
         await this.cacheDb.init();
 
@@ -318,14 +307,13 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "solarSystemName",          type: String},
                 {name: "constellationName",        type: String},
                 {name: "regionName",               type: String},
-                {name: "systemType",               type: Number},
                 {name: "typeDescription",          type: String},
-                {name: "typeName",                 type: String},
+                {name: "classTitle",               type: String},
                 {name: "isShattered",              type: Boolean},
-                {name: "effectType",               type: String},
                 {name: "effectName",               type: String},
-                {name: "effectData",               type: Array},
+                {name: "effectPower",              type: Number},
                 {name: "statics",                  type: Array},
+                {name: "wanderers",                type: Array},
                 {name: "solarSystemNameLC",        type: String},
                 {name: "triglavianInvasionStatus", type: String},
             ]

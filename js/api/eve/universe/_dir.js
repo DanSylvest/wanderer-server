@@ -5,4 +5,5 @@
 module.exports = {
     solarSystemInfo : require("./solarSystemInfo.js"),
     shipInfo : require("./shipInfo.js"),
+    staticData : require("./staticData.js"),
 };

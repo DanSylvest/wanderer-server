@@ -78,24 +78,6 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
         solarSystemInfo = solarSystemInfo[0];
         mapInfo = mapInfo[0];
 
-        let systemData = {
-            typeName: solarSystemInfo.typeName,
-            typeDescription: solarSystemInfo.typeDescription,
-            isShattered: solarSystemInfo.isShattered,
-        }
-
-        if(solarSystemInfo.effectType)
-            systemData.effectType = solarSystemInfo.effectType;
-
-        if(solarSystemInfo.effectName)
-            systemData.effectName = solarSystemInfo.effectName;
-
-        if(solarSystemInfo.effectData)
-            systemData.effectData = solarSystemInfo.effectData;
-
-        if(solarSystemInfo.statics)
-            systemData.statics = solarSystemInfo.statics;
-
         let out = {
             id: mapInfo.id,
             mapId: mapInfo.mapId,
@@ -116,8 +98,14 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
             solarSystemName: solarSystemInfo.solarSystemName,
             constellationName: solarSystemInfo.constellationName,
             regionName: solarSystemInfo.regionName,
-            systemType: solarSystemInfo.systemType,
-            systemData: systemData,
+
+            effectName: solarSystemInfo.effectName,
+            effectPower: solarSystemInfo.effectPower,
+            statics: solarSystemInfo.statics || [],
+            wanderers: solarSystemInfo.wanderers || [],
+            classTitle: solarSystemInfo.classTitle,
+            typeDescription: solarSystemInfo.typeDescription,
+            isShattered: solarSystemInfo.isShattered,
 
             onlineCount: this.onlineCharacters.length,
             onlineCharacters: this.onlineCharacters,

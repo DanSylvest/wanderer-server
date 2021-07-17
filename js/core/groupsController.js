@@ -116,8 +116,9 @@ const GroupsController = classCreator("GroupsController", Emitter, {
 
         // надо получить всех персонажей, которые в результате данной операции,
         // должны быть отключены от наблюдения со всех карт, к которым прикреплена данная группа
-        let affectedCharactersOfflinePr = this.getAffectedCharacters(_groupId, characters.removed, corporations.removed, alliances.removed);
-        let affectedCharactersOnlinePr = this.getAffectedCharacters(_groupId, characters.added, corporations.added, alliances.added);
+
+        let affectedCharactersOfflinePr = this.getAffectedCharacters(_groupId, characters.removedIds, corporations.removedIds, alliances.removedIds);
+        let affectedCharactersOnlinePr = this.getAffectedCharacters(_groupId, characters.addedIds, corporations.addedIds, alliances.addedIds);
         let affectedCharactersOffline = await affectedCharactersOfflinePr;
         let affectedCharactersOnline = await affectedCharactersOnlinePr;
 

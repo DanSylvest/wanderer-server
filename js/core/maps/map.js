@@ -633,8 +633,8 @@ const removeIntersection = function (pairsArr) {
 const solarSystemTypesNotAbleToEnter = [7,8,9,19,20,21,22,23,24];
 // const solarSystemTypesNotAbleToMove = [19,20,21,22,23,24];
 const minimumRouteAttrs = [
-    "systemType",
-    "typeName",
+    "systemClass",
+    "classTitle",
     "security",
     "triglavianInvasionStatus",
     "solarSystemId",

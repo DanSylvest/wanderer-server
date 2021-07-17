@@ -18,6 +18,7 @@ const TempStorage            = require("./storage");
 const Thera                  = require("./other/thera");
 const CachedDBData           = require("./other/cachedDBData");
 const ESI_API                = require("./../esi/api");
+const StaticData             = require("./staticData.js");
 
 class Controller {
     constructor () {
@@ -35,6 +36,7 @@ class Controller {
         this.connectionStorage      = new TempStorage();
         this.thera                  = new Thera();
         this.cachedDBData           = new CachedDBData();
+        this.staticData             = new StaticData();
     }
     async init () {
         var pr = new CustomPromise();

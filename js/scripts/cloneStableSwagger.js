@@ -2,7 +2,8 @@ const Path          = require('./../env/tools/path');
 const fs            = require('fs');
 const ConfReader    = require("./../utils/configReader");
 const log           = require("./../utils/log.js");
-const { Clone }     = require("nodegit");
+const git           = require('simple-git');
+
 
 const dirPath  = Path.fromBackSlash(__dirname);
 dirPath.pop();
@@ -24,7 +25,9 @@ const cloneStableSwagger = async function () {
         }
 
         console.log(`Cloning ${REPO}...`);
-        await Clone(REPO, `./${REPO_NAME}`);
+        await git().clone(REPO, `./${REPO_NAME}`)
+
+        // await Clone(REPO, `./${REPO_NAME}`);
 
         fs.renameSync(repoPath["+"]('generated').toString(), generatedPath.toString());
         fs.rmSync(repoPath.toString(), {recursive: true});

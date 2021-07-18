@@ -25,6 +25,7 @@
 		"updateEveDb": "node js/scripts/installer.js update eve",
 		"updateManualDb": "node js/scripts/installer.js update other",
 		"updateSwagger": "node js/scripts/installer.js update swagger",
+		"clone-swagger": "node js/scripts/installer.js update clone-swagger",
 		"installApp": "node js/scripts/installer.js install",
 		"clearSignatures": "node js/scripts/installer.js update clearSignatures"
 	},
@@ -32,6 +33,7 @@
 		"args": "^5.0.1",
 		"md5": "^2.3.0",
 		"node-cache": "^5.1.2",
+		"nodegit": "^0.27.0",
 		"pg": "^8.5.1",
 		"request": "^2.88.2",
 		"superagent": "^6.1.0",

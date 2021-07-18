@@ -50,10 +50,10 @@ var Path = classCreator("Path", null, {
     slice: function (_index, _count) {
         return new Path(this._data.slice(_index, _count));
     },
-    pop: function () {
+    pop: function (returnThis) {
         var last = this.last();
         this._data = this._data.slice(0, this.size() - 1);
-        return last;
+        return returnThis ? this : last;
     },
     size: function () {
         return this._data.length;

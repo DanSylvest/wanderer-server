@@ -1,12 +1,13 @@
-const pg                = require('pg');
-const ConfReader        = require("./../utils/configReader");
-const reinstallEveDb    = require("./reinstallEveDb");
-const reinstallMapperDb = require("./reinstallMapperDb");
-const reinstallCachedDB = require("./reinstallCachedESD");
-const generateSwagger   = require("./generateSwagger.js");
-const clearSignatures   = require("./clearSignatures.js");
-const args              = require("args");
-const log               = require("./../utils/log.js");
+const pg                 = require('pg');
+const ConfReader         = require("./../utils/configReader");
+const reinstallEveDb     = require("./reinstallEveDb");
+const reinstallMapperDb  = require("./reinstallMapperDb");
+const reinstallCachedDB  = require("./reinstallCachedESD");
+const generateSwagger    = require("./generateSwagger.js");
+const cloneStableSwagger = require("./cloneStableSwagger.js");
+const clearSignatures    = require("./clearSignatures.js");
+const args               = require("args");
+const log                = require("./../utils/log.js");
 
 const config = new ConfReader("conf").build();
 const MAPPER_DB = config.db.name;
@@ -50,6 +51,9 @@ const processUpdateCommand = async function (_command, _flags) {
                 case "swagger":
                     await generateSwagger();
                     break;
+                case "clone-swagger":
+                    await cloneStableSwagger();
+                    break;
                 case "mapper":
                     await reinstallMapperDb(client, conString);
                     break;
@@ -87,7 +91,7 @@ const processInstall = async function () {
     process.exit()
 };
 
-args.command('update', 'Update [swagger/mapper/eve/other/all] or [mapper eve] default is all', processUpdateCommand);
+args.command('update', 'Update [swagger/clone-swagger/mapper/eve/other/all] or [mapper eve] default is all', processUpdateCommand);
 args.command('install', 'Will install all', processInstall);
 args.parse(process.argv);
 

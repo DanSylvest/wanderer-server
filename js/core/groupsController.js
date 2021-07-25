@@ -193,7 +193,7 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         }
 
         for (let b = 0; b < _result.length; b++) {
-            if (arr.indexOf(parseInt(_result[b].second)) === -1) {
+            if (arr.indexOf(_result[b].second) === -1) {
                 transactionArr.push(core.dbController.linksTable.removeByCondition([
                     {name: "type", operator: "=", value: type},
                     {name: "first", operator: "=", value: groupId},

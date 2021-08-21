@@ -2,14 +2,21 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 11/15/20.
  */
 
-const Emitter = require("./../../../env/tools/emitter");
+const Emitter = require("./../../../env/_new/tools/emitter");
 const exist = require("./../../../env/tools/exist");
-const classCreator = require("./../../../env/tools/class");
+
+let counter = 0;
+const ST_INITIAL = counter++;
+const ST_WAIT_ONLINE = counter++;
+const ST_WAIT_SHIP_TYPE = counter++;
+const ST_WAIT_LOCATION = counter++;
+const ST_READY = counter++;
+
 
 const DROP_TIMEOUT = 15000;
-const MapCharacter = classCreator("MapCharacter", Emitter, {
-    constructor (characterId) {
-        Emitter.prototype.constructor.call(this);
+class MapCharacter extends Emitter {
+    constructor(characterId) {
+        super();
 
         this.characterId = characterId;
 
@@ -27,8 +34,9 @@ const MapCharacter = classCreator("MapCharacter", Emitter, {
         this.shipValue = null;
 
         this.state = ST_INITIAL;
-    },
-    destructor () {
+    }
+
+    destructor() {
         this.dropTimerId !== -1 && clearTimeout(this.dropTimerId);
         this.dropTimerId = -1;
 
@@ -38,40 +46,40 @@ const MapCharacter = classCreator("MapCharacter", Emitter, {
         this.shipAttr && this.shipAttr.off(this.shipSubscribeId);
 
         Emitter.prototype.destructor.call(this);
-    },
-    init () {
+    }
+
+    init() {
         this.state = ST_WAIT_ONLINE;
         this.onlineAttr = core.charactersController.get(this.characterId).get("online");
         this.onlineSubscribeId = this.onlineAttr.on("change", this._onOnlineChange.bind(this));
         this.onlineValue = false;
-    },
-    startDropTimer () {
+    }
+
+    startDropTimer() {
         this.dropTimerId !== -1 && clearTimeout(this.dropTimerId);
         this.dropTimerId = setTimeout(() => {
             this.dropTimerId = -1;
             this.emit("drop");
         }, DROP_TIMEOUT);
-    },
-    cancelDropTimer () {
+    }
+
+    cancelDropTimer() {
         clearTimeout(this.dropTimerId);
         this.dropTimerId = -1;
-    },
-    clearCurrentLocation () {
-        this.locationValue = null;
-    },
-    currentLocation () {
-        return this.locationValue;
-    },
-    watchToShipType () {
+    }
+
+    watchToShipType() {
         this.shipAttr = core.charactersController.get(this.characterId).get("ship");
         this.shipSubscribeId = this.shipAttr.on("change", this._onShipChange.bind(this));
-    },
-    watchToLocation () {
+    }
+
+    watchToLocation() {
         this.locationAttr = core.charactersController.get(this.characterId).get("location");
         this.locationSubscribeId = this.locationAttr.on("change", this._onLocationChange.bind(this));
-    },
-    dropWatches () {
-        if(this.shipSubscribeId !== null) {
+    }
+
+    dropWatches() {
+        if (this.shipSubscribeId !== null) {
             this.shipAttr.off(this.shipSubscribeId);
             this.shipAttr = null;
             this.shipSubscribeId = null;
@@ -84,8 +92,9 @@ const MapCharacter = classCreator("MapCharacter", Emitter, {
             this.locationSubscribeId = null;
             this.locationValue = null;
         }
-    },
-    _onOnlineChange (_isOnline) {
+    }
+
+    _onOnlineChange(_isOnline) {
         switch (this.state) {
             case ST_WAIT_ONLINE:
                 if (_isOnline && !this.onlineValue) {
@@ -95,7 +104,7 @@ const MapCharacter = classCreator("MapCharacter", Emitter, {
                 }
                 break;
             default:
-                if(!_isOnline && this.onlineValue) {
+                if (!_isOnline && this.onlineValue) {
                     this.onlineValue = false;
                     this.dropWatches();
                     this.state = ST_WAIT_ONLINE;
@@ -104,8 +113,9 @@ const MapCharacter = classCreator("MapCharacter", Emitter, {
         }
 
         this.emit("onlineChanged", _isOnline);
-    },
-    _onShipChange (shipTypeId) {
+    }
+
+    _onShipChange(shipTypeId) {
         this.shipValue = shipTypeId;
 
         switch (this.state) {
@@ -120,16 +130,16 @@ const MapCharacter = classCreator("MapCharacter", Emitter, {
                 this.emit("shipChanged", this.shipValue);
                 break;
         }
-    },
+    }
+
     /**
      * It will called when character location state is changed
      * Location - it is solar system id
      *
-     * @param _characterId
      * @param _location
      * @private
      */
-    _onLocationChange ( _location) {
+    _onLocationChange(_location) {
         let location = _location.toString();
 
         switch (this.state) {
@@ -145,24 +155,19 @@ const MapCharacter = classCreator("MapCharacter", Emitter, {
                     this.emit("moveToSystem", oldSystem, location);
                 }
         }
-    },
+    }
 
-    isOnline () {
+    isOnline() {
         return exist(this.onlineValue) ? this.onlineValue : false;
-    },
-    location () {
+    }
+
+    location() {
         return this.locationValue;
-    },
+    }
+
     currentShipType() {
         return this.shipValue;
     }
-});
-
-let counter = 0;
-const ST_INITIAL = counter++;
-const ST_WAIT_ONLINE = counter++;
-const ST_WAIT_SHIP_TYPE = counter++;
-const ST_WAIT_LOCATION = counter++;
-const ST_READY = counter++;
+}
 
 module.exports = MapCharacter;

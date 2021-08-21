@@ -9,9 +9,7 @@ module.exports = {
     subscribeLocation : require("./subscribeLocation"),
     subscribeShip     : require("./subscribeShip"),
     fastSearch        : require("./fastSearch"),
-    publicInfo        : require("./publicInfo"),
     protectedInfo     : require("./protectedInfo"),
-    getName           : require("./getName"),
     remove            : require("./remove"),
     byUser            : require("./byUser"),
 };

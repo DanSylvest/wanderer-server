@@ -2,9 +2,7 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/22/20.
  */
 
-
-const Emitter         = require("./../../env/tools/emitter");
-const classCreator    = require("./../../env/tools/class");
+const Emitter         = require("./../../env/_new/tools/emitter");
 const exist           = require("./../../env/tools/exist");
 const CustomPromise   = require("./../../env/promise");
 const Character       = require("./map/character");
@@ -15,10 +13,12 @@ const solarSystemSql  = require("./sql/solarSystemSql.js");
 const ChainsManager   = require("./map/chainsManager.js");
 const log             = require("./../../utils/log.js");
 const MapSubscribers  = require("./map/mapSubscribers.js");
-const MapChain        = require("./map/chain.js")
+const MapChain        = require("./map/chain.js");
+const CollectCharactersForBulk = require('./map/mixins/collectCharactersForBulk.js');
 
-const Map = classCreator("Map", Emitter, {
-    constructor (_options) {
+class Map extends Emitter {
+    constructor(_options) {
+        super();
         this.options = Object.create(null);
 
         let __mapId = null;
@@ -27,7 +27,7 @@ const Map = classCreator("Map", Emitter, {
                 return __mapId;
             },
             set: function (_val) {
-                if(_val === undefined)
+                if (_val === undefined)
                     debugger;
 
                 __mapId = _val;
@@ -36,39 +36,55 @@ const Map = classCreator("Map", Emitter, {
 
         this.options.mapId = _options.mapId;
 
-        Emitter.prototype.constructor.call(this);
-
+        /**
+         *
+         * @type {Object.<string, Character>}
+         */
         this.characters = Object.create(null);
+
+        /**
+         *
+         * @type {Object.<string, MapSolarSystem>}
+         * @private
+         */
         this._systems = Object.create(null);
         this._charactersOnSystem = Object.create(null);
         this._chains = Object.create(null);
+
+        /**
+         *
+         * @type {Object.<string, User>}
+         * @private
+         */
         this._users = Object.create(null);
         this._charactersOnUsers = Object.create(null);
 
         this.subscribers = new MapSubscribers(this);
 
         this._createChainsManager();
-    },
-    destructor () {
+    }
+
+    destructor() {
         this.chainsManager.destructor();
         this.subscribers.destructor();
 
-        Emitter.prototype.destructor.call(this);
-    },
+        super.destructor();
+    }
 
-    async init () {
+    async init() {
         this.chainsManager.start();
-    },
-    deinit () {
-        for(let systemId in this._systems) {
+    }
+
+    deinit() {
+        for (let systemId in this._systems) {
             this._systems[systemId].destructor();
         }
 
-        for(let key in this._chains) {
+        for (let key in this._chains) {
             this._chains[key].promise.cancel();
         }
 
-        for(let characterId in this.characters) {
+        for (let characterId in this.characters) {
             this.characters[characterId].destructor();
         }
 
@@ -77,23 +93,25 @@ const Map = classCreator("Map", Emitter, {
         this._systems = Object.create(null);
         this._charactersOnSystem = Object.create(null);
         this._chains = Object.create(null);
-    },
+    }
 
-    connectionBreak (_connectionId) {
+    connectionBreak(_connectionId) {
         this.subscribers.connectionBreak(_connectionId);
 
-        for(let solarSystemId in this._systems)
+        for (let solarSystemId in this._systems)
             this._systems[solarSystemId].connectionBreak(_connectionId);
 
-        for(let chainId in this._chains)
+        for (let chainId in this._chains)
             this._chains[chainId].model.connectionBreak(_connectionId);
-    },
-    getSolarSystem (solarSystemId) {
+    }
+
+    getSolarSystem(solarSystemId) {
         this._createSystemObject(solarSystemId);
         return this._systems[solarSystemId];
-    },
-    async getChain (chainId) {
-        if(!this._chains[chainId]) {
+    }
+
+    async getChain(chainId) {
+        if (!this._chains[chainId]) {
             let chainInfo = await mapSqlActions.getLinkInfo(this.options.mapId, chainId);
             if (!chainInfo) {
                 throw `Error "Chain ${chainId} isn't exists."`
@@ -107,32 +125,36 @@ const Map = classCreator("Map", Emitter, {
         }
 
         return this._chains[chainId].model;
-    },
+    }
 
-    addCharactersToObserve (_characterIds) {
+    addCharactersToObserve(_characterIds) {
         _characterIds.map(this._startObserverCharacter.bind(this));
-    },
-    removeCharactersFromObserve (_characterIds) {
-        _characterIds.map(this._stopObserverCharacter.bind(this));
-    },
+    }
 
-    _createChainsManager () {
+    removeCharactersFromObserve(_characterIds) {
+        _characterIds.map(this._stopObserverCharacter.bind(this));
+    }
+
+    _createChainsManager() {
         this.chainsManager = new ChainsManager(this.options.mapId);
         this.chainsManager.on("changedChains", this._onChainsChanged.bind(this))
 
-    },
-    _createSystemObject (_systemId) {
-        if(!exist(this._systems[_systemId])) {
+    }
+
+    _createSystemObject(_systemId) {
+        if (!exist(this._systems[_systemId])) {
             this._systems[_systemId] = new MapSolarSystem(this.options.mapId, _systemId);
         }
-    },
-    _startObserverCharacter (characterId) {
-        if(!this.characters[characterId]) {
+    }
+
+    _startObserverCharacter(characterId) {
+        if (!this.characters[characterId]) {
             this.characters[characterId] = new Character(characterId);
             this.characters[characterId].on("onlineChanged", this._onCharacterOnlineChanged.bind(this, characterId));
             this.characters[characterId].on("leaveSystem", this._onCharacterLeaveSystem.bind(this, characterId));
             this.characters[characterId].on("enterInSystem", this._onCharacterEnterInSystem.bind(this, characterId));
             this.characters[characterId].on("moveToSystem", this._onCharacterMoveToSystem.bind(this, characterId));
+            this.characters[characterId].on("shipChanged", this._onCharacterShipChanged.bind(this, characterId));
             this.characters[characterId].on("drop", this._onCharacterDrop.bind(this, characterId));
             this.characters[characterId].init();
         } else {
@@ -141,7 +163,7 @@ const Map = classCreator("Map", Emitter, {
 
         // this is fast access to user characters
         let userId = this._charactersOnUsers[characterId];
-        if(exist(userId)) {
+        if (exist(userId)) {
             this._users[userId].addedToAvailable({
                 charId: characterId,
                 online: this.characters[characterId].isOnline()
@@ -149,14 +171,15 @@ const Map = classCreator("Map", Emitter, {
         }
 
         log(log.WARN, `STARTED observe [${this.options.mapId}:${characterId}]`);
-    },
-    _stopObserverCharacter (characterId) {
+    }
+
+    _stopObserverCharacter(characterId) {
         log(log.WARN, `STOPPED observe [${this.options.mapId}:${characterId}]`);
 
         this.characters[characterId] && this.characters[characterId].startDropTimer();
-    },
+    }
 
-    _onChainsChanged (chains) {
+    _onChainsChanged(chains) {
         chains.map(chain => {
             switch (chain.newState) {
                 case "EOL":
@@ -167,54 +190,70 @@ const Map = classCreator("Map", Emitter, {
                     break;
             }
         });
-    },
+    }
 
-    async _onCharacterOnlineChanged (characterId, isOnline) {
+    async _onCharacterOnlineChanged(characterId, isOnline) {
+        if(!isOnline) {
+            this.subscribers.notifyCharacterOnlineRemoved(characterId);
+        }
+
         // this is fast access to user characters
         let userId = this._charactersOnUsers[characterId];
-        if(exist(userId)) {
+        if (exist(userId)) {
             this._users[userId].onlineChanged(characterId, isOnline);
         }
-    },
-    async _onCharacterLeaveSystem (characterId) {
+    }
+
+    async _onCharacterLeaveSystem(characterId) {
         await this._characterLeaveSystem(characterId, this._charactersOnSystem[characterId]);
-    },
-    async _onCharacterEnterInSystem (characterId, location) {
+        this.subscribers.notifyCharacterOnlineRemoved(characterId);
+    }
+
+    async _onCharacterEnterInSystem(characterId, location) {
         await this._characterEnterToSystem(characterId, location);
-    },
-    async _onCharacterMoveToSystem (characterId, oldSystem, location) {
+        this.subscribers.notifyCharacterOnlineAdded(characterId);
+    }
+
+    async _onCharacterMoveToSystem(characterId, oldSystem, location) {
         await this._characterMoveToSystem(characterId, oldSystem, location);
-    },
-    async _onCharacterDrop (characterId) {
+        this.subscribers.notifyCharacterOnlineUpdatedLocation(characterId, oldSystem, location);
+    }
+
+    _onCharacterShipChanged (characterId, shipId) {
+        this.subscribers.notifyCharacterOnlineUpdatedShipType(characterId, shipId);
+    }
+
+    async _onCharacterDrop(characterId) {
         let isOnline = this.characters[characterId].isOnline();
         let currentSystemId = this._charactersOnSystem[characterId];
         this.characters[characterId].destructor();
         delete this.characters[characterId];
-        if(isOnline && exist(currentSystemId)) {
+        if (isOnline && exist(currentSystemId)) {
             await this._characterLeaveSystem(characterId, currentSystemId);
         }
 
         // this is fast access to user characters
         let userId = this._charactersOnUsers[characterId];
-        if(exist(userId)) {
+        if (exist(userId)) {
             this._users[userId].removedFromAvailable(characterId);
         }
-    },
-    async _notifySystemAdd (_systemId) {
-        this.subscribers.notifySystemAdd(_systemId);
-    },
 
-    async _addSystem (_oldSystem, _systemId, position) {
+    }
+
+    async _notifySystemAdd(_systemId) {
+        this.subscribers.notifySystemAdd(_systemId);
+    }
+
+    async _addSystem(_oldSystem, _systemId, position) {
         let pos = position;
         this._createSystemObject(_systemId);
         let solarSystem = this._systems[_systemId];
 
         let result = await solarSystem.isSystemExistsAndVisible();
-        if(result.exists && result.visible) {
+        if (result.exists && result.visible) {
             // do nothing
             solarSystem.resolve();
-        }
-        else if(result.exists && !result.visible) {
+        } else if (result.exists && !result.visible) {
             if (!exist(position))
                 pos = await this.findPosition(_oldSystem, _systemId);
 
@@ -223,15 +262,14 @@ const Map = classCreator("Map", Emitter, {
 
             solarSystem.resolve();
             await this._notifySystemAdd(_systemId);
-        }
-        else if (!result.exists) {
+        } else if (!result.exists) {
             let solarSystemInfo = await solarSystemSql.getSolarSystemInfo(_systemId);
             if (solarSystemInfo === null) {
                 // solar system can be not found in list
                 throw `Exception "Solar system ${_systemId} is not exists in database..."`
             }
 
-            if(!exist(position))
+            if (!exist(position))
                 pos = await this.findPosition(_oldSystem, _systemId);
 
             await solarSystem.create(solarSystemInfo.solarSystemName, pos);
@@ -241,16 +279,17 @@ const Map = classCreator("Map", Emitter, {
         }
 
         return solarSystem.loadPromise();
-    },
-    async _addLink (_sourceSystemId, _targetSystemId) {
+    }
+
+    async _addLink(_sourceSystemId, _targetSystemId) {
         let chainInfo = this._chains[_sourceSystemId + "_" + _targetSystemId] || this._chains[_targetSystemId + "_" + _sourceSystemId];
-        if(!chainInfo) {
+        if (!chainInfo) {
             chainInfo = this._chains[_sourceSystemId + "_" + _targetSystemId] = {
                 promise: new CustomPromise()
             };
 
             let chainData = await mapSqlActions.getLinkByEdges(this.options.mapId, _sourceSystemId, _targetSystemId);
-            if(!chainData) {
+            if (!chainData) {
                 let newChainId = _sourceSystemId + "_" + _targetSystemId;
                 await mapSqlActions.addLink(this.options.mapId, newChainId, _sourceSystemId, _targetSystemId);
                 this._chains[newChainId].model = new MapChain(this.options.mapId, newChainId);
@@ -264,8 +303,9 @@ const Map = classCreator("Map", Emitter, {
         }
 
         return chainInfo.promise.native;
-    },
-    async _linkPassage (_sourceSystemId, _targetSystemId, _characterId) {
+    }
+
+    async _linkPassage(_sourceSystemId, _targetSystemId, _characterId) {
         await this._addLink(_sourceSystemId, _targetSystemId);
 
         let link = await mapSqlActions.getLinkByEdges(this.options.mapId, _sourceSystemId, _targetSystemId);
@@ -279,21 +319,24 @@ const Map = classCreator("Map", Emitter, {
         )
 
         //TODO А после этого, нужно отправить оповещение в гуй, что линк id был проинкрементирован
-    },
-    async _characterJoinToSystem (_characterId, _systemId) {
+    }
+
+    async _characterJoinToSystem(_characterId, _systemId) {
         this._createSystemObject(_systemId);
         this._systems[_systemId].addCharacter(_characterId);
         this._charactersOnSystem[_characterId] = _systemId;
-    },
-    async _characterLeaveSystem (_characterId, _systemId) {
-        if(exist(this._systems[_systemId])) {
+    }
+
+    async _characterLeaveSystem(_characterId, _systemId) {
+        if (exist(this._systems[_systemId])) {
             this._systems[_systemId].removeCharacter(_characterId);
             delete this._charactersOnSystem[_characterId];
         }
-    },
-    async _characterEnterToSystem (_characterId, _systemId) {
+    }
+
+    async _characterEnterToSystem(_characterId, _systemId) {
         let ssInfo = await solarSystemSql.getSolarSystemInfo(_systemId);
-                // let solarSystemInfo = await core.sdeController.getSolarSystemInfo(_systemId);
+        // let solarSystemInfo = await core.sdeController.getSolarSystemInfo(_systemId);
         // let systemClass = await core.sdeController.getSystemClass(solarSystemInfo.regionID, solarSystemInfo.constellationID, _systemId);
         let isExists = await this.systemExists(_systemId, true);
         let isAbleToEnter = solarSystemTypesNotAbleToEnter.indexOf(ssInfo.systemClass) === -1;
@@ -306,16 +349,17 @@ const Map = classCreator("Map", Emitter, {
         }
 
         // Это происходит, когда нет никаких систем, и персонаж первый раз попал на карту
-        if(!isExists && isAbleToEnter) {
+        if (!isExists && isAbleToEnter) {
             await this._addSystem(null, _systemId);
             isExists = true;
         }
 
         // Это происходит когда система уже была добавлена: вручную или в результате прохода в неё.
-        if(isExists)
+        if (isExists)
             await this._characterJoinToSystem(_characterId, _systemId);
-    },
-    async _characterMoveToSystem (_characterId, _oldSystem, _newSystem) {
+    }
+
+    async _characterMoveToSystem(_characterId, _oldSystem, _newSystem) {
         // System can be chained by gates and if it true, we consider system in known space.
         // But also system can be chained by the wormhole also, but we can detect it.
         let isJump = await core.sdeController.checkSystemJump(_oldSystem, _newSystem);
@@ -355,59 +399,64 @@ const Map = classCreator("Map", Emitter, {
                 await this._characterJoinToSystem(_characterId, _newSystem);
             }
         }
-    },
+    }
 
-    async addChainManual (sourceSolarSystemId, targetSolarSystemId) {
+    async addChainManual(sourceSolarSystemId, targetSolarSystemId) {
         // надо проверить что система соединяется
         let link = await mapSqlActions.getLinkByEdges(this.options.mapId, sourceSolarSystemId, targetSolarSystemId);
 
-        if(!exist(link)) {
+        if (!exist(link)) {
             await this._addLink(sourceSolarSystemId, targetSolarSystemId);
         }
-    },
-    async addManual (solarSystemId, x, y) {
+    }
+
+    async addManual(solarSystemId, x, y) {
         this._createSystemObject(solarSystemId);
         let solarSystem = this._systems[solarSystemId];
         let result = await solarSystem.isSystemExistsAndVisible();
 
-        if(result.visible)
+        if (result.visible)
             throw "System already exists in map";
 
         await this._addSystem(null, solarSystemId, {x: x, y: y});
 
-        for(let characterId in this.characters) {
+        for (let characterId in this.characters) {
             let character = this.characters[characterId];
-            if(character.isOnline() && character.location() === solarSystemId) {
+            if (character.isOnline() && character.location() === solarSystemId) {
                 await this._characterJoinToSystem(characterId, solarSystemId);
             }
         }
-    },
-    async addHub (solarSystemId) {
+    }
+
+    async addHub(solarSystemId) {
         let hubs = await core.dbController.mapsDB.get(this.options.mapId, "hubs");
 
         let hasSystem = hubs.indexOf(solarSystemId.toString()) !== -1;
 
-        if(!hasSystem) {
+        if (!hasSystem) {
             hubs.push(solarSystemId.toString());
             await core.dbController.mapsDB.set(this.options.mapId, "hubs", hubs);
 
             this.subscribers.notifyHubAdded(solarSystemId);
         }
-    },
-    async removeHub (solarSystemId) {
+    }
+
+    async removeHub(solarSystemId) {
         let hubs = await core.dbController.mapsDB.get(this.options.mapId, "hubs");
 
         let index = hubs.indexOf(solarSystemId.toString());
-        if(index !== -1) {
+        if (index !== -1) {
             hubs.removeByIndex(index);
             await core.dbController.mapsDB.set(this.options.mapId, "hubs", hubs);
             this.subscribers.notifyHubRemoved(solarSystemId);
         }
-    },
-    async getHubs () {
+    }
+
+    async getHubs() {
         return await core.dbController.mapsDB.get(this.options.mapId, "hubs");
-    },
-    async getRoutesListForSolarSystemAdvanced (solarSystemId, hubs, settings) {
+    }
+
+    async getRoutesListForSolarSystemAdvanced(solarSystemId, hubs, settings) {
         let defaultSettings = {
             pathType: "shortest",
             includeMassCrit: true,
@@ -427,7 +476,7 @@ const Map = classCreator("Map", Emitter, {
 
         // If we avoid wormholes - map links will be avoiding
         // if we avoid wormholes - we avoiding also Thera
-        if(!defaultSettings.avoidWormholes) {
+        if (!defaultSettings.avoidWormholes) {
             let mapChains = await this.getLinkPairsAdvanced(
                 defaultSettings.includeFrig,
                 defaultSettings.includeEol,
@@ -435,7 +484,7 @@ const Map = classCreator("Map", Emitter, {
             );
 
             let theraChains = [];
-            if(defaultSettings.includeThera) {
+            if (defaultSettings.includeThera) {
                 theraChains = core.thera.getChainPairs(
                     defaultSettings.includeFrig,
                     defaultSettings.includeEol,
@@ -444,7 +493,7 @@ const Map = classCreator("Map", Emitter, {
             }
 
             let chains = removeIntersection(mapChains.concat(theraChains));
-            if(!defaultSettings.includeCruise) {
+            if (!defaultSettings.includeCruise) {
                 chains = chains.filter(x => {
                     return !core.cachedDBData.wormholeClassAIndexed[x.first] && !core.cachedDBData.wormholeClassAIndexed[x.second];
                 })
@@ -455,20 +504,20 @@ const Map = classCreator("Map", Emitter, {
         }
 
         let avoidanceList = [];
-        if(defaultSettings.avoidEdencom)
+        if (defaultSettings.avoidEdencom)
             avoidanceList = avoidanceList.concat(core.cachedDBData.edencomSolarSystems);
 
-        if(defaultSettings.avoidTriglavian)
+        if (defaultSettings.avoidTriglavian)
             avoidanceList = avoidanceList.concat(core.cachedDBData.triglavianSolarSystems);
 
-        if(defaultSettings.avoidPochven)
+        if (defaultSettings.avoidPochven)
             avoidanceList = avoidanceList.concat(core.cachedDBData.pochvenSolarSystems);
 
         let out = [];
 
         let arrRoutes = await Promise.all(hubs.map(destination => this.loadRoute(destination, solarSystemId, defaultSettings.pathType, connections, avoidanceList)));
 
-        for(let a = 0; a < arrRoutes.length; a++) {
+        for (let a = 0; a < arrRoutes.length; a++) {
             let destination = hubs[a];
             let route = arrRoutes[a];
 
@@ -483,8 +532,9 @@ const Map = classCreator("Map", Emitter, {
         }
 
         return out;
-    },
-    loadRoute (dest, origin, flag, connections, avoidanceList) {
+    }
+
+    loadRoute(dest, origin, flag, connections, avoidanceList) {
         let pr = new CustomPromise();
 
         if (avoidanceList === undefined)
@@ -497,11 +547,12 @@ const Map = classCreator("Map", Emitter, {
             );
 
         return pr.native;
-    },
-    async findPosition (_oldSystemId, _systemId) {
+    }
+
+    async findPosition(_oldSystemId, _systemId) {
         let newPosition = {x: 0, y: 0};
 
-        if(_oldSystemId !== null) {
+        if (_oldSystemId !== null) {
             let oldSystemPositionResult = await mapSqlActions.getSystemPosition(this.options.mapId, _oldSystemId);
 
             if (exist(oldSystemPositionResult)) {
@@ -511,51 +562,62 @@ const Map = classCreator("Map", Emitter, {
         }
 
         return newPosition;
-    },
-    async updateSystem (_systemId, _data) {
+    }
+
+    async updateSystem(_systemId, _data) {
         this._systems[_systemId].update(_data);
-    },
-    async updateLink (chainId, data) {
-        for(let attr in data) {
-            if(attr === "timeStatus")
+    }
+
+    async updateLink(chainId, data) {
+        for (let attr in data) {
+            if (attr === "timeStatus")
                 data = {...data, updated: new Date}
         }
 
         await mapSqlActions.updateChain(this.options.mapId, chainId, data);
         let chain = await this.getChain(chainId);
         chain.update(data);
-    },
-    async updateSystemsPosition (_systemsPosition) {
+    }
+
+    async updateSystemsPosition(_systemsPosition) {
         await Promise.all(_systemsPosition.map(x => this._systems[x.id].updatePositions(x.x, x.y)))
-    },
-    async getSystemInfo (_systemId) {
+    }
+
+    async getSystemInfo(_systemId) {
         this._createSystemObject(_systemId);
         return await this._systems[_systemId].getInfo();
-    },
-    async getLinkInfo (_linkId) {
+    }
+
+    async getLinkInfo(_linkId) {
         return await mapSqlActions.getLinkInfo(this.options.mapId, _linkId);
-    },
-    async getSystems () {
+    }
+
+    async getSystems() {
         return await mapSqlActions.getSystems(this.options.mapId);
-    },
-    async getLinks () {
+    }
+
+    async getLinks() {
         return await mapSqlActions.getLinks(this.options.mapId);
-    },
-    async getLinkPairs () {
+    }
+
+    async getLinkPairs() {
         return await mapSqlActions.getLinkPairs(this.options.mapId);
-    },
-    async getLinkPairsAdvanced (includeFrig, includeEol, includeMassCrit) {
+    }
+
+    async getLinkPairsAdvanced(includeFrig, includeEol, includeMassCrit) {
         return await mapSqlActions.getLinkPairsAdvanced(this.options.mapId, includeFrig, includeEol, includeMassCrit);
-    },
-    async systemExists (_systemId, checkVisible) {
+    }
+
+    async systemExists(_systemId, checkVisible) {
         return await mapSqlActions.systemExists(this.options.mapId, _systemId, checkVisible);
-    },
-    async linkRemove (chainId) {
+    }
+
+    async linkRemove(chainId) {
         // todo - процес удаления линка может быть только один раз
         // поэтому его надо блокировать
         let chainInfo = await mapSqlActions.linkRemove(this.options.mapId, chainId);
         let info = this._chains[chainInfo.source + "_" + chainInfo.target] || this._chains[chainInfo.target + "_" + chainInfo.source];
-        if(info) {
+        if (info) {
             this._chains[chainId].model.destructor();
 
             delete this._chains[chainInfo.source + "_" + chainInfo.target];
@@ -563,8 +625,9 @@ const Map = classCreator("Map", Emitter, {
         }
 
         this.subscribers.notifyLinkRemoved(chainId);
-    },
-    async systemRemove (_systemId) {
+    }
+
+    async systemRemove(_systemId) {
         await this._systems[_systemId].changeVisible(false);
         // await mapSqlActions.updateSystem(this.options.mapId, _systemId, {visible: false});
         let affectedLinks = await mapSqlActions.getLinksBySystem(this.options.mapId, _systemId);
@@ -580,15 +643,16 @@ const Map = classCreator("Map", Emitter, {
         this._systems[_systemId].destructor();
 
         delete this._systems[_systemId];
-    },
+    }
+
     async subscribeAllowedCharacters(connectionId, responseId, userId) {
         let characters = await core.userController.getUserCharacters(userId);
         characters.map(x => this._charactersOnUsers[x] = userId);
 
-        if(!exist(this._users[userId]) || this._users[userId].subscribersCount() === 0) {
+        if (!exist(this._users[userId]) || this._users[userId].subscribersCount() === 0) {
             let trackedCharacters = [];
             characters.map(characterId => {
-                if(exist(this.characters[characterId])) {
+                if (exist(this.characters[characterId])) {
                     trackedCharacters.push({
                         charId: characterId,
                         online: this.characters[characterId].isOnline()
@@ -596,15 +660,16 @@ const Map = classCreator("Map", Emitter, {
                 }
             });
 
-            if(!exist(this._users[userId]))
+            if (!exist(this._users[userId]))
                 this._users[userId] = new User(this.options.mapId, userId);
 
-            if(this._users[userId].subscribersCount() === 0)
+            if (this._users[userId].subscribersCount() === 0)
                 this._users[userId].updateAllowedCharacters(trackedCharacters);
         }
 
         this._users[userId].subscribeAllowedCharacters(connectionId, responseId);
-    },
+    }
+
     async unsubscribeAllowedCharacters(connectionId, responseId, userId) {
         // Вероятно нужно поставить таймаут на 10-15ms, на добавление и удаление
         // по той причине, что вомзожно что может быть неловкая ситуация
@@ -613,8 +678,11 @@ const Map = classCreator("Map", Emitter, {
 
         this._users[userId].unsubscribeAllowedCharacters(connectionId, responseId);
     }
+}
 
-});
+// List of mixins
+Object.assign(Map.prototype, CollectCharactersForBulk);
+
 
 const removeIntersection = function (pairsArr) {
     let checkObj = Object.create(null);

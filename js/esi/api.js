@@ -37,6 +37,22 @@ var __esi_characters_portrait = function (_characterId) {
     return pr.native;
 };
 
+/**
+ *
+ * @param _characterId
+ * @returns {Promise | Promise<{
+ *     allianceId {number | undefined}
+ *     ancestryId {number}
+ *     birthday {Date}
+ *     bloodlineId {number}
+ *     corporationId {number | undefined}
+ *     description {string}
+ *     gender {string}
+ *     name {string}
+ *     raceId {number}
+ * }>}
+ * @private
+ */
 var __esi_characters_info = function (_characterId) {
     var pr = new CustomPromise();
 

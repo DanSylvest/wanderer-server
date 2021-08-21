@@ -18,7 +18,7 @@ const request = async function (_connectionId, _responseId, _event) {
     try {
         let userId = await core.tokenController.checkToken(token);
         let characters = await core.userController.getUserCharacters(userId);
-        let arr = await Promise.all(characters.map(x => core.charactersController.get(x).getInfo()));
+        let arr = await Promise.all(characters.map(x => core.charactersController.getProtectedCharacterInfo(x)));
         arr.map((x, i) => arr[i].id = characters[i]);
 
         api.send(_connectionId, _responseId, {

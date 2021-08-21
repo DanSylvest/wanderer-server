@@ -2,45 +2,53 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/21/20.
  */
 
-const Emitter       = require("./../env/tools/emitter");
-const Group         = require("./group");
-const classCreator  = require("./../env/tools/class");
-const exist         = require("./../env/tools/exist");
-const md5           = require("md5");
-const DBController  = require("./dbController");
+const Emitter = require("./../env/_new/tools/emitter");
+const Group = require("./group");
+const exist = require("./../env/tools/exist");
+const md5 = require("md5");
+const DBController = require("./dbController");
+const {getName: getCharacterName, getAllianceId, getCorporationId} = require('./characters/utils');
 
-const GroupsController = classCreator("GroupsController", Emitter, {
-    constructor: function GroupsController() {
-        Emitter.prototype.constructor.call(this);
+class GroupsController extends Emitter {
+    constructor() {
+        super();
 
         this._groups = Object.create(null);
-    },
-    destructor: function () {
-        Emitter.prototype.destructor.call(this);
-    },
-    has: function (_groupId) {
+    }
+
+    has(_groupId) {
         return !!this._groups[_groupId];
-    },
-    get: function (_groupId) {
+    }
+
+    /**
+     *
+     * @param _groupId
+     * @returns {Group}
+     */
+    get(_groupId) {
         if (!this.has(_groupId)) {
             this._add(_groupId, new Group({groupId: _groupId}));
         }
 
         return this._groups[_groupId];
-    },
-    remove: function (_groupId) {
+    }
+
+    remove(_groupId) {
         if (this.has(_groupId)) {
             delete this._groups[_groupId];
         }
-    },
-    _add: function (_groupId, _mapInstance) {
+    }
+
+    _add(_groupId, _mapInstance) {
         this._groups[_groupId] = _mapInstance;
-    },
-    connectionBreak: function (_connectionId) {
+    }
+
+    connectionBreak(_connectionId) {
         for (let mapId in this._groups) {
             this._groups[mapId].connectionBreak(_connectionId);
         }
-    },
+    }
+
     /**
      *
      * @param owner - is group user id
@@ -53,7 +61,7 @@ const GroupsController = classCreator("GroupsController", Emitter, {
      * @param _data.description {string}
      * @returns {Promise<any> | Promise<unknown>}
      */
-    async createGroup (owner, {name, description, characters, corporations, alliances, moderators}) {
+    async createGroup(owner, {name, description, characters, corporations, alliances, moderators}) {
         let id = md5(config.app.solt + "_" + +new Date);
 
         await this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCharacter, id, characters);
@@ -70,8 +78,9 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         await core.dbController.groupsDB.add({id, owner, name, description});
 
         return id;
-    },
-    async removeGroup (_groupId) {
+    }
+
+    async removeGroup(_groupId) {
         // before remove group, we should check if map use the group by default
         // after we should remove group from map
         // we can't remove it
@@ -102,8 +111,9 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         // Обновление состояния подписки на список доступных карт пользователей
         // В данном случае мы получим всех затронутых персонажей
         await core.mapController.notifyAllowedMapsByAffectedCharacters(affectedCharacters);
-    },
-    async editGroup (_groupId, _props) {
+    }
+
+    async editGroup(_groupId, _props) {
         let updCharactersPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCharacter, _groupId, _props.characters);
         let updCorporationsPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCorporation, _groupId, _props.corporations);
         let updAlliancesPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToAlliance, _groupId, _props.alliances);
@@ -138,16 +148,16 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         // В данном случае мы получим всех затронутых персонажей
         let affectedCharacters = affectedCharactersOffline.slice().merge(affectedCharactersOnline);
         await core.mapController.notifyAllowedMapsByAffectedCharacters(affectedCharacters);
-    },
+    }
 
-    async getAffectedCharacters (groupId, characters, corporations, alliances) {
+    async getAffectedCharacters(groupId, characters, corporations, alliances) {
         characters = characters.map(x => x.toString());
         corporations = corporations.map(x => x.toString());
         alliances = alliances.map(x => x.toString());
 
         let trackedCharacters = await this.getTrackedCharactersByGroup(groupId);
-        let charactersCorporations = await Promise.all(trackedCharacters.map(_characterId => core.charactersController.get(_characterId).getCorporationId()));
-        let charactersAlliances = await Promise.all(trackedCharacters.map(_characterId => core.charactersController.get(_characterId).getAllianceId()));
+        let charactersCorporations = await Promise.all(trackedCharacters.map(charId => getCorporationId(charId)));
+        let charactersAlliances = await Promise.all(trackedCharacters.map(charId => getAllianceId(charId)));
 
         // У нас может быть ID корпорации стрингой а может быть интом, поэтому приведем к стринге
         charactersCorporations = charactersCorporations.map(_x => _x.toString());
@@ -167,10 +177,10 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         affected.merge(charactersByAlliances);
 
         return affected;
-    },
+    }
 
 
-    async _abstractUpdateGroupList (type, groupId, arr) {
+    async _abstractUpdateGroupList(type, groupId, arr) {
         let condition = [
             {name: "type", operator: "=", value: type},
             {name: "first", operator: "=", value: groupId}
@@ -205,7 +215,7 @@ const GroupsController = classCreator("GroupsController", Emitter, {
 
         await core.dbController.db.transaction(transactionArr);
         return {addedIds, removedIds}
-    },
+    }
 
     // async getGroupListByOwner (_ownerId) {
     //     let groupList = await core.dbController.groupsDB.getByCondition([{name: "owner", operator: "=", value: _ownerId}], ["id", "name", "description", "owner"]);
@@ -229,10 +239,15 @@ const GroupsController = classCreator("GroupsController", Emitter, {
     //     }
     //     return groupList;
     // },
-    async getGroupsByOwner (ownerId) {
-        return await core.dbController.groupsDB.getByCondition([{name: "owner", operator: "=", value: ownerId}], ["id", "name", "description", "owner"]);
-    },
-    async getProtectedInfo (groupId) {
+    async getGroupsByOwner(ownerId) {
+        return await core.dbController.groupsDB.getByCondition([{
+            name: "owner",
+            operator: "=",
+            value: ownerId
+        }], ["id", "name", "description", "owner"]);
+    }
+
+    async getProtectedInfo(groupId) {
         let charPr = this.getGroupCharacters(groupId);
         let corpPr = this.getGroupCorporations(groupId);
         let allyPr = this.getGroupAlliances(groupId);
@@ -242,9 +257,9 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         let alliances = await allyPr;
 
         return {characters, corporations, alliances};
-    },
+    }
 
-    async getGroupCharacters (_groupId) {
+    async getGroupCharacters(_groupId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCharacter},
             {name: "first", operator: "=", value: _groupId}
@@ -252,24 +267,27 @@ const GroupsController = classCreator("GroupsController", Emitter, {
 
         let result = await core.dbController.linksTable.getByCondition(condition, ["second"]);
         return result.map(x => x.second);
-    },
-    async getGroupCorporations (_groupId) {
+    }
+
+    async getGroupCorporations(_groupId) {
         let condition = [
-            {name: "type",operator: "=",value: DBController.linksTableTypes.groupToCorporation},
-            {name: "first",operator: "=",value: _groupId}
+            {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCorporation},
+            {name: "first", operator: "=", value: _groupId}
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["second"]);
         return result.map(x => x.second * 1)
-    },
-    async getGroupAlliances (_groupId) {
+    }
+
+    async getGroupAlliances(_groupId) {
         let condition = [
-            {name: "type",operator: "=",value: DBController.linksTableTypes.groupToAlliance},
-            {name: "first",operator: "=",value: _groupId}
+            {name: "type", operator: "=", value: DBController.linksTableTypes.groupToAlliance},
+            {name: "first", operator: "=", value: _groupId}
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["second"]);
         return result.map(x => x.second * 1);
-    },
-    async getAllowedGroupListByOwner (_ownerId) {
+    }
+
+    async getAllowedGroupListByOwner(_ownerId) {
         let groups = [];
         let characters = await core.userController.getUserCharacters(_ownerId);
         let allowedGroups = await Promise.all(characters.map(_characterId => this.getAllowedGroupsByCharacter(_characterId)));
@@ -277,14 +295,14 @@ const GroupsController = classCreator("GroupsController", Emitter, {
 
         let groupsInfo = await Promise.all(groups.map(_groupId => this.get(_groupId).getInfo()));
         return groupsInfo;
-    },
+    }
 
     // Allow get groups by
     // corporations
     // characters
-    async getAllowedGroupsByCharacter (_characterId) {
-        let corporationId = await core.charactersController.get(_characterId).getCorporationId();
-        let allianceId = await core.charactersController.get(_characterId).getAllianceId();
+    async getAllowedGroupsByCharacter(_characterId) {
+        let corporationId = getCorporationId(_characterId);
+        let allianceId = getAllianceId(_characterId);
         let groupsByAlliancePr = this.getGroupsByAlliance(allianceId);
         let groupsByCorporationPr = this.getGroupsByCorporation(corporationId);
         let groupsByCharacterPr = this.getGroupsByCharacter(_characterId);
@@ -296,31 +314,35 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         return groupsByCorporation.slice()
             .merge(groupsByCharacter)
             .merge(groupsByAlliance);
-    },
-    async getGroupsByCharacter (_characterId) {
+    }
+
+    async getGroupsByCharacter(_characterId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCharacter},
             {name: "second", operator: "=", value: _characterId}
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
         return result.map(_x => _x.first);
-    },
-    async getGroupsByCorporation (_corporationId) {
+    }
+
+    async getGroupsByCorporation(_corporationId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCorporation},
             {name: "second", operator: "=", value: _corporationId}
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
         return result.map(_x => _x.first);
-    },
-    async getGroupsByAlliance (_allianceId) {
+    }
+
+    async getGroupsByAlliance(_allianceId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.groupToAlliance},
             {name: "second", operator: "=", value: _allianceId}
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
         return result.map(_x => _x.first);
-    },
+    }
+
     /**
      * Этот метод вернет всех персонажей, которые удовлетворяют условиям группы и принадлежат переданному пользователю
      * - добавлены в список перснонажей
@@ -331,10 +353,10 @@ const GroupsController = classCreator("GroupsController", Emitter, {
      * @param {string} _groupId
      * @returns {Promise<Array<string>>}
      */
-    async getAllowedCharactersForGroupByUser (_groupId, _userId) {
+    async getAllowedCharactersForGroupByUser(_groupId, _userId) {
         let userCharacters = await core.userController.getUserCharacters(_userId);
         return await this.getAllowedCharactersForGroup(_groupId, userCharacters);
-    },
+    }
 
     /**
      * Этот метод профильтрует всех персонажей, которые туда будут переданы
@@ -345,7 +367,7 @@ const GroupsController = classCreator("GroupsController", Emitter, {
      * @returns {Promise<Array<string>>}
      * @private
      */
-    async getAllowedCharactersForGroup (_groupId, _charactersIds) {
+    async getAllowedCharactersForGroup(_groupId, _charactersIds) {
         let groupCharactersPr = this.getGroupCharacters(_groupId);
         let groupCharactersByCorporationsPr = this.getAllowedCharactersForGroupByCorporations(_groupId, _charactersIds);
         let groupCharactersByAlliancesPr = this.getAllowedCharactersForGroupByAlliances(_groupId, _charactersIds);
@@ -366,15 +388,20 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         let prarrCharacterNames = [];
         for (let a = 0; a < characterIds.length; a++) {
             prarrTracks.push(this.getCharacterTrack(_groupId, characterIds[a]));
-            prarrCharacterNames.push(core.charactersController.get(characterIds[a]).getName());
+            prarrCharacterNames.push(getCharacterName(characterIds[a]));
         }
 
         let trackArr = await Promise.all(prarrTracks);
         let namesArr = await Promise.all(prarrCharacterNames);
-        return characterIds.map((id, index) => ({id: characterIds[index], track: trackArr[index], name: namesArr[index]}));
-    },
-    async getAllowedCharactersForGroupByCorporations (_groupId, _characterIds) {
-        let corporationIdsPr = Promise.all(_characterIds.map(_characterId => core.charactersController.get(_characterId).getCorporationId()));
+        return characterIds.map((id, index) => ({
+            id: characterIds[index],
+            track: trackArr[index],
+            name: namesArr[index]
+        }));
+    }
+
+    async getAllowedCharactersForGroupByCorporations(_groupId, _characterIds) {
+        let corporationIdsPr = Promise.all(_characterIds.map(charId => getCorporationId(charId)));
         let groupCorporationsPr = this.getGroupCorporations(_groupId);
 
         let corporationIds = await corporationIdsPr;
@@ -385,9 +412,10 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         let out = [];
         corporationIds.map((x, i) => x !== -1 && gcMap[x] && out.push(_characterIds[i]));
         return out;
-    },
-    async getAllowedCharactersForGroupByAlliances (_groupId, _characterIds) {
-        let allianceIdsPr = Promise.all(_characterIds.map(_characterId => core.charactersController.get(_characterId).getAllianceId()));
+    }
+
+    async getAllowedCharactersForGroupByAlliances(_groupId, _characterIds) {
+        let allianceIdsPr = Promise.all(_characterIds.map(charId => getAllianceId(charId)));
         let groupAlliancesPr = this.getGroupAlliances(_groupId);
 
         let allianceIds = await allianceIdsPr;
@@ -398,29 +426,33 @@ const GroupsController = classCreator("GroupsController", Emitter, {
         let out = [];
         allianceIds.map((x, i) => x !== -1 && gaMap[x] && out.push(_characterIds[i]));
         return out;
-    },
-    async updateAllowedCharactersForGroup (_userId, _groupId, _characters) {
+    }
+
+    async updateAllowedCharactersForGroup(_userId, _groupId, _characters) {
         await Promise.all(_characters.map(_character => this.updateCharacterTrack(_groupId, _character.id, _character.track)));
         await core.mapController.notifyAllowedMapsByUser(_userId);
-    },
-    async getMapsByGroup (_groupId) {
+    }
+
+    async getMapsByGroup(_groupId) {
         var cond = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.mapToGroups},
             {name: "second", operator: "=", value: _groupId}
         ];
         let result = await core.dbController.linksTable.getByCondition(cond, ["first"]);
         return result.map(x => x.first);
-    },
-    async getCharacterTrack (_groupId, _characterId) {
+    }
+
+    async getCharacterTrack(_groupId, _characterId) {
         let condition = [
-            {name: "groupId",operator: "=",value: _groupId},
-            {name: "characterId",operator: "=",value: _characterId}
+            {name: "groupId", operator: "=", value: _groupId},
+            {name: "characterId", operator: "=", value: _characterId}
         ];
         let result = await core.dbController.groupToCharacterTable.getByCondition(condition, ["track"]);
         return result.length === 1 ? result[0].track : false;
-    },
-    async removeCharactersFromTracking (_groupId, _characterIds) {
-        if(_characterIds.length > 0) {
+    }
+
+    async removeCharactersFromTracking(_groupId, _characterIds) {
+        if (_characterIds.length > 0) {
             await core.dbController.groupToCharacterTable.removeByCondition({
                 left: {name: "groupId", operator: "=", value: _groupId},
                 operator: "AND",
@@ -430,24 +462,32 @@ const GroupsController = classCreator("GroupsController", Emitter, {
                 }
             });
         }
-    },
-    async removeGroupCharactersFromTracking (_groupId) {
-        await core.dbController.groupToCharacterTable.removeByCondition([{name: "groupId", operator: "=", value: _groupId}]);
-    },
-    async getTrackedCharactersByGroup (_groupId) {
+    }
+
+    async removeGroupCharactersFromTracking(_groupId) {
+        await core.dbController.groupToCharacterTable.removeByCondition([{
+            name: "groupId",
+            operator: "=",
+            value: _groupId
+        }]);
+    }
+
+    async getTrackedCharactersByGroup(_groupId) {
         let condition = [{name: "groupId", operator: "=", value: _groupId}];
         let result = await core.dbController.groupToCharacterTable.getByCondition(condition, ["characterId"]);
         return result.map(_data => _data.characterId);
-    },
-    async getGroupsByTrackedCharacterId (_characterId) {
+    }
+
+    async getGroupsByTrackedCharacterId(_characterId) {
         let condition = [
-            {name: "characterId",operator: "=",value: _characterId},
-            {name: "track",operator: "=",value: true},
+            {name: "characterId", operator: "=", value: _characterId},
+            {name: "track", operator: "=", value: true},
         ];
         let groups = await core.dbController.groupToCharacterTable.getByCondition(condition, ["groupId"]);
         return groups.map(x => x.groupId);
-    },
-    async updateCharacterTrack (_groupId, _characterId, _track) {
+    }
+
+    async updateCharacterTrack(_groupId, _characterId, _track) {
         let condition = [
             {name: "groupId", operator: "=", value: _groupId},
             {name: "characterId", operator: "=", value: _characterId}
@@ -459,7 +499,7 @@ const GroupsController = classCreator("GroupsController", Emitter, {
             let maps = await core.groupsController.getMapsByGroup(_groupId);
             await core.dbController.groupToCharacterTable.setByCondition(condition, {track: _track});
             await core.mapController.updateCharacterTrackStatus(maps, _characterId, _track);
-        } else if(!isExist && _track) {
+        } else if (!isExist && _track) {
             let maps = await core.groupsController.getMapsByGroup(_groupId);
             await core.dbController.groupToCharacterTable.add({
                 groupId: _groupId,
@@ -468,26 +508,28 @@ const GroupsController = classCreator("GroupsController", Emitter, {
             });
             await core.mapController.updateCharacterTrackStatus(maps, _characterId, true);
         }
-    },
-    async _removeCharacters (groupId) {
+    }
+
+    async _removeCharacters(groupId) {
         await core.dbController.linksTable.removeByCondition([
             {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCharacter},
             {name: "first", operator: "=", value: groupId}
         ]);
-    },
-    async _removeCorporations (groupId) {
+    }
+
+    async _removeCorporations(groupId) {
         await core.dbController.linksTable.removeByCondition([
             {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCorporation},
             {name: "first", operator: "=", value: groupId}
         ]);
-    },
-    async _removeAlliances (groupId) {
+    }
+
+    async _removeAlliances(groupId) {
         await core.dbController.linksTable.removeByCondition([
             {name: "type", operator: "=", value: DBController.linksTableTypes.groupToAlliance},
             {name: "first", operator: "=", value: groupId}
         ]);
-    },
-});
-
+    }
+}
 
 module.exports = GroupsController;

@@ -1,23 +1,22 @@
-const Emitter       = require("./../env/tools/emitter");
-const classCreator  = require("./../env/tools/class");
-const extend        = require("./../env/tools/extend");
-const DBController  = require("./dbController");
-const OAuth         = require("./../esi/oauth.js");
-const log           = require("./../utils/log");
-const md5           = require("md5");
-const MultiObject   = require("./../env/multiObject")
+const DBController = require("./dbController");
+const OAuth = require("./../esi/oauth.js");
+const log = require("./../utils/log");
+const MultiObject = require("./../env/multiObject");
+const Emitter = require("./../env/_new/tools/emitter");
 
-const UserController = classCreator("UserController", Emitter, {
-    constructor: function UserController() {
-        Emitter.prototype.constructor.call(this);
+class UserController extends Emitter {
+    _usersOnline = Object.create(null);
+    userAtConnection = new MultiObject();
 
-        this._usersOnline = Object.create(null);
-        this.userAtConnection = new MultiObject();
-    },
-    destructor: function () {
-        Emitter.prototype.destructor.call(this);
-    },
-    async registerUserByEveSSO (code) {
+    constructor() {
+        super();
+    }
+
+    destructor() {
+        super.destructor();
+    }
+
+    async registerUserByEveSSO(code) {
         let data = await this._verifyAuthCode(code);
 
         let existsInUsers = await core.dbController.userDB.existsByCondition([
@@ -54,7 +53,8 @@ const UserController = classCreator("UserController", Emitter, {
             // а если этот вариант, то мы просто авторизуем персонажа
             return await core.tokenController.generateToken(data.userData.CharacterID);
         }
-    },
+    }
+
     /**
      * here we must notify client about online state change
      *
@@ -62,84 +62,80 @@ const UserController = classCreator("UserController", Emitter, {
      * @param _bool
      * @returns {*|Promise|Promise<any>|Promise<unknown>}
      */
-    setOnline (_userId, _bool) {
+    setOnline(_userId, _bool) {
         this._usersOnline[_userId] = _bool;
-    },
-    getUserOnline (_userId) {
+    }
+
+    getUserOnline(_userId) {
         return this._usersOnline[_userId] || false;
-    },
-    async getUserCharacters (_userId) {
+    }
+
+    async getUserCharacters(_userId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
             {name: "first", operator: "=", value: _userId}
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["second"]);
         return result.map(x => x.second);
-    },
-    async getUserName (_userId) {
+    }
+
+    async getUserName(_userId) {
         return await core.dbController.userDB.get(_userId, "name");
-    },
-    async _addCharacter (data) {
+    }
+
+    async _addCharacter(data) {
         // todo все запросы к евке надо как-то так оборачивать, что бы оно не ломало ничего...
         // а еще нафиг не нужно запрашивать портреты для персонажей, т.к. можно портрет по иду отображать...
         // а еще надо проверять что евка вообще жива, а еще может быть разрыв соединения.
         // а еще может быть таймаут... жопа короче
-        let images = await core.esiApi.characters.portrait(data.userData.CharacterID);
-        let info = await core.charactersController.get(data.userData.CharacterID).loadPublicCharacterInfo();
+        // const info = await core.charactersController.get(data.userData.CharacterID).loadPublicCharacterInfo();
+        // const {corporationId, allianceId} = info;
 
-        let charProps = {
-            id                 : data.userData.CharacterID,
-            name               : data.userData.CharacterName,
-            expiresOn          : data.userData.ExpiresOn,                      // wherefore it?
-            expiresIn          : data.tokenData.expires_in,                    // in seconds
-            realExpiresIn      : +new Date + data.tokenData.expires_in * 1000,
-            scopes             : data.userData.Scopes,
-            characterOwnerHash : data.userData.CharacterOwnerHash,
-            accessToken        : data.tokenData.access_token,
-            refreshToken       : data.tokenData.refresh_token,
-            tokenType          : data.userData.TokenType,
-            online             : false,                                   // todo We need request this parameter from ESI
-            images             : images,
-            infoExpiresIn      : +new Date + (1000 * 60 * 60 * 24),
-            info               : info                                     // todo We need get alliance_id and corporation_id
-                                                                          // and create special attribute for it. Not big object.
+        const {
+            CharacterID: id,
+            CharacterName: name,
+            ExpiresOn: expiresOn,                    // wherefore it?
+            CharacterOwnerHash: characterOwnerHash,
+            TokenType: tokenType,
+        } = data.userData;
+
+        const {
+            expires_in: expiresIn,                   // in seconds
+            access_token: accessToken,
+            refresh_token: refreshToken,
+        } = data.tokenData;
+
+        const charProps = {
+            id,
+            name,
+            expiresOn,
+            expiresIn,
+            realExpiresIn: +new Date + expiresIn * 1000,
+            // scopes: data.userData.Scopes,
+            characterOwnerHash,
+            accessToken,
+            refreshToken,
+            tokenType,
+            online: false,
+            // infoExpiresIn: +new Date + (1000 * 60 * 60 * 24),
         };
 
         await core.dbController.charactersDB.add(charProps);
-    },
-    async addCharacter (_userId, _code) {
+    }
+
+    async addCharacter(_userId, _code) {
         let data = await this._verifyAuthCode(_code);
+        const {CharacterID} = data.userData;
 
-        if(await this._checkAccountBinding(data.userData.CharacterID)){
-            throw {message: `Character ${data.userData.CharacterID} already attached`};
+        if (await this._checkAccountBinding(CharacterID)) {
+            throw {message: `Character ${CharacterID} already attached`};
         } else {
-            // todo все запросы к евке надо как-то так оборачивать, что бы оно не ломало ничего...
-            let images = await core.esiApi.characters.portrait(data.userData.CharacterID);
-            let info = await core.charactersController.get(data.userData.CharacterID).loadPublicCharacterInfo();
-
-            let charProps = {
-                id                 : data.userData.CharacterID,
-                name               : data.userData.CharacterName,
-                expiresOn          : data.userData.ExpiresOn,                      // wherefore it?
-                expiresIn          : data.tokenData.expires_in,                    // in seconds
-                realExpiresIn      : +new Date + data.tokenData.expires_in * 1000,
-                scopes             : data.userData.Scopes,
-                characterOwnerHash : data.userData.CharacterOwnerHash,
-                accessToken        : data.tokenData.access_token,
-                refreshToken       : data.tokenData.refresh_token,
-                tokenType          : data.userData.TokenType,
-                online             : false,                                   // todo We need request this parameter from ESI
-                images             : images,
-                infoExpiresIn      : +new Date + (1000 * 60 * 60 * 24),
-                info               : info                                     // todo We need get alliance_id and corporation_id
-                                                                              // and create special attribute for it. Not big object.
-            };
-
-            await core.dbController.charactersDB.add(charProps);
-            await this._boundUserAndCharacter(_userId, data.userData.CharacterID);
+            await this._addCharacter(data);
+            await this._boundUserAndCharacter(_userId, CharacterID);
         }
-    },
-    async _verifyAuthCode (_code) {
+    }
+
+    async _verifyAuthCode(_code) {
         /**
          *
          * @type {{
@@ -149,7 +145,7 @@ const UserController = classCreator("UserController", Emitter, {
          *     refresh_token: string
          * }}
          */
-        let tokenData = await OAuth.token(_code);
+        const tokenData = await OAuth.token(_code);
 
         /**
          *
@@ -163,15 +159,13 @@ const UserController = classCreator("UserController", Emitter, {
          *     IntellectualProperty: string,
          * }}
          */
-        let userData = await OAuth.verify(tokenData.access_token);
+        const userData = await OAuth.verify(tokenData.access_token);
         log(log.INFO, `SSO_AUTH[2]: got char data: (${userData.CharacterID})`);
 
-        return {
-            tokenData: tokenData,
-            userData: userData,
-        };
-    },
-    async _checkAccountBinding (_characterId) {
+        return {tokenData, userData};
+    }
+
+    async _checkAccountBinding(_characterId) {
         let condition = {
             left: {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
             operator: "AND",
@@ -180,16 +174,17 @@ const UserController = classCreator("UserController", Emitter, {
 
         let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
         return result.length > 0;
-    },
-    async _boundUserAndCharacter (_userName, _characterId) {
+    }
+
+    async _boundUserAndCharacter(_userName, _characterId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
             {name: "first", operator: "=", value: _userName},
             {name: "second", operator: "=", value: _characterId},
         ];
 
-        let result = await core.dbController.linksTable.getByCondition(condition, ["first","second"]);
-        if(result.length !== 0) {
+        let result = await core.dbController.linksTable.getByCondition(condition, ["first", "second"]);
+        if (result.length !== 0) {
             throw {message: `Character ${_characterId} already attached to user ${_userName}`}
         }
 
@@ -198,8 +193,9 @@ const UserController = classCreator("UserController", Emitter, {
             first: _userName,
             second: _characterId
         });
-    },
-    async isCharacterAttachedToUser (_characterId, _userId) {
+    }
+
+    async isCharacterAttachedToUser(_characterId, _userId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
             {name: "first", operator: "=", value: _userId},
@@ -207,8 +203,9 @@ const UserController = classCreator("UserController", Emitter, {
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
         return result.length === 1;
-    },
-    async updateUserOnlineStatus (connectionId, token) {
+    }
+
+    async updateUserOnlineStatus(connectionId, token) {
         // we need check that this user already is online
         // after...
         // if user is not online then set online
@@ -225,18 +222,19 @@ const UserController = classCreator("UserController", Emitter, {
         // Так же это значит, что пользак все еще онлайн его не надо заного заставлять быть в онлайне
         // В противном случае, когда пользак не онлайн, никуда ничего не надо переставлять,
         // В силу того, что дальше должен будет отработать выбор карты, и этот запрос сам всё сделает
-        if(!isOnline) {
+        if (!isOnline) {
             this.setOnline(userId, true);
             log(log.INFO, `User [${userId}] was log in on server.`);
         } else {
             // await core.mapController.updateAllUserMapWatchStatuses(connectionId, userId);
         }
-    },
-    async updateUserOfflineStatus (connectionId, token) {
+    }
+
+    async updateUserOfflineStatus(connectionId, token) {
         let userId = await core.tokenController.checkToken(token);
         let isOnline = this.getUserOnline(userId);
 
-        if(this.userAtConnection.has(userId, connectionId)) {
+        if (this.userAtConnection.has(userId, connectionId)) {
             // todo тут надо сбрасывать тоже
             await core.mapController.dropCharsFromMapsByUserAndConnection(userId, connectionId);
 
@@ -247,26 +245,28 @@ const UserController = classCreator("UserController", Emitter, {
             }
         }
         core.connectionStorage.del(connectionId);
-    },
+    }
+
     /**
      *
      * @param {string} characterId
      * @returns {Promise<string|null>}
      */
-    async getUserByCharacter (characterId) {
+    async getUserByCharacter(characterId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
             {name: "second", operator: "=", value: characterId},
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
         return result.length > 0 ? result[0].first : null;
-    },
+    }
+
     /**
      *
      * @param {Array<String>} characters
      * @returns {Promise<string|null>}
      */
-    async getUsersByCharacters (characters) {
+    async getUsersByCharacters(characters) {
         let out = [];
         if (characters.length > 0) {
             let condition = {
@@ -282,6 +282,6 @@ const UserController = classCreator("UserController", Emitter, {
         }
         return out;
     }
-});
+}
 
 module.exports = UserController;

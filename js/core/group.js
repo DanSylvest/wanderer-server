@@ -2,27 +2,29 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/22/20.
  */
 
-var Emitter       = require("./../env/tools/emitter");
-var classCreator  = require("./../env/tools/class");
-var extend        = require("./../env/tools/extend");
+const Emitter = require("./../env/_new/tools/emitter");
+const extend = require("./../env/tools/extend");
 
-var Group = classCreator("Group", Emitter, {
-    constructor: function Group(_options) {
+class Group extends Emitter {
+    constructor(_options) {
+        super();
+
         this.options = extend({
             groupId: null
-        },_options);
-
-        Emitter.prototype.constructor.call(this);
+        }, _options);
 
         this._observers = Object.create(null);
-    },
-    destructor: function () {
+    }
+
+    destructor() {
         Emitter.prototype.destructor.call(this);
-    },
-    async getAttribute (_attribute) {
+    }
+
+    async getAttribute(_attribute) {
         return await core.dbController.groupsDB.get(this.options.groupId, _attribute);
-    },
-    async getInfo () {
+    }
+
+    async getInfo() {
         try {
             let result = await core.dbController.groupsDB.get(this.options.groupId, ["name", "owner", "description"]);
 
@@ -38,10 +40,11 @@ var Group = classCreator("Group", Emitter, {
                 message: `Error on getInfo by [${this.options.groupId}]`
             }
         }
-    },
-    connectionBreak: function (_connectionId) {
+    }
+
+    connectionBreak(_connectionId) {
 
     }
-});
+}
 
 module.exports = Group;

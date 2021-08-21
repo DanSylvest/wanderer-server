@@ -2,18 +2,17 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/21/20.
  */
 
-const Emitter       = require("./../../env/tools/emitter");
-const Character     = require("./character");
-const classCreator  = require("./../../env/tools/class");
+const Emitter = require("./../../env/_new/tools/emitter");
+const Character = require("./character");
 const CustomPromise = require("./../../env/promise");
-const DBController  = require("./../../core/dbController");
-const NodeCache     = require( "node-cache" );
+const DBController = require("./../../core/dbController");
+const NodeCache = require("node-cache");
 
 // const SEARCH_LIMIT = 12;
 
-const Controller = classCreator("CharactersController", Emitter, {
-    constructor: function CharactersController() {
-        Emitter.prototype.constructor.call(this);
+class Controller extends Emitter {
+    constructor() {
+        super();
 
         this._characters = Object.create(null);
         this.infoCache = new NodeCache({
@@ -21,50 +20,72 @@ const Controller = classCreator("CharactersController", Emitter, {
             checkperiod: 60 * 10,
             useClones: false
         });
-    },
-    destructor: function () {
-        Emitter.prototype.destructor.call(this);
-    },
-    has: function (_characterId) {
+    }
+
+    has(_characterId) {
         return !!this._characters[_characterId];
-    },
+    }
+
     /**
      *
      * @param _characterId
      * @returns {Character}
      */
-    get: function (_characterId) {
+    get(_characterId) {
         if (!this.has(_characterId)) {
             this._add(_characterId, new Character({characterId: _characterId}));
         }
 
         return this._characters[_characterId];
-    },
-    remove: function (_characterId) {
+    }
+
+    remove(_characterId) {
         this._characters[_characterId].destructor();
         delete this._characters[_characterId];
-    },
-    _add: function (_characterId, _characterInstance) {
+    }
+
+    _add(_characterId, _characterInstance) {
         this._characters[_characterId] = _characterInstance;
-    },
-    connectionBreak: function (_connectionId) {
+    }
+
+    connectionBreak(_connectionId) {
         for (var characterId in this._characters) {
             this._characters[characterId].connectionBreak(_connectionId);
         }
-    },
-    async getPublicCharacterInfo (characterId) {
-        if(this.infoCache.has(characterId)) {
+    }
+
+    /**
+     * Now it used for fast loading data for search by characters
+     * But i think it can work at client side
+     * @param characterId
+     * @returns {Promise | Promise<{
+     *     allianceId {number | undefined}
+     *     ancestryId {number}
+     *     birthday {Date}
+     *     bloodlineId {number}
+     *     corporationId {number | undefined}
+     *     description {string}
+     *     gender {string}
+     *     name {string}
+     *     raceId {number}
+     * }>}
+     */
+    async getPublicCharacterInfo(characterId) {
+        if (this.infoCache.has(characterId)) {
             return this.infoCache.get(characterId);
         } else {
             let info = await core.esiApi.characters.info(characterId);
             this.infoCache.set(characterId, info);
             return info;
         }
-    },
-    async getProtectedCharacterInfo (_characterId) {
-        return await this.get(_characterId).getInfo();
-    },
-    async searchInEve (_match) {
+    }
+
+    async getProtectedCharacterInfo(_characterId) {
+        const {name, addDate} = await core.dbController.charactersDB.get(_characterId, ["name", "addDate"]);
+        return {name, addDate};
+    }
+
+    async searchInEve(_match) {
         let result = Object.create(null);
 
         try {
@@ -84,21 +105,25 @@ const Controller = classCreator("CharactersController", Emitter, {
         out.sort((a, b) => (a.name > b.name ? 1 : a.name < b.name ? -1 : 0));
 
         return out;
-    },
+    }
 
-    fastSearch: function (_options) {
+    fastSearch(_options) {
         switch (_options.type) {
             case "byAll":
                 return this.searchInEve(_options.match);
             case "byUser":
                 break;
         }
-    },
-    async getCharacterName (characterId) {
-        let result = await core.esiApi.characters.info(characterId);
-        return {name: result.name};
-    },
-    removeCharacter: async function (_userId, _characterId) {
+    }
+
+    /**
+     * This case will work incorrect because remove character from observe work incorrect
+     * removeCharactersFromObserve should return promise
+     * @param _userId
+     * @param _characterId
+     * @returns {Promise<unknown>}
+     */
+    async removeCharacter(_userId, _characterId) {
         var pr = new CustomPromise();
 
         try {
@@ -121,7 +146,7 @@ const Controller = classCreator("CharactersController", Emitter, {
             var filteredMaps = await core.mapController.getMapsByGroupsWithCharacters(groups);
 
             var prarr = [];
-            for(var mapId in filteredMaps) {
+            for (var mapId in filteredMaps) {
                 prarr.push(core.mapController.removeCharactersFromObserve(mapId, filteredMaps[mapId]));
             }
 
@@ -153,18 +178,20 @@ const Controller = classCreator("CharactersController", Emitter, {
 
 
         return pr.native;
-    },
-    serverStatusOffline () {
-        for(let id in this._characters){
+    }
+
+    serverStatusOffline() {
+        for (let id in this._characters) {
             this._characters[id].serverStatusOffline();
         }
-    },
-    serverStatusOnline () {
-        for(let id in this._characters){
+    }
+
+    serverStatusOnline() {
+        for (let id in this._characters) {
             this._characters[id].serverStatusOnline();
         }
     }
-});
+}
 
 
 module.exports = Controller;

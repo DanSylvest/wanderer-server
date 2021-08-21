@@ -2,41 +2,40 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 1/15/21.
  */
 
-const Emitter       = require("./../env/tools/emitter");
-const classCreator  = require("./../env/tools/class");
-const CustomPromise = require("./../env/promise.js");
-const ServerStatus  = require("./../core/providers/status");
-const Subscriber    = require("./../utils/subscriber")
+const Emitter = require("./../env/tools/emitter");
+const ServerStatus = require("./../core/providers/status");
+const Subscriber = require("./../utils/_new/subscriber")
 
-const ServerStatusController = classCreator("GroupsController", Emitter, {
-    constructor: function GroupsController() {
-        Emitter.prototype.constructor.call(this);
+class ServerStatusController extends Emitter {
+    constructor() {
+        super();
         this.statusData = {
             online: false
         }
         this.notifyStatus = false;
         this.createStatusProvider();
-    },
-    destructor: function () {
-        Emitter.prototype.destructor.call(this);
-    },
-    connectionBreak: function (_connectionId) {
-        if(this.subscriptionStatus) {
+    }
+
+    connectionBreak(_connectionId) {
+        if (this.subscriptionStatus) {
             this.subscriptionStatus.removeSubscribersByConnection(_connectionId);
         }
-    },
-    start () {
+    }
+
+    start() {
         this.serverStatusProvider.start();
-    },
-    createStatusProvider () {
+    }
+
+    createStatusProvider() {
         this.serverStatusProvider = new ServerStatus();
         this._sspHandleId = this.serverStatusProvider.on("change", this._onServerStatusChange.bind(this));
-    },
-    _onServerStatusChange (data) {
-        if(this.statusData.online !== data.online) {
+    }
+
+    _onServerStatusChange(data) {
+        if (this.statusData.online !== data.online) {
             this.emit("changedStatus", data.online);
 
-            if(this.notifyStatus) {
+            if (this.notifyStatus) {
                 this.subscriptionStatus.notify({
                     type: "status",
                     isOnline: data.online
@@ -45,11 +44,13 @@ const ServerStatusController = classCreator("GroupsController", Emitter, {
         }
 
         this.statusData = data;
-    },
+    }
+
     isOnline() {
         return this.statusData.online;
-    },
-    subscribeStatus (connectionId, responseId) {
+    }
+
+    subscribeStatus(connectionId, responseId) {
         this._createStatusSubscription();
 
         this.subscriptionStatus.addSubscriber(connectionId, responseId);
@@ -57,11 +58,13 @@ const ServerStatusController = classCreator("GroupsController", Emitter, {
             type: "bulk",
             isOnline: this.statusData.online
         });
-    },
-    unsubscribeStatus (connectionId, responseId) {
+    }
+
+    unsubscribeStatus(connectionId, responseId) {
         this.subscriptionStatus.removeSubscriber(connectionId, responseId);
-    },
-    _createStatusSubscription () {
+    }
+
+    _createStatusSubscription() {
         if (!this.subscriptionStatus) {
             this.subscriptionStatus = new Subscriber({
                 responseCommand: "eveServerStatus",
@@ -75,7 +78,7 @@ const ServerStatusController = classCreator("GroupsController", Emitter, {
         }
     }
 
-});
+}
 
 
 module.exports = ServerStatusController;

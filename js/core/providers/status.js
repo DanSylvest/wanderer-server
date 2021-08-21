@@ -2,22 +2,20 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/22/20.
  */
 
-var Provider        = require("./../../utils/provider");
-var classCreator    = require("./../../env/tools/class");
-var extend          = require("./../../env/tools/extend");
-var log             = require("./../../utils/log");
+const Provider = require("./../../utils/_new/provider");
+const extend = require("./../../env/tools/extend");
+const log = require("./../../utils/log");
 
 // {"error":"Timeout contacting tranquility","timeout":10}
-var Location = classCreator("Location", Provider, {
-    constructor: function Location(_options) {
-        var base = extend({
+class Location extends Provider {
+    constructor(_options) {
+        super(extend({
             name: "statusObserver",
             timeout: 20000
-        }, _options);
+        }, _options));
+    }
 
-        Provider.prototype.constructor.call(this, base);
-    },
-    _sendRequest: function () {
+    _sendRequest() {
         core.esiApi.status()
             .then(
                 event => {
@@ -30,7 +28,7 @@ var Location = classCreator("Location", Provider, {
                     });
                 },
                 err => {
-                    if(err.errno === -3001) { // when EAI_AGAIN
+                    if (err.errno === -3001) { // when EAI_AGAIN
                         this._notify({
                             online: false,
                             players: 0,
@@ -45,6 +43,6 @@ var Location = classCreator("Location", Provider, {
                 }
             );
     }
-});
+}
 
 module.exports = Location;

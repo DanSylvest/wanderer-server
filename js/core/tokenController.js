@@ -1,18 +1,11 @@
-var Emitter       = require("./../env/tools/emitter");
-var classCreator  = require("./../env/tools/class");
+var Emitter       = require("./../env/_new/tools/emitter");
 var CustomPromise = require("./../env/promise");
 var md5           = require("md5");
 const exist       = require("./../env/tools/exist");
 
 // TODO вычищать нафиг все просроченные токены на каждый старт
-var TokenController = classCreator("TokenController", Emitter, {
-    constructor: function TokenController() {
-        Emitter.prototype.constructor.call(this);
-    },
-    destructor: function () {
-        Emitter.prototype.destructor.call(this);
-    },
-    generateToken: async function (_value, expire) {
+class TokenController extends Emitter {
+    async generateToken(_value, expire) {
         let pr = new CustomPromise();
         let tokenId = md5(+new Date + config.tokens.solt);
         let expireDate = new Date(exist(expire) ? expire : (+new Date) + config.tokens.lifeTime);
@@ -25,8 +18,9 @@ var TokenController = classCreator("TokenController", Emitter, {
         }
 
         return pr.native;
-    },
-    checkToken: async function (_token) {
+    }
+
+    async checkToken(_token) {
         let pr = new CustomPromise();
 
         try {
@@ -34,7 +28,7 @@ var TokenController = classCreator("TokenController", Emitter, {
                 {name: "id", operator: "=", value: _token},
             ]);
 
-            if(isExists) {
+            if (isExists) {
                 let expire = await core.dbController.tokensDB.get(_token, "expire");
                 if (!isExpire(expire)) {
                     let value = await core.dbController.tokensDB.get(_token, "value");
@@ -51,18 +45,19 @@ var TokenController = classCreator("TokenController", Emitter, {
         }
 
         return pr.native;
-    },
-    removeToken: async function (token) {
+    }
+
+    async removeToken(token) {
         let isExists = await core.dbController.tokensDB.existsByCondition([
             {name: "id", operator: "=", value: token},
         ]);
 
-        if(isExists)
+        if (isExists)
             await core.dbController.tokensDB.remove(token);
         else
             throw "Token already removed";
     }
-});
+}
 
 var isExpire = function (_date) {
     return _date <= new Date();

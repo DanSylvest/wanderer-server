@@ -2,33 +2,35 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 11/16/20.
  */
 
-const Emitter       = require("./../../../env/tools/emitter");
-const classCreator  = require("./../../../env/tools/class");
+const Emitter = require("./../../../env/_new/tools/emitter");
 const CustomPromise = require("./../../../env/promise.js");
-const exist         = require("./../../../env/tools/exist.js");
-const Subscriber    = require("./../../../utils/subscriber");
+const exist = require("./../../../env/tools/exist.js");
+const Subscriber = require("./../../../utils/subscriber");
 const mapSqlActions = require("./../sql/mapSqlActions.js");
 
-const MapSolarSystem = classCreator("MapCharacter", Emitter, {
+class MapSolarSystem extends Emitter {
     constructor(mapId, solarSystemId) {
-        Emitter.prototype.constructor.call(this);
+        super();
 
         this.mapId = mapId;
         this.solarSystemId = solarSystemId;
         this.onlineCharacters = [];
         this._loadPromise = new CustomPromise();
         this._notifyDynamicInfoSubscriber = false;
-    },
+    }
+
     destructor() {
         this._loadPromise.native.cancel();
         this._loadPromise = new CustomPromise();
         this.onlineCharacters = [];
-        Emitter.prototype.destructor.call(this);
-    },
-    connectionBreak (_connectionId) {
+        super.destructor();
+    }
+
+    connectionBreak(_connectionId) {
         this._notifyDynamicInfoSubscriber && this._dynamicInfoSubscriber.removeSubscribersByConnection(_connectionId);
-    },
-    async isSystemExistsAndVisible () {
+    }
+
+    async isSystemExistsAndVisible() {
         let condition = [
             {name: "id", operator: "=", value: this.solarSystemId},
             {name: "mapId", operator: "=", value: this.mapId}
@@ -40,25 +42,30 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
             exists: result.length > 0,
             visible: result.length > 0 && result[0].visible
         }
-    },
-    loadPromise () {
+    }
+
+    loadPromise() {
         return this._loadPromise.native;
-    },
-    resolve () {
+    }
+
+    resolve() {
         this._loadPromise.resolve();
-    },
-    reject () {
+    }
+
+    reject() {
         this._loadPromise.reject();
-    },
-    async create (name, position) {
+    }
+
+    async create(name, position) {
         await core.dbController.mapSystemsTable.add({
             mapId: this.mapId,
             id: this.solarSystemId,
             name: name,
             position: position
         });
-    },
-    async getInfo () {
+    }
+
+    async getInfo() {
         let condition = [
             {name: "id", operator: "=", value: this.solarSystemId},
             {name: "mapId", operator: "=", value: this.mapId}
@@ -69,10 +76,10 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
             name: "solarSystemId", operator: "=", value: this.solarSystemId
         }, core.dbController.solarSystemsTable.attributes());
 
-        if(!solarSystemInfo[0])
+        if (!solarSystemInfo[0])
             throw "exception";
 
-        if(!mapInfo[0])
+        if (!mapInfo[0])
             throw "exception";
 
         solarSystemInfo = solarSystemInfo[0];
@@ -112,19 +119,21 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
         }
 
         return out;
-    },
-    async staticInfo (attrs) {
+    }
+
+    async staticInfo(attrs) {
         let result = await core.dbController.solarSystemsTable.getByCondition({
             name: "solarSystemId", operator: "=", value: this.solarSystemId
         }, exist(attrs) ? attrs : core.dbController.solarSystemsTable.attributes());
 
         return result.length === 1 ? result[0] : null;
-    },
-    async addCharacter (characterId) {
-        await mapSqlActions.addCharacterToSystem(this.mapId, this.systemId, characterId);
+    }
+
+    async addCharacter(characterId) {
+        await mapSqlActions.addCharacterToSystem(this.mapId, this.solarSystemId, characterId);
         this.onlineCharacters.push(characterId);
 
-        if(this._notifyDynamicInfoSubscriber) {
+        if (this._notifyDynamicInfoSubscriber) {
             this._dynamicInfoSubscriber.notify({
                 type: "multipleEvents",
                 list: [
@@ -133,9 +142,10 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
                 ]
             });
         }
-    },
+    }
+
     async removeCharacter(characterId) {
-        await mapSqlActions.removeCharacterFromSystem(this.mapId, this.systemId, characterId);
+        await mapSqlActions.removeCharacterFromSystem(this.mapId, this.solarSystemId, characterId);
         this.onlineCharacters.removeByValue(characterId);
 
         if (this._notifyDynamicInfoSubscriber) {
@@ -147,8 +157,9 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
                 ]
             });
         }
-    },
-    async updatePositions (x, y) {
+    }
+
+    async updatePositions(x, y) {
         await mapSqlActions.updateSystemPosition(this.mapId, this.solarSystemId, x, y);
 
         if (this._notifyDynamicInfoSubscriber) {
@@ -157,21 +168,24 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
                 data: {position: {x, y}}
             });
         }
-    },
-    async update (data) {
+    }
+
+    async update(data) {
         await mapSqlActions.updateSystem(this.mapId, this.solarSystemId, data);
 
-        if(this._notifyDynamicInfoSubscriber) {
+        if (this._notifyDynamicInfoSubscriber) {
             this._dynamicInfoSubscriber.notify({
                 type: "systemUpdated",
                 data: data
             });
         }
-    },
-    async changeVisible (bool) {
+    }
+
+    async changeVisible(bool) {
         await mapSqlActions.updateSystem(this.mapId, this.solarSystemId, {visible: bool});
-    },
-    _createDynamicInfoSubscriber () {
+    }
+
+    _createDynamicInfoSubscriber() {
         if (!this._dynamicInfoSubscriber) {
             this._dynamicInfoSubscriber = new Subscriber({
                 responseCommand: "responseEveMapSolarSystemData",
@@ -183,24 +197,26 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
                 }.bind(this)
             });
         }
-    },
-    subscribeDynamicInfo (connectionId, responseId) {
+    }
+
+    subscribeDynamicInfo(connectionId, responseId) {
         this._createDynamicInfoSubscriber();
         this._dynamicInfoSubscriber.addSubscriber(connectionId, responseId);
         this._bulkDynamicInfo(connectionId, responseId);
-    },
-    unsubscribeDynamicInfo (_connectionId, _responseId) {
+    }
+
+    unsubscribeDynamicInfo(_connectionId, _responseId) {
         if (this._dynamicInfoSubscriber) {
             this._dynamicInfoSubscriber.removeSubscriber(_connectionId, _responseId);
         }
-    },
+    }
 
-    async _bulkDynamicInfo (connectionId, responseId) {
+    async _bulkDynamicInfo(connectionId, responseId) {
         let info = await mapSqlActions.getSystemInfo(this.mapId, this.solarSystemId);
 
-        if(info === null) {
+        if (info === null) {
             // debugger;
-            return ;
+            return;
         }
 
         this._dynamicInfoSubscriber.notifyFor(connectionId, responseId, {
@@ -217,7 +233,7 @@ const MapSolarSystem = classCreator("MapCharacter", Emitter, {
                 onlineCharacters: this.onlineCharacters,
             }
         });
-    },
-});
+    }
+}
 
 module.exports = MapSolarSystem;

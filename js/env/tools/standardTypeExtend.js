@@ -2,24 +2,24 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/23/20.
  */
 
-Array.prototype.removeByIndex = function removeByIndex (index) {
+Array.prototype.removeByIndex = function removeByIndex(index) {
     this[index] = this[this.length - 1];
     this.pop();
 };
 
-Array.prototype.removeByValue = function removeByValue (value) {
+Array.prototype.removeByValue = function removeByValue(value) {
     let index = this.indexOf(value);
     index !== -1 && this.removeByIndex(index);
 }
 
-Array.prototype.exists = function exists (value) {
+Array.prototype.exists = function exists(value) {
     let index = this.indexOf(value);
     return index !== -1 ? value : undefined;
 }
 
 Array.prototype.searchByObjectKey = function (_key, _value) {
     for (var a = 0; a < this.length; a++) {
-        if(this[a][_key] && this[a][_key] === _value)
+        if (this[a][_key] && this[a][_key] === _value)
             return this[a];
     }
 
@@ -28,7 +28,7 @@ Array.prototype.searchByObjectKey = function (_key, _value) {
 
 Array.prototype.eraseByObjectKey = function (_key, _value) {
     for (var a = 0; a < this.length; a++) {
-        if(exists(this[a][_key]) && this[a][_key] === _value){
+        if (exists(this[a][_key]) && this[a][_key] === _value) {
             this.splice(a, 1);
             return true;
         }
@@ -41,7 +41,7 @@ Array.prototype.merge = function (_arr) {
     // let map = this.convertToMap();
 
     for (var a = 0; a < _arr.length; a++) {
-        if(this.indexOf(_arr[a]) === -1)
+        if (this.indexOf(_arr[a]) === -1)
             this.push(_arr[a]);
     }
 
@@ -51,7 +51,7 @@ Array.prototype.merge = function (_arr) {
 Array.prototype.convertToMap = function (callback) {
     let out = Object.create(null);
 
-    if(!callback) {
+    if (!callback) {
         for (let a = 0; a < this.length; a++)
             out[this[a]] = true;
     } else {
@@ -65,7 +65,7 @@ Array.prototype.convertToMap = function (callback) {
 Array.cross = function (_a, _b) {
     let arrMap = _a.convertToMap();
     let out = [];
-    for(let a = 0; a < _b.length; a++)
+    for (let a = 0; a < _b.length; a++)
         arrMap[_b[a]] && out.push(_b[a]);
 
     return out;
@@ -74,8 +74,8 @@ Array.cross = function (_a, _b) {
 Array.prototype.subtract = function (arr) {
     let arrMap = arr.convertToMap();
 
-    for(let a = 0; a < this.length; a++)
-        if(arrMap[this[a]])
+    for (let a = 0; a < this.length; a++)
+        if (arrMap[this[a]])
             delete arrMap[this[a]];
         else
             arrMap[this[a]] = true;

@@ -1,11 +1,10 @@
 const Emitter       = require("./../../env/tools/emitter");
-const classCreator  = require("./../../env/tools/class");
 const CustomPromise = require("./../../env/promise");
 const TheraProvider = require("./../providers/thera");
 
-const Thera = classCreator("SdeController", Emitter, {
-    constructor: function SdeController() {
-        Emitter.prototype.constructor.call(this);
+class Thera extends Emitter {
+    constructor() {
+        super();
 
         this.isReady = false;
         this.isBroken = false;
@@ -18,30 +17,29 @@ const Thera = classCreator("SdeController", Emitter, {
         });
 
         this._createTheraProvider();
-    },
-    destructor: function () {
+    }
+    destructor () {
         this._destroyTheraProvider();
 
         this._readyPromise.cancel();
         delete this._readyPromise;
 
-        Emitter.prototype.destructor.call(this);
-    },
-
-    init () {
+        super.destructor();
+    }
+    async init () {
         this.theraProvider.start()
-    },
+    }
 
     _createTheraProvider() {
         this.theraProvider = new TheraProvider();
         this.theraProvider.on("change", this._onData.bind(this));
         this.theraProvider.on("broken", this._onBroken.bind(this));
-    },
+    }
 
     _destroyTheraProvider() {
         this.theraProvider.destructor();
         delete this.theraProvider;
-    },
+    }
 
     _onData(data) {
         if(this.isBroken)
@@ -53,7 +51,7 @@ const Thera = classCreator("SdeController", Emitter, {
         }
 
         this._data = this._processData(data);
-    },
+    }
 
     _processData (data) {
         let out = data.map(x => {
@@ -85,11 +83,11 @@ const Thera = classCreator("SdeController", Emitter, {
         });
 
         return out;
-    },
+    }
 
     _onBroken () {
         this.isBroken = true;
-    },
+    }
 
     getChainPairs (includeFrig, includeEol, includeMassCrit) {
         return this._data.filter(x => {
@@ -105,6 +103,6 @@ const Thera = classCreator("SdeController", Emitter, {
             return true;
         }).map(x => ({first: x.sourceSolarSystemId, second: x.destinationSolarSystemId}));
     }
-});
+}
 
 module.exports = Thera;

@@ -1,18 +1,14 @@
-var Emitter       = require("./../env/tools/emitter");
-var classCreator  = require("./../env/tools/class");
-var extend        = require("./../env/tools/extend");
-var printf        = require("./../env/tools/print_f");
-var Path          = require("./../env/tools/path");
-var CustomPromise = require("./../env/promise");
-var fs            = require("fs");
-var DB            = require("./../utils/db");
-var log           = require("./../utils/log");
-var Client        = require('pg').Client;
+const Emitter       = require("./../env/_new/tools/emitter");
+const printf        = require("./../env/tools/print_f");
+const CustomPromise = require("./../env/promise");
+const DB            = require("./../utils/db");
+const log           = require("./../utils/log");
+const Client        = require('pg').Client;
 
 
-var DBController = classCreator("DBController", Emitter, {
-    constructor: function DBController() {
-        Emitter.prototype.constructor.call(this);
+class DBController  extends Emitter {
+    constructor() {
+        super();
 
         this.db = new DB({
             client: new Client({
@@ -56,11 +52,9 @@ var DBController = classCreator("DBController", Emitter, {
         this._createMapSystemToCharacter();
         this._createCachedSolarSystemsTable();
         this._createChainPassages();
-    },
-    destructor: function () {
-        Emitter.prototype.destructor.call(this);
-    },
-    init: async function () {
+    }
+
+    async init () {
         log(log.DEBUG, printf("dbController loading..."));
 
         var pr = new CustomPromise();
@@ -99,27 +93,14 @@ var DBController = classCreator("DBController", Emitter, {
             log(log.ERR, JSON.stringify(e, true, 3));
         }
 
-        // prarr.push(this.userDB.init());
-        // prarr.push(this.tokensDB.init());
-        // prarr.push(this.charactersDB.init());
-        // prarr.push(this.mapsDB.init());
-        // prarr.push(this.groupsDB.init());
-        // prarr.push(this.linksTable.init());
-        // prarr.push(this.groupToCharacterTable.init());
-        // prarr.push(this.mapLinksTable.init());
-        // prarr.push(this.mapSystemsTable.init());
-        // prarr.push(this.mapSystemToCharacterTable.init());
-        // prarr.push(this.solarSystemsTable.init());
-
-        // await Promise.all(prarr);
-
         log(log.DEBUG, printf("dbController loaded."));
 
         pr.resolve();
 
         return pr.native;
-    },
-    _createUserDB: function () {
+    }
+
+    _createUserDB () {
         this.userDB = this.db.createTable({
             name: "users",
             idField: "id",
@@ -133,8 +114,9 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "password", type: String}
             ]
         });
-    },
-    _createTokensDB: function () {
+    }
+
+    _createTokensDB () {
         this.tokensDB = this.db.createTable({
             name: "tokens",
             idField: "id",
@@ -144,8 +126,9 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "expire", type: Date}
             ]
         });
-    },
-    _createCharactersDB: function () {
+    }
+
+    _createCharactersDB () {
         this.charactersDB = this.db.createTable({
             name: "characters",
             idField: "id",
@@ -160,17 +143,15 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "accessToken",        type: String},
                 {name: "refreshToken",       type: String},
                 {name: "tokenType",          type: String},
-                {name: "online",             type: Boolean},
+                {name: "online",             type: Boolean, defaultValue: false},
                 {name: "location",           type: String},
                 {name: "ship",               type: String},
-                {name: "images",             type: Object},
-                {name: "infoExpiresIn",      type: Number}, // in milliseconds
-                {name: "info",               type: Object},
                 {name: "addDate",            type: Date,    defaultValue: () => new Date},
             ]
         });
-    },
-    _createMapsDB: function () {
+    }
+
+    _createMapsDB () {
         this.mapsDB = this.db.createTable({
             name: "maps",
             idField: "id",
@@ -182,8 +163,9 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "hubs",        type: Array,   defaultValue: () => []}
             ]
         });
-    },
-    _createGroupsDB: function () {
+    }
+
+    _createGroupsDB () {
         this.groupsDB = this.db.createTable({
             name: "groups",
             idField: "id",
@@ -194,8 +176,9 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "owner",                 type: String, index: true},   // this is id of mapper character
             ]
         });
-    },
-    _createLinksTable: function () {
+    }
+
+    _createLinksTable () {
         this.linksTable = this.db.createTable({
             name: "links",
             idField: "type",
@@ -205,8 +188,9 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "second", type: String}
             ]
         });
-    },
-    _createGroupToCharacterTable: function () {
+    }
+
+    _createGroupToCharacterTable () {
         this.groupToCharacterTable = this.db.createTable({
             name: "group2character",
             idField: "groupId",
@@ -216,8 +200,9 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "track",        type: Boolean, defaultValue: function () {return false}}
             ]
         });
-    },
-    _createMapLinksTable: function () {
+    }
+
+    _createMapLinksTable () {
         this.mapLinksTable = this.db.createTable({
             name: "map_links",
             idField: "id",
@@ -245,7 +230,8 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "updated",           type: Date,   defaultValue: () => new Date},
             ]
         });
-    },
+    }
+
     _createChainPassages () {
         this.mapChainPassagesTable = this.db.createTable({
             name: "map_chain_passages",
@@ -259,8 +245,9 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "shipTypeId",          type: String},
             ]
         });
-    },
-    _createMapSystemsTable: function () {
+    }
+
+    _createMapSystemsTable () {
         this.mapSystemsTable = this.db.createTable({
             name: "map_systems",
             idField: "id",
@@ -277,13 +264,13 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "position",      type: Object,  defaultValue: () => ({x: 0, y: 0})}
             ]
         });
-    },
+    }
 
     /**
      * This table allow us to know who in the systems.
      * @private
      */
-    _createMapSystemToCharacter: function () {
+    _createMapSystemToCharacter () {
         this.mapSystemToCharacterTable = this.db.createTable({
             name: "map_systems_to_character",
             idField: "mapId",
@@ -293,8 +280,9 @@ var DBController = classCreator("DBController", Emitter, {
                 {name: "characterId", type: String}
             ]
         });
-    },
-    _createCachedSolarSystemsTable: function () {
+    }
+
+    _createCachedSolarSystemsTable () {
         this.solarSystemsTable = this.cacheDb.createTable({
             name: "solar_systems",
             idField: "solarSystemId",
@@ -319,7 +307,7 @@ var DBController = classCreator("DBController", Emitter, {
             ]
         });
     }
-});
+}
 
 DBController.linksTableTypes = {
     /**

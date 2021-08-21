@@ -19,5 +19,6 @@ module.exports = {
     updateWatchStatus           : require("./updateWatchStatus"),
     subscribeAllowedMaps        : require("./subscribeAllowedMaps"),
     subscribeAllowedCharacters  : require("./subscribeAllowedCharacters"),
+    subscribeOnlineCharacters   : require("./subscribeOnlineCharacters"),
     groups                      : require("./groups"),
 };

@@ -4,6 +4,7 @@
 
 module.exports = {
     add               : require("./add"),
+    refresh           : require("./refresh"),
     list              : require("./list"),
     online            : require("./online"),
     subscribeLocation : require("./subscribeLocation"),

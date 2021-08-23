@@ -145,7 +145,7 @@ class DBController  extends Emitter {
                 {name: "tokenType",          type: String},
                 {name: "online",             type: Boolean, defaultValue: false},
                 {name: "location",           type: String},
-                {name: "ship",               type: String},
+                {name: "ship",               type: Number},
                 {name: "addDate",            type: Date,    defaultValue: () => new Date},
             ]
         });

@@ -4,27 +4,27 @@ const log = require("./../utils/log");
 const MultiObject = require("./../env/multiObject");
 const Emitter = require("./../env/_new/tools/emitter");
 
-class UserController extends Emitter {
+class UserController extends Emitter{
     _usersOnline = Object.create(null);
     userAtConnection = new MultiObject();
 
-    constructor() {
+    constructor () {
         super();
     }
 
-    destructor() {
+    destructor () {
         super.destructor();
     }
 
-    async registerUserByEveSSO(code) {
+    async registerUserByEveSSO (code) {
         let data = await this._verifyAuthCode(code);
 
         let existsInUsers = await core.dbController.userDB.existsByCondition([
-            {name: "type", operator: "=", value: 1},
-            {name: "id", operator: "=", value: data.userData.CharacterID},
+            { name: "type", operator: "=", value: 1 },
+            { name: "id", operator: "=", value: data.userData.CharacterID },
         ]);
         let existsInCharacters = await core.dbController.charactersDB.existsByCondition([
-            {name: "id", operator: "=", value: data.userData.CharacterID},
+            { name: "id", operator: "=", value: data.userData.CharacterID },
         ]);
 
         if (!existsInUsers && existsInCharacters) {
@@ -62,35 +62,28 @@ class UserController extends Emitter {
      * @param _bool
      * @returns {*|Promise|Promise<any>|Promise<unknown>}
      */
-    setOnline(_userId, _bool) {
+    setOnline (_userId, _bool) {
         this._usersOnline[_userId] = _bool;
     }
 
-    getUserOnline(_userId) {
+    getUserOnline (_userId) {
         return this._usersOnline[_userId] || false;
     }
 
-    async getUserCharacters(_userId) {
+    async getUserCharacters (_userId) {
         let condition = [
-            {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
-            {name: "first", operator: "=", value: _userId}
+            { name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter },
+            { name: "first", operator: "=", value: _userId }
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["second"]);
         return result.map(x => x.second);
     }
 
-    async getUserName(_userId) {
+    async getUserName (_userId) {
         return await core.dbController.userDB.get(_userId, "name");
     }
 
-    async _addCharacter(data) {
-        // todo все запросы к евке надо как-то так оборачивать, что бы оно не ломало ничего...
-        // а еще нафиг не нужно запрашивать портреты для персонажей, т.к. можно портрет по иду отображать...
-        // а еще надо проверять что евка вообще жива, а еще может быть разрыв соединения.
-        // а еще может быть таймаут... жопа короче
-        // const info = await core.charactersController.get(data.userData.CharacterID).loadPublicCharacterInfo();
-        // const {corporationId, allianceId} = info;
-
+    async _addCharacter (data) {
         const {
             CharacterID: id,
             CharacterName: name,
@@ -123,19 +116,59 @@ class UserController extends Emitter {
         await core.dbController.charactersDB.add(charProps);
     }
 
-    async addCharacter(_userId, _code) {
+    async _refreshCharacter (data) {
+        const {
+            CharacterID: id,
+            ExpiresOn: expiresOn,                    // wherefore it?
+            CharacterOwnerHash: characterOwnerHash,
+        } = data.userData;
+
+        const {
+            expires_in: expiresIn,                   // in seconds
+            access_token: accessToken,
+            refresh_token: refreshToken,
+        } = data.tokenData;
+
+        const charProps = {
+            expiresOn,
+            expiresIn,
+            realExpiresIn: +new Date + expiresIn * 1000,
+            characterOwnerHash,
+            accessToken,
+            refreshToken
+        };
+
+        let condition = [
+            { name: "id", operator: "=", value: id },
+        ];
+
+        await core.dbController.charactersDB.setByCondition(condition, charProps);
+    }
+
+    async addCharacter (_userId, _code) {
         let data = await this._verifyAuthCode(_code);
-        const {CharacterID} = data.userData;
+        const { CharacterID } = data.userData;
 
         if (await this._checkAccountBinding(CharacterID)) {
-            throw {message: `Character ${CharacterID} already attached`};
+            throw { message: `Character ${CharacterID} already attached` };
         } else {
             await this._addCharacter(data);
             await this._boundUserAndCharacter(_userId, CharacterID);
         }
     }
 
-    async _verifyAuthCode(_code) {
+    async refreshCharacter (_userId, _code) {
+        let data = await this._verifyAuthCode(_code);
+        const { CharacterID } = data.userData;
+
+        if (!await this._checkAccountBinding(CharacterID)) {
+            throw { message: `Character ${CharacterID} can not be updated` };
+        } else {
+            await this._refreshCharacter(data);
+        }
+    }
+
+    async _verifyAuthCode (_code) {
         /**
          *
          * @type {{
@@ -162,30 +195,30 @@ class UserController extends Emitter {
         const userData = await OAuth.verify(tokenData.access_token);
         log(log.INFO, `SSO_AUTH[2]: got char data: (${userData.CharacterID})`);
 
-        return {tokenData, userData};
+        return { tokenData, userData };
     }
 
-    async _checkAccountBinding(_characterId) {
+    async _checkAccountBinding (_characterId) {
         let condition = {
-            left: {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
+            left: { name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter },
             operator: "AND",
-            right: {name: "second", operator: "=", value: _characterId}
+            right: { name: "second", operator: "=", value: _characterId }
         }
 
         let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
         return result.length > 0;
     }
 
-    async _boundUserAndCharacter(_userName, _characterId) {
+    async _boundUserAndCharacter (_userName, _characterId) {
         let condition = [
-            {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
-            {name: "first", operator: "=", value: _userName},
-            {name: "second", operator: "=", value: _characterId},
+            { name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter },
+            { name: "first", operator: "=", value: _userName },
+            { name: "second", operator: "=", value: _characterId },
         ];
 
         let result = await core.dbController.linksTable.getByCondition(condition, ["first", "second"]);
         if (result.length !== 0) {
-            throw {message: `Character ${_characterId} already attached to user ${_userName}`}
+            throw { message: `Character ${_characterId} already attached to user ${_userName}` }
         }
 
         await core.dbController.linksTable.add({
@@ -195,17 +228,17 @@ class UserController extends Emitter {
         });
     }
 
-    async isCharacterAttachedToUser(_characterId, _userId) {
+    async isCharacterAttachedToUser (_characterId, _userId) {
         let condition = [
-            {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
-            {name: "first", operator: "=", value: _userId},
-            {name: "second", operator: "=", value: _characterId},
+            { name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter },
+            { name: "first", operator: "=", value: _userId },
+            { name: "second", operator: "=", value: _characterId },
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
         return result.length === 1;
     }
 
-    async updateUserOnlineStatus(connectionId, token) {
+    async updateUserOnlineStatus (connectionId, token) {
         // we need check that this user already is online
         // after...
         // if user is not online then set online
@@ -230,7 +263,7 @@ class UserController extends Emitter {
         }
     }
 
-    async updateUserOfflineStatus(connectionId, token) {
+    async updateUserOfflineStatus (connectionId, token) {
         let userId = await core.tokenController.checkToken(token);
         let isOnline = this.getUserOnline(userId);
 
@@ -252,10 +285,10 @@ class UserController extends Emitter {
      * @param {string} characterId
      * @returns {Promise<string|null>}
      */
-    async getUserByCharacter(characterId) {
+    async getUserByCharacter (characterId) {
         let condition = [
-            {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
-            {name: "second", operator: "=", value: characterId},
+            { name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter },
+            { name: "second", operator: "=", value: characterId },
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
         return result.length > 0 ? result[0].first : null;
@@ -266,19 +299,19 @@ class UserController extends Emitter {
      * @param {Array<String>} characters
      * @returns {Promise<string|null>}
      */
-    async getUsersByCharacters(characters) {
+    async getUsersByCharacters (characters) {
         let out = [];
         if (characters.length > 0) {
             let condition = {
-                left: {name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter},
+                left: { name: "type", operator: "=", value: DBController.linksTableTypes.userToCharacter },
                 operator: "AND",
                 right: {
                     operator: "OR",
-                    condition: characters.map(characterId => ({name: "second", operator: "=", value: characterId}))
+                    condition: characters.map(characterId => ({ name: "second", operator: "=", value: characterId }))
                 }
             };
             let result = await core.dbController.linksTable.getByCondition(condition, ["first", "second"]);
-            out = result.map(x => ({characterId: x.second, userId: x.first}));
+            out = result.map(x => ({ characterId: x.second, userId: x.first }));
         }
         return out;
     }

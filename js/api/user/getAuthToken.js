@@ -12,9 +12,9 @@ const exist = require("./../../env/tools/exist")
  * @returns {Promise<void>}
  */
 var request = async function (_connection_id, _response_id, _event) {
-    if(!exist(_event.type) || typeof _event.type !== "string" || !_event.type.match(/auth|attach/i)) {
+    if(!exist(_event.type) || typeof _event.type !== "string" || !_event.type.match(/auth|attach|refresh/i)) {
         api.send(_connection_id, _response_id, {
-            message: "Not found parameter 'type' or incorrect. Type should be 'auth' or 'attach'",
+            message: "Not found parameter 'type' or incorrect. Type should be 'auth' or 'attach' or 'refresh'",
             event_type: "responseAuthToken",
             success: false
         });

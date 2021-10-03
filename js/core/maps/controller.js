@@ -117,7 +117,7 @@ class MapController extends Emitter {
         // groups = groups.filter(x => x !== groupId);
 
         // Загружаем все карты, для которых данная группа присоеденена
-        // /** @type {Array<Array<mapId>>} */
+        /** @type {Array<Array<mapId>>} */
         let arr = await Promise.all(groups.map(x => core.groupsController.getMapsByGroup(x)));
 
         // Все карты, которые по другим группам отслеживаются

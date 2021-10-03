@@ -63,7 +63,7 @@ const processUpdateCommand = async function (_command, _flags) {
                 case "all":
                     await reinstallMapperDb(client, conString);
                     await reinstallEveDb(client, conString);
-                    await generateSwagger();
+                    await cloneStableSwagger();
                     break;
             }
         }

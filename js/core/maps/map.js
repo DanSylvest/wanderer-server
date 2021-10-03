@@ -2,18 +2,18 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/22/20.
  */
 
-const Emitter         = require("./../../env/_new/tools/emitter");
-const exist           = require("./../../env/tools/exist");
-const CustomPromise   = require("./../../env/promise");
-const Character       = require("./map/character");
-const User            = require("./map/user");
-const MapSolarSystem  = require("./map/solarSystem.js");
-const mapSqlActions   = require("./sql/mapSqlActions.js");
-const solarSystemSql  = require("./sql/solarSystemSql.js");
-const ChainsManager   = require("./map/chainsManager.js");
-const log             = require("./../../utils/log.js");
-const MapSubscribers  = require("./map/mapSubscribers.js");
-const MapChain        = require("./map/chain.js");
+const Emitter = require("./../../env/_new/tools/emitter");
+const exist = require("./../../env/tools/exist");
+const CustomPromise = require("./../../env/promise");
+const Character = require("./map/character");
+const User = require("./map/user");
+const MapSolarSystem = require("./map/solarSystem.js");
+const mapSqlActions = require("./sql/mapSqlActions.js");
+const solarSystemSql = require("./sql/solarSystemSql.js");
+const ChainsManager = require("./map/chainsManager.js");
+const log = require("./../../utils/log.js");
+const MapSubscribers = require("./map/mapSubscribers.js");
+const MapChain = require("./map/chain.js");
 const CollectCharactersForBulk = require('./map/mixins/collectCharactersForBulk.js');
 
 class Map extends Emitter {
@@ -60,6 +60,13 @@ class Map extends Emitter {
         this._charactersOnUsers = Object.create(null);
 
         this.subscribers = new MapSubscribers(this);
+
+        /**
+         *
+         * @type {Object.<string, CustomPromise>}
+         * @private
+         */
+        this._addingSystems = Object.create(null);
 
         this._createChainsManager();
     }
@@ -193,7 +200,7 @@ class Map extends Emitter {
     }
 
     async _onCharacterOnlineChanged(characterId, isOnline) {
-        if(!isOnline) {
+        if (!isOnline) {
             this.subscribers.notifyCharacterOnlineRemoved(characterId);
         }
 
@@ -219,7 +226,7 @@ class Map extends Emitter {
         this.subscribers.notifyCharacterOnlineUpdatedLocation(characterId, oldSystem, location);
     }
 
-    _onCharacterShipChanged (characterId, shipId) {
+    _onCharacterShipChanged(characterId, shipId) {
         this.subscribers.notifyCharacterOnlineUpdatedShipType(characterId, shipId);
     }
 
@@ -244,38 +251,62 @@ class Map extends Emitter {
         this.subscribers.notifySystemAdd(_systemId);
     }
 
-    async _addSystem(_oldSystem, _systemId, position) {
+    /**
+     *
+     * @param _oldSystem
+     * @param solarSystemId
+     * @param position
+     * @return {Promise<undefined>}
+     * @private
+     */
+    async _addSystem(_oldSystem, solarSystemId, position) {
         let pos = position;
-        this._createSystemObject(_systemId);
-        let solarSystem = this._systems[_systemId];
+        this._createSystemObject(solarSystemId);
+        let solarSystem = this._systems[solarSystemId];
+
+        let isNeedResolveAddingPromise = false;
+        if (!this._addingSystems[solarSystemId]) {
+            this._addingSystems[solarSystemId] = new CustomPromise();
+            isNeedResolveAddingPromise = true;
+        } else {
+            await this._addingSystems[solarSystemId].native;
+        }
 
         let result = await solarSystem.isSystemExistsAndVisible();
         if (result.exists && result.visible) {
             // do nothing
             solarSystem.resolve();
         } else if (result.exists && !result.visible) {
-            if (!exist(position))
-                pos = await this.findPosition(_oldSystem, _systemId);
+            await this._systems[solarSystemId].changeVisible(true);
 
-            // await mapSqlActions.updateSystem(this.options.mapId, _systemId, {visible: true});
-            await this._systems[_systemId].changeVisible(true);
-
-            solarSystem.resolve();
-            await this._notifySystemAdd(_systemId);
-        } else if (!result.exists) {
-            let solarSystemInfo = await solarSystemSql.getSolarSystemInfo(_systemId);
-            if (solarSystemInfo === null) {
-                // solar system can be not found in list
-                throw `Exception "Solar system ${_systemId} is not exists in database..."`
+            if (!exist(position)) {
+                pos = await this.findPosition(_oldSystem, solarSystemId);
+                await this._systems[solarSystemId].updatePositions(pos.x, pos.y);
             }
 
-            if (!exist(position))
-                pos = await this.findPosition(_oldSystem, _systemId);
+            solarSystem.resolve();
+            await this._notifySystemAdd(solarSystemId);
+        } else if (!result.exists) {
+            let solarSystemInfo = await solarSystemSql.getSolarSystemInfo(solarSystemId);
+            if (solarSystemInfo === null) {
+                // solar system can be not found in list
+                throw `Exception "Solar system ${solarSystemId} is not exists in database..."`
+            }
+
+            if (!exist(position)) {
+                pos = await this.findPosition(_oldSystem, solarSystemId);
+            }
 
             await solarSystem.create(solarSystemInfo.solarSystemName, pos);
             solarSystem.resolve();
 
-            await this._notifySystemAdd(_systemId);
+            await this._notifySystemAdd(solarSystemId);
+        }
+
+        if (isNeedResolveAddingPromise) {
+            await solarSystem.loadPromise();
+            this._addingSystems[solarSystemId].resolve();
+            return;
         }
 
         return solarSystem.loadPromise();
@@ -689,7 +720,7 @@ const removeIntersection = function (pairsArr) {
     let out = [];
 
     pairsArr.map(x => {
-        if(!checkObj[x.first + "_" + x.second] && !checkObj[x.second + "_" + x.first]) {
+        if (!checkObj[x.first + "_" + x.second] && !checkObj[x.second + "_" + x.first]) {
             checkObj[x.first + "_" + x.second] = true;
             out.push(x);
         }
@@ -698,7 +729,7 @@ const removeIntersection = function (pairsArr) {
     return out;
 }
 
-const solarSystemTypesNotAbleToEnter = [7,8,9,19,20,21,22,23,24];
+const solarSystemTypesNotAbleToEnter = [7, 8, 9, 19, 20, 21, 22, 23, 24];
 // const solarSystemTypesNotAbleToMove = [19,20,21,22,23,24];
 const minimumRouteAttrs = [
     "systemClass",

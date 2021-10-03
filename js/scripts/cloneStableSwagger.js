@@ -25,9 +25,7 @@ const cloneStableSwagger = async function () {
         }
 
         console.log(`Cloning ${REPO}...`);
-        await git().clone(REPO, `./${REPO_NAME}`)
-
-        // await Clone(REPO, `./${REPO_NAME}`);
+        await git().clone(REPO, `./${REPO_NAME}`);
 
         fs.renameSync(repoPath["+"]('generated').toString(), generatedPath.toString());
         fs.rmSync(repoPath.toString(), {recursive: true});

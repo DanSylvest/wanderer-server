@@ -80,6 +80,11 @@ class Controller extends Emitter {
         }
     }
 
+    /**
+     *
+     * @param _characterId
+     * @returns {Promise<{name: string, addDate: Date}>}
+     */
     async getProtectedCharacterInfo(_characterId) {
         const {name, addDate} = await core.dbController.charactersDB.get(_characterId, ["name", "addDate"]);
         return {name, addDate};

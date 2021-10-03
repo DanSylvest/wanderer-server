@@ -114,6 +114,7 @@ class GroupsController extends Emitter {
     }
 
     async editGroup(_groupId, _props) {
+        debugger;
         let updCharactersPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCharacter, _groupId, _props.characters);
         let updCorporationsPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCorporation, _groupId, _props.corporations);
         let updAlliancesPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToAlliance, _groupId, _props.alliances);
@@ -301,8 +302,8 @@ class GroupsController extends Emitter {
     // corporations
     // characters
     async getAllowedGroupsByCharacter(_characterId) {
-        let corporationId = getCorporationId(_characterId);
-        let allianceId = getAllianceId(_characterId);
+        let corporationId = await getCorporationId(_characterId);
+        let allianceId = await getAllianceId(_characterId);
         let groupsByAlliancePr = this.getGroupsByAlliance(allianceId);
         let groupsByCorporationPr = this.getGroupsByCorporation(corporationId);
         let groupsByCharacterPr = this.getGroupsByCharacter(_characterId);

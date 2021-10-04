@@ -2,21 +2,22 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 3/18/21.
  */
 
-const Emitter      = require("./../../../env/_new/tools/emitter");
-const exist        = require("./../../../env/tools/exist");
-const Subscriber   = require("./../../../utils/subscriber");
+const Emitter = require("./../../../env/_new/tools/emitter");
+const exist = require("./../../../env/tools/exist");
+const Subscriber = require("./../../../utils/subscriber");
 
 class MapUser extends Emitter {
+    /**
+     * @type {{charId : String, online: Boolean}[]}
+     */
+    characters = [];
+
     constructor(mapId, userId) {
         super();
 
         this.mapId = mapId;
         this.characterId = userId;
 
-        /**
-         * @type Array<Object<charId : String, online: Boolean>>
-         */
-        this.characters = [];
         this._notifyAllowedCharacters = false;
         this._allowedCharactersSubscriber = null;
     }
@@ -81,6 +82,11 @@ class MapUser extends Emitter {
 
     onlineChanged(charId, online) {
         let obj = this.characters.searchByObjectKey("charId", charId);
+
+        if (!obj) {
+            debugger;
+        }
+
         obj.online = online;
 
         if (this._notifyAllowedCharacters) {

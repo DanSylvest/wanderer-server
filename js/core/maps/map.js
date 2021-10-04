@@ -134,8 +134,13 @@ class Map extends Emitter {
         return this._chains[chainId].model;
     }
 
-    addCharactersToObserve(_characterIds) {
-        _characterIds.map(this._startObserverCharacter.bind(this));
+    /**
+     *
+     * @param {string} userId
+     * @param {string[]} characters
+     */
+    addCharactersToObserve(userId, characters) {
+        characters.map(this._startObserverCharacter.bind(this, userId));
     }
 
     removeCharactersFromObserve(_characterIds) {
@@ -154,30 +159,29 @@ class Map extends Emitter {
         }
     }
 
-    _startObserverCharacter(characterId) {
-        if (!this.characters[characterId]) {
-            this.characters[characterId] = new Character(characterId);
-            this.characters[characterId].on("onlineChanged", this._onCharacterOnlineChanged.bind(this, characterId));
-            this.characters[characterId].on("leaveSystem", this._onCharacterLeaveSystem.bind(this, characterId));
-            this.characters[characterId].on("enterInSystem", this._onCharacterEnterInSystem.bind(this, characterId));
-            this.characters[characterId].on("moveToSystem", this._onCharacterMoveToSystem.bind(this, characterId));
-            this.characters[characterId].on("shipChanged", this._onCharacterShipChanged.bind(this, characterId));
-            this.characters[characterId].on("drop", this._onCharacterDrop.bind(this, characterId));
-            this.characters[characterId].init();
+    _startObserverCharacter(userId, charId) {
+        if (!this.characters[charId]) {
+            this.characters[charId] = new Character(charId);
+            this.characters[charId].on("onlineChanged", this._onCharacterOnlineChanged.bind(this, charId));
+            this.characters[charId].on("leaveSystem", this._onCharacterLeaveSystem.bind(this, charId));
+            this.characters[charId].on("enterInSystem", this._onCharacterEnterInSystem.bind(this, charId));
+            this.characters[charId].on("moveToSystem", this._onCharacterMoveToSystem.bind(this, charId));
+            this.characters[charId].on("shipChanged", this._onCharacterShipChanged.bind(this, charId));
+            this.characters[charId].on("drop", this._onCharacterDrop.bind(this, charId));
+            this.characters[charId].init();
         } else {
-            this.characters[characterId].cancelDropTimer();
+            this.characters[charId].cancelDropTimer();
         }
 
-        // this is fast access to user characters
-        let userId = this._charactersOnUsers[characterId];
-        if (exist(userId)) {
-            this._users[userId].addedToAvailable({
-                charId: characterId,
-                online: this.characters[characterId].isOnline()
-            });
+        if (this._users[userId]) {
+            if (!this._charactersOnUsers[charId]) {
+                this._charactersOnUsers[charId] = userId;
+            }
+
+            this._users[userId].addedToAvailable({charId, online: false});
         }
 
-        log(log.WARN, `STARTED observe [${this.options.mapId}:${characterId}]`);
+        log(log.WARN, `STARTED observe [${this.options.mapId}:${charId}]`);
     }
 
     _stopObserverCharacter(characterId) {
@@ -296,7 +300,6 @@ class Map extends Emitter {
             if (!exist(position)) {
                 pos = await this.findPosition(_oldSystem, solarSystemId);
             }
-
             await solarSystem.create(solarSystemInfo.solarSystemName, pos);
             solarSystem.resolve();
 
@@ -676,37 +679,39 @@ class Map extends Emitter {
         delete this._systems[_systemId];
     }
 
+    /**
+     * todo - тут явно присутствует какая-то ошибка
+     *
+     * 1) почему запрашиваются все персонажи пользака? Должны же быть, только те, которые доступны по карте
+     *
+     * @param connectionId
+     * @param responseId
+     * @param userId
+     * @return {Promise<void>}
+     */
     async subscribeAllowedCharacters(connectionId, responseId, userId) {
-        let characters = await core.userController.getUserCharacters(userId);
+        const characters = await core.mapController.getTrackingCharactersForMapByUser(this.options.mapId, userId);
+
         characters.map(x => this._charactersOnUsers[x] = userId);
 
-        if (!exist(this._users[userId]) || this._users[userId].subscribersCount() === 0) {
-            let trackedCharacters = [];
-            characters.map(characterId => {
-                if (exist(this.characters[characterId])) {
-                    trackedCharacters.push({
-                        charId: characterId,
-                        online: this.characters[characterId].isOnline()
-                    })
-                }
-            });
+        if (!this._users[userId]) {
+            this._users[userId] = new User(this.options.mapId, userId);
+        }
 
-            if (!exist(this._users[userId]))
-                this._users[userId] = new User(this.options.mapId, userId);
+        if (this._users[userId].subscribersCount() === 0) {
+            let trackedCharacters = characters.reduce((acc, charId) => {
+                this.characters[charId] && acc.push({charId, online: this.characters[charId].isOnline()})
+                return acc;
+            }, []);
 
-            if (this._users[userId].subscribersCount() === 0)
-                this._users[userId].updateAllowedCharacters(trackedCharacters);
+            this._users[userId].updateAllowedCharacters(trackedCharacters);
         }
 
         this._users[userId].subscribeAllowedCharacters(connectionId, responseId);
     }
 
     async unsubscribeAllowedCharacters(connectionId, responseId, userId) {
-        // Вероятно нужно поставить таймаут на 10-15ms, на добавление и удаление
-        // по той причине, что вомзожно что может быть неловкая ситуация
-        let characters = await core.userController.getUserCharacters(userId);
-        characters.map(x => delete this._charactersOnUsers[x]);
-
+        this._users[userId].characters.map(({charId}) => delete this._charactersOnUsers[charId]);
         this._users[userId].unsubscribeAllowedCharacters(connectionId, responseId);
     }
 }

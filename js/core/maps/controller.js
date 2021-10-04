@@ -2,14 +2,14 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/21/20.
  */
 
-const Emitter           = require("./../../env/_new/tools/emitter");
-const log               = require("./../../utils/log");
-const DBController      = require("./../dbController");
-const Map               = require("./map");
-const md5               = require("md5");
-const UserMapWatcher    = require("./userMapWatcher.js");
+const Emitter = require("./../../env/_new/tools/emitter");
+const log = require("./../../utils/log");
+const DBController = require("./../dbController");
+const Map = require("./map");
+const md5 = require("md5");
+const UserMapWatcher = require("./userMapWatcher.js");
 const UserSubscriptions = require("./userSubscriptions.js");
-const mapSqlActions     = require("./sql/mapSqlActions.js");
+const mapSqlActions = require("./sql/mapSqlActions.js");
 const {getCorporationId, getAllianceId} = require('./../characters/utils')
 
 
@@ -129,15 +129,23 @@ class MapController extends Emitter {
         if (state) {
             for (let a = 0; a < maps.length; a++) {
                 let mapId = maps[a];
-                let isWatchingOnMap = this.has(mapId) && this._umw.isUserWatchOnMap(userId, mapId);
-                isWatchingOnMap && this.get(mapId).addCharactersToObserve([characterId]);
+                // todo not sure that this correct way
+                // let isWatchingOnMap = this.has(mapId) && this._umw.isUserWatchOnMap(userId, mapId);
+                // isWatchingOnMap && this.get(mapId).addCharactersToObserve([characterId]);
+                // this.has(mapId) && this.get(mapId).addCharactersToObserve([characterId]);
+
+
+                this.has(mapId) && this.get(mapId).addCharactersToObserve(userId, [characterId]);
             }
         } else if (!state) {
             for (let a = 0; a < maps.length; a++) {
                 let mapId = maps[a];
-                let isWatchingOnMap = this.has(mapId) && this._umw.isUserWatchOnMap(userId, mapId);
-
-                if (isWatchingOnMap && !mapsObj[mapId]) {
+                // todo not sure that this correct way
+                // let isWatchingOnMap = this.has(mapId) && this._umw.isUserWatchOnMap(userId, mapId);
+                // if (isWatchingOnMap && !mapsObj[mapId]) {
+                //     this.get(mapId).removeCharactersFromObserve([characterId]);
+                // }
+                if (!mapsObj[mapId] && this.has(mapId)) {
                     this.get(mapId).removeCharactersFromObserve([characterId]);
                 }
             }
@@ -552,7 +560,7 @@ class MapController extends Emitter {
         let map = this.get(mapId);
 
         if (status)
-            map.addCharactersToObserve(characters);
+            map.addCharactersToObserve(userId, characters);
         else
             map.removeCharactersFromObserve(characters);
     }

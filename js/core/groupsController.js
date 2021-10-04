@@ -114,7 +114,6 @@ class GroupsController extends Emitter {
     }
 
     async editGroup(_groupId, _props) {
-        debugger;
         let updCharactersPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCharacter, _groupId, _props.characters);
         let updCorporationsPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCorporation, _groupId, _props.corporations);
         let updAlliancesPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToAlliance, _groupId, _props.alliances);

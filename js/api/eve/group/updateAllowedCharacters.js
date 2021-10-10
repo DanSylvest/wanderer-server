@@ -21,7 +21,7 @@ const request = async function (_connectionId, _responseId, _event) {
             eventType: responseName
         });
     } catch (err) {
-        helpers.errResponse(_connectionId, _responseId, responseName, "Error on load group list", {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on update allowed character for group", {
             code: 0,
             handledError: err
         });

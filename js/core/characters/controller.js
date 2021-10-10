@@ -122,8 +122,8 @@ class Controller extends Emitter {
     }
 
     /**
-     * This case will work incorrect because remove character from observe work incorrect
-     * removeCharactersFromObserve should return promise
+     * TODO !Attention!
+     * this method should be refactored as fast as it can
      * @param _userId
      * @param _characterId
      * @returns {Promise<unknown>}
@@ -152,7 +152,7 @@ class Controller extends Emitter {
 
             var prarr = [];
             for (var mapId in filteredMaps) {
-                prarr.push(core.mapController.removeCharactersFromObserve(mapId, filteredMaps[mapId]));
+                prarr.push(core.mapController.removeCharactersFromObserve(_userId, mapId, filteredMaps[mapId]));
             }
 
             // дождемся когда все персонажи будут отключены

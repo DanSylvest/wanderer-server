@@ -433,6 +433,11 @@ class GroupsController extends Emitter {
         await core.mapController.notifyAllowedMapsByUser(_userId);
     }
 
+    /**
+     *
+     * @param _groupId
+     * @return {Promise<number[]>}
+     */
     async getMapsByGroup(_groupId) {
         var cond = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.mapToGroups},
@@ -478,6 +483,11 @@ class GroupsController extends Emitter {
         return result.map(_data => _data.characterId);
     }
 
+    /**
+     *
+     * @param {string} _characterId
+     * @return {Promise<string[]>}
+     */
     async getGroupsByTrackedCharacterId(_characterId) {
         let condition = [
             {name: "characterId", operator: "=", value: _characterId},

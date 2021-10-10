@@ -48,6 +48,11 @@ Array.prototype.merge = function (_arr) {
     return this;
 };
 
+/**
+ *
+ * @param callback
+ * @return {Object.<string, boolean>}
+ */
 Array.prototype.convertToMap = function (callback) {
     let out = Object.create(null);
 

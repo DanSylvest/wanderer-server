@@ -31,7 +31,7 @@ class Map extends Emitter {
                     debugger;
 
                 __mapId = _val;
-            }
+            },
         });
 
         this.options.mapId = _options.mapId;
@@ -121,13 +121,13 @@ class Map extends Emitter {
         if (!this._chains[chainId]) {
             let chainInfo = await mapSqlActions.getLinkInfo(this.options.mapId, chainId);
             if (!chainInfo) {
-                throw `Error "Chain ${chainId} isn't exists."`
+                throw `Error "Chain ${chainId} isn't exists."`;
             }
 
             this._chains[chainId] = {
                 model: new MapChain(this.options.mapId, chainId),
-                promise: new CustomPromise()
-            }
+                promise: new CustomPromise(),
+            };
             this._chains[chainId].promise.resolve();
         }
 
@@ -140,16 +140,20 @@ class Map extends Emitter {
      * @param {string[]} characters
      */
     addCharactersToObserve(userId, characters) {
-        characters.map(this._startObserverCharacter.bind(this, userId));
+        characters.forEach(this._startObserverCharacter.bind(this, userId));
     }
 
-    removeCharactersFromObserve(_characterIds) {
-        _characterIds.map(this._stopObserverCharacter.bind(this));
+    removeCharactersFromObserve(characterIds) {
+        characterIds.forEach(this._stopObserverCharacter.bind(this));
+    }
+
+    async removeCharactersFromTracking(userId, charIds) {
+        await Promise.all(charIds.map(this.removeCharacterFromTracking.bind(this, userId)));
     }
 
     _createChainsManager() {
         this.chainsManager = new ChainsManager(this.options.mapId);
-        this.chainsManager.on("changedChains", this._onChainsChanged.bind(this))
+        this.chainsManager.on("changedChains", this._onChainsChanged.bind(this));
 
     }
 
@@ -160,7 +164,8 @@ class Map extends Emitter {
     }
 
     _startObserverCharacter(userId, charId) {
-        if (!this.characters[charId]) {
+        const hasCharacter = this.characters[charId];
+        if (!hasCharacter) {
             this.characters[charId] = new Character(charId);
             this.characters[charId].on("onlineChanged", this._onCharacterOnlineChanged.bind(this, charId));
             this.characters[charId].on("leaveSystem", this._onCharacterLeaveSystem.bind(this, charId));
@@ -178,23 +183,66 @@ class Map extends Emitter {
                 this._charactersOnUsers[charId] = userId;
             }
 
-            this._users[userId].addedToAvailable({charId, online: false});
+            this._users[userId].addedToAvailable({charId, online: this.characters[charId].isOnline()});
         }
 
         log(log.WARN, `STARTED observe [${this.options.mapId}:${charId}]`);
     }
 
-    _stopObserverCharacter(characterId) {
-        log(log.WARN, `STOPPED observe [${this.options.mapId}:${characterId}]`);
+    _stopObserverCharacter(charId) {
+        log(log.WARN, `STOPPED observe [${this.options.mapId}:${charId}]`);
 
-        this.characters[characterId] && this.characters[characterId].startDropTimer();
+        this.characters[charId] && this.characters[charId].startDropTimer();
+    }
+
+    async _onCharacterDrop(characterId) {
+        await this.dropCharacter(characterId);
+
+        // this is fast access to user characters
+        let userId = this._charactersOnUsers[characterId];
+        if (userId) {
+            this._users[userId].removedFromAvailable(characterId);
+            delete this._charactersOnUsers[characterId];
+        }
+    }
+
+    async dropCharacter(charId) {
+        let isOnline = this.characters[charId].isOnline();
+        this.characters[charId].destructor();
+        delete this.characters[charId];
+        let currentSystemId = this._charactersOnSystem[charId];
+        if (isOnline && currentSystemId) {
+            await this._characterLeaveSystem(charId, currentSystemId);
+            delete this._charactersOnSystem[charId];
+            this.subscribers.notifyCharacterOnlineRemoved(charId);
+        }
+    }
+
+    /**
+     * this is a similar function as _onCharacterDrop
+     * but this case work when you want immediately remove character without a delay
+     *
+     * It need at least for two cases:
+     *  - if someone set off tracking for character
+     *  - if someone removed character from account
+     * @param {string} userId
+     * @param {string} characterId
+     * @return {Promise<void>}
+     */
+    async removeCharacterFromTracking(userId, characterId) {
+        await this.dropCharacter(characterId);
+
+        if (this._users[userId]) {
+            this._users[userId].removedFromAvailable(characterId);
+            delete this._charactersOnUsers[characterId];
+        }
     }
 
     _onChainsChanged(chains) {
         chains.map(chain => {
             switch (chain.newState) {
                 case "EOL":
-                    this.updateLink(chain.id, {timeStatus: 1})
+                    this.updateLink(chain.id, {timeStatus: 1});
                     break;
                 case "Expired":
                     this.linkRemove(chain.id);
@@ -232,23 +280,6 @@ class Map extends Emitter {
 
     _onCharacterShipChanged(characterId, shipId) {
         this.subscribers.notifyCharacterOnlineUpdatedShipType(characterId, shipId);
-    }
-
-    async _onCharacterDrop(characterId) {
-        let isOnline = this.characters[characterId].isOnline();
-        let currentSystemId = this._charactersOnSystem[characterId];
-        this.characters[characterId].destructor();
-        delete this.characters[characterId];
-        if (isOnline && exist(currentSystemId)) {
-            await this._characterLeaveSystem(characterId, currentSystemId);
-        }
-
-        // this is fast access to user characters
-        let userId = this._charactersOnUsers[characterId];
-        if (exist(userId)) {
-            this._users[userId].removedFromAvailable(characterId);
-        }
-
     }
 
     async _notifySystemAdd(_systemId) {
@@ -294,7 +325,7 @@ class Map extends Emitter {
             let solarSystemInfo = await solarSystemSql.getSolarSystemInfo(solarSystemId);
             if (solarSystemInfo === null) {
                 // solar system can be not found in list
-                throw `Exception "Solar system ${solarSystemId} is not exists in database..."`
+                throw `Exception "Solar system ${solarSystemId} is not exists in database..."`;
             }
 
             if (!exist(position)) {
@@ -319,7 +350,7 @@ class Map extends Emitter {
         let chainInfo = this._chains[_sourceSystemId + "_" + _targetSystemId] || this._chains[_targetSystemId + "_" + _sourceSystemId];
         if (!chainInfo) {
             chainInfo = this._chains[_sourceSystemId + "_" + _targetSystemId] = {
-                promise: new CustomPromise()
+                promise: new CustomPromise(),
             };
 
             let chainData = await mapSqlActions.getLinkByEdges(this.options.mapId, _sourceSystemId, _targetSystemId);
@@ -349,21 +380,21 @@ class Map extends Emitter {
             _sourceSystemId,
             _targetSystemId,
             _characterId,
-            this.characters[_characterId].currentShipType()
-        )
+            this.characters[_characterId].currentShipType(),
+        );
 
         //TODO А после этого, нужно отправить оповещение в гуй, что линк id был проинкрементирован
     }
 
     async _characterJoinToSystem(_characterId, _systemId) {
         this._createSystemObject(_systemId);
-        this._systems[_systemId].addCharacter(_characterId);
+        await this._systems[_systemId].addCharacter(_characterId);
         this._charactersOnSystem[_characterId] = _systemId;
     }
 
     async _characterLeaveSystem(_characterId, _systemId) {
         if (exist(this._systems[_systemId])) {
-            this._systems[_systemId].removeCharacter(_characterId);
+            await this._systems[_systemId].removeCharacter(_characterId);
             delete this._charactersOnSystem[_characterId];
         }
     }
@@ -374,13 +405,6 @@ class Map extends Emitter {
         // let systemClass = await core.sdeController.getSystemClass(solarSystemInfo.regionID, solarSystemInfo.constellationID, _systemId);
         let isExists = await this.systemExists(_systemId, true);
         let isAbleToEnter = solarSystemTypesNotAbleToEnter.indexOf(ssInfo.systemClass) === -1;
-
-        // This is will filter Jita. Because wormhole can not be open to Jita.
-        switch (_systemId) {
-            case 30000142:
-                isAbleToEnter = false;
-                break;
-        }
 
         // Это происходит, когда нет никаких систем, и персонаж первый раз попал на карту
         if (!isExists && isAbleToEnter) {
@@ -503,7 +527,7 @@ class Map extends Emitter {
             avoidTriglavian: false,
             includeThera: true,
 
-            ...settings
+            ...settings,
         };
 
         let connections = [];
@@ -530,11 +554,11 @@ class Map extends Emitter {
             if (!defaultSettings.includeCruise) {
                 chains = chains.filter(x => {
                     return !core.cachedDBData.wormholeClassAIndexed[x.first] && !core.cachedDBData.wormholeClassAIndexed[x.second];
-                })
+                });
             }
 
             connections = chains.map(x => x.first + "|" + x.second)
-                .concat(chains.map(x => x.second + "|" + x.first));
+            .concat(chains.map(x => x.second + "|" + x.first));
         }
 
         let avoidanceList = [];
@@ -561,8 +585,8 @@ class Map extends Emitter {
                 hasConnection: route.hasConnection,
                 systems: arrInfo,
                 origin: solarSystemId,
-                destination: destination
-            })
+                destination: destination,
+            });
         }
 
         return out;
@@ -575,10 +599,10 @@ class Map extends Emitter {
             avoidanceList = [];
 
         core.esiApi.routes(dest, origin, flag, connections, avoidanceList)
-            .then(
-                event => pr.resolve({hasConnection: true, systems: event}),
-                err => pr.resolve({hasConnection: false, systems: [dest]})
-            );
+        .then(
+            event => pr.resolve({hasConnection: true, systems: event}),
+            err => pr.resolve({hasConnection: false, systems: [dest]}),
+        );
 
         return pr.native;
     }
@@ -605,7 +629,7 @@ class Map extends Emitter {
     async updateLink(chainId, data) {
         for (let attr in data) {
             if (attr === "timeStatus")
-                data = {...data, updated: new Date}
+                data = {...data, updated: new Date};
         }
 
         await mapSqlActions.updateChain(this.options.mapId, chainId, data);
@@ -614,7 +638,7 @@ class Map extends Emitter {
     }
 
     async updateSystemsPosition(_systemsPosition) {
-        await Promise.all(_systemsPosition.map(x => this._systems[x.id].updatePositions(x.x, x.y)))
+        await Promise.all(_systemsPosition.map(x => this._systems[x.id].updatePositions(x.x, x.y)));
     }
 
     async getSystemInfo(_systemId) {
@@ -668,11 +692,11 @@ class Map extends Emitter {
         await Promise.all(affectedLinks.map(linkId => this.linkRemove(linkId)));
 
         await Promise.all(this._systems[_systemId].onlineCharacters.map(x => {
-            delete this._charactersOnSystem[x]
+            delete this._charactersOnSystem[x];
             return mapSqlActions.removeCharacterFromSystem(this.options.mapId, _systemId, x);
         }));
 
-        this.subscribers.notifySystemRemoved(_systemId)
+        this.subscribers.notifySystemRemoved(_systemId);
 
         this._systems[_systemId].destructor();
 
@@ -700,7 +724,7 @@ class Map extends Emitter {
 
         if (this._users[userId].subscribersCount() === 0) {
             let trackedCharacters = characters.reduce((acc, charId) => {
-                this.characters[charId] && acc.push({charId, online: this.characters[charId].isOnline()})
+                this.characters[charId] && acc.push({charId, online: this.characters[charId].isOnline()});
                 return acc;
             }, []);
 
@@ -719,7 +743,6 @@ class Map extends Emitter {
 // List of mixins
 Object.assign(Map.prototype, CollectCharactersForBulk);
 
-
 const removeIntersection = function (pairsArr) {
     let checkObj = Object.create(null);
     let out = [];
@@ -732,7 +755,7 @@ const removeIntersection = function (pairsArr) {
     });
 
     return out;
-}
+};
 
 const solarSystemTypesNotAbleToEnter = [7, 8, 9, 19, 20, 21, 22, 23, 24];
 // const solarSystemTypesNotAbleToMove = [19,20,21,22,23,24];
@@ -743,6 +766,6 @@ const minimumRouteAttrs = [
     "triglavianInvasionStatus",
     "solarSystemId",
     "solarSystemName",
-]
+];
 
 module.exports = Map;

@@ -436,23 +436,24 @@ class MapController extends Emitter {
         });
     }
 
+    /**
+     *
+     * @param _ownerId
+     * @return {Promise<{id: string, name: string, description: string}[]>}
+     */
     async getMapListByOwner(_ownerId) {
         let condition = [{name: "owner", operator: "=", value: _ownerId}];
-        let attributes = ["id", "name", "description", "owner"];
-
-        let mapList = await core.dbController.mapsDB.getByCondition(condition, attributes);
-        // let mapsGroups = await Promise.all(mapList.map(_mapInfo => this.getMapGroups(_mapInfo.id)));
-
-        for (let a = 0; a < mapList.length; a++) {
-            // mapList[a].groups = mapsGroups[a];
-            mapList[a].owner = _ownerId;
-        }
-
-        return mapList;
+        return await core.dbController.mapsDB.getByCondition(condition, ["id", "name", "description"]);
     }
 
-    async getMapInfo(_mapId) {
-        return await core.dbController.mapsDB.get(_mapId, core.dbController.mapsDB.attributes());
+    /**
+     *
+     * @param mapId
+     * @return {Promise<{id: string, name: string, description: string, hubs: number[]}>}
+     */
+    async getMapInfo(mapId) {
+        const attributes = ['id', 'name', 'description', 'hubs'];
+        return await core.dbController.mapsDB.get(mapId, attributes);
     }
 
     async getMapGroups(mapId) {

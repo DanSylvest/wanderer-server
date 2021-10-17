@@ -15,6 +15,7 @@ const log = require("./../../utils/log.js");
 const MapSubscribers = require("./map/mapSubscribers.js");
 const MapChain = require("./map/chain.js");
 const CollectCharactersForBulk = require('./map/mixins/collectCharactersForBulk.js');
+const {prohibitedSystems} = require('./../helpers/environment');
 
 class Map extends Emitter {
     constructor(_options) {
@@ -319,8 +320,8 @@ class Map extends Emitter {
                 await this._systems[solarSystemId].updatePositions(pos.x, pos.y);
             }
 
-            solarSystem.resolve();
             await this._notifySystemAdd(solarSystemId);
+            solarSystem.resolve();
         } else if (!result.exists) {
             let solarSystemInfo = await solarSystemSql.getSolarSystemInfo(solarSystemId);
             if (solarSystemInfo === null) {
@@ -332,9 +333,9 @@ class Map extends Emitter {
                 pos = await this.findPosition(_oldSystem, solarSystemId);
             }
             await solarSystem.create(solarSystemInfo.solarSystemName, pos);
-            solarSystem.resolve();
 
             await this._notifySystemAdd(solarSystemId);
+            solarSystem.resolve();
         }
 
         if (isNeedResolveAddingPromise) {
@@ -399,22 +400,31 @@ class Map extends Emitter {
         }
     }
 
-    async _characterEnterToSystem(_characterId, _systemId) {
-        let ssInfo = await solarSystemSql.getSolarSystemInfo(_systemId);
-        // let solarSystemInfo = await core.sdeController.getSolarSystemInfo(_systemId);
-        // let systemClass = await core.sdeController.getSystemClass(solarSystemInfo.regionID, solarSystemInfo.constellationID, _systemId);
-        let isExists = await this.systemExists(_systemId, true);
-        let isAbleToEnter = solarSystemTypesNotAbleToEnter.indexOf(ssInfo.systemClass) === -1;
+    /**
+     * It happens when character join in system and it is not move from system to system
+     *
+     * @param {string} _characterId
+     * @param {string} solarSystemId
+     * @return {Promise<void>}
+     * @private
+     */
+    async _characterEnterToSystem(_characterId, solarSystemId) {
+        let info = await solarSystemSql.getSolarSystemInfo(solarSystemId);
+        const {systemClass} = info;
 
-        // Это происходит, когда нет никаких систем, и персонаж первый раз попал на карту
+        let isExists = await this.systemExists(solarSystemId, true);
+        let isAbleToEnter = !prohibitedSystems.includes(systemClass);
+
+        // It happens when system is not exists on map
         if (!isExists && isAbleToEnter) {
-            await this._addSystem(null, _systemId);
+            await this._addSystem(null, solarSystemId);
             isExists = true;
         }
 
         // Это происходит когда система уже была добавлена: вручную или в результате прохода в неё.
-        if (isExists)
-            await this._characterJoinToSystem(_characterId, _systemId);
+        if (isExists) {
+            await this._characterJoinToSystem(_characterId, solarSystemId);
+        }
     }
 
     async _characterMoveToSystem(_characterId, _oldSystem, _newSystem) {
@@ -463,7 +473,7 @@ class Map extends Emitter {
         // надо проверить что система соединяется
         let link = await mapSqlActions.getLinkByEdges(this.options.mapId, sourceSolarSystemId, targetSolarSystemId);
 
-        if (!exist(link)) {
+        if (!link) {
             await this._addLink(sourceSolarSystemId, targetSolarSystemId);
         }
     }

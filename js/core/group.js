@@ -12,8 +12,6 @@ class Group extends Emitter {
         this.options = extend({
             groupId: null
         }, _options);
-
-        this._observers = Object.create(null);
     }
 
     destructor() {
@@ -24,6 +22,10 @@ class Group extends Emitter {
         return await core.dbController.groupsDB.get(this.options.groupId, _attribute);
     }
 
+    /**
+     *
+     * @return {Promise<{name, description, id: (null|string|boolean|ConstrainDOMString|*)}>}
+     */
     async getInfo() {
         try {
             let result = await core.dbController.groupsDB.get(this.options.groupId, ["name", "owner", "description"]);
@@ -31,7 +33,6 @@ class Group extends Emitter {
             return {
                 id: this.options.groupId,
                 name: result.name,
-                owner: result.owner,
                 description: result.description
             }
         } catch (err) {

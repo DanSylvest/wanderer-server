@@ -239,12 +239,17 @@ class GroupsController extends Emitter {
     //     }
     //     return groupList;
     // },
+    /**
+     *
+     * @param ownerId
+     * @return {Promise<{name: String, id: String, description: String}>}
+     */
     async getGroupsByOwner(ownerId) {
         return await core.dbController.groupsDB.getByCondition([{
             name: "owner",
             operator: "=",
             value: ownerId
-        }], ["id", "name", "description", "owner"]);
+        }], ["id", "name", "description"]);
     }
 
     async getProtectedInfo(groupId) {

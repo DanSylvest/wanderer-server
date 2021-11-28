@@ -6,7 +6,7 @@ const log           = require("./../utils/log");
 const Client        = require('pg').Client;
 
 
-class DBController  extends Emitter {
+class DBController extends Emitter {
     constructor() {
         super();
 
@@ -156,11 +156,12 @@ class DBController  extends Emitter {
             name: "maps",
             idField: "id",
             properties: [
-                {name: "id",          type: String},
-                {name: "name",        type: String},
-                {name: "description", type: String},
-                {name: "owner",       type: String,  index: true},   // this is id of mapper character
-                {name: "hubs",        type: Array,   defaultValue: () => []}
+                {name: "id",           type: String},
+                {name: "name",         type: String},
+                {name: "description",  type: String},
+                {name: "personalNote", type: String},
+                {name: "owner",        type: String,  index: true},   // this is id of mapper character
+                {name: "hubs",         type: Array,   defaultValue: () => []}
             ]
         });
     }
@@ -170,10 +171,11 @@ class DBController  extends Emitter {
             name: "groups",
             idField: "id",
             properties: [
-                {name: "id",                    type: String},
-                {name: "name",                  type: String},
-                {name: "description",           type: String},
-                {name: "owner",                 type: String, index: true},   // this is id of mapper character
+                {name: "id",           type: String},
+                {name: "name",         type: String},
+                {name: "description",  type: String},
+                {name: "personalNote", type: String},
+                {name: "owner",        type: String, index: true},   // this is id of mapper character
             ]
         });
     }
@@ -197,7 +199,7 @@ class DBController  extends Emitter {
             properties: [
                 {name: "groupId",      type: String},
                 {name: "characterId",  type: String},
-                {name: "track",        type: Boolean, defaultValue: function () {return false}}
+                {name: "track",        type: Boolean, defaultValue: () => false}
             ]
         });
     }

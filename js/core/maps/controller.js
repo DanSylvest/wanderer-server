@@ -11,6 +11,8 @@ const UserMapWatcher = require("./userMapWatcher.js");
 const UserSubscriptions = require("./userSubscriptions.js");
 const mapSqlActions = require("./sql/mapSqlActions.js");
 const {getCorporationId, getAllianceId} = require('./../characters/utils');
+const {getCorporationName, getAllianceName, getName} = require("../characters/utils");
+const {map} = require("../../api/eve/_dir");
 
 const USER_DROP_TIMEOUT = 10000;
 
@@ -237,6 +239,7 @@ class MapController extends Emitter {
      * @param _data {{}}
      * @param _data.name {string}
      * @param _data.description {string}
+     * @param _data.note {string}
      * @param _data.groups {Array<string>}
      * @returns {Promise<any> | Promise<unknown>}
      */
@@ -247,6 +250,7 @@ class MapController extends Emitter {
             id: id,
             owner: _owner,
             name: _data.name,
+            personalNote: _data.note,
             description: _data.description,
         };
 
@@ -263,34 +267,35 @@ class MapController extends Emitter {
      * @param _props
      * @returns {Promise<void>}
      */
-    async editMap(_mapId, _props) {
+    async editMap(_mapId, {name, description, note, groups}) {
         // todo Тут наверно надо сделать очередь на редактирование.
         // нельзя что бы эдитилось сразу 2 карты...
         // хз надо об этом подумать
 
-        let oldGroups = await this.getMapGroups(_mapId);
-        let result = await this._updateGroups(_mapId, _props.groups);
+        if (groups) {
+            let oldGroups = await this.getMapGroups(_mapId);
+            let {added, removed} = await this._updateGroups(_mapId, groups);
 
-        // персонажей надо добавлять в онлайн только при условии, что у карты были хотя бы
-        // какие-то группы, т.к. если их не было, то смотреть на карту невозможно
-        if (oldGroups.length !== 0) {
-            if (result.added.length > 0) {
-                let charsArr = await Promise.all(result.added.map(groupId => core.groupsController.getTrackedCharactersByGroup(groupId)));
-                let characters = [];
-                charsArr.map(x => characters.merge(x));
-                await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus([_mapId], characterId, true)));
-            }
+            // персонажей надо добавлять в онлайн только при условии, что у карты были хотя бы
+            // какие-то группы, т.к. если их не было, то смотреть на карту невозможно
+            if (oldGroups.length !== 0) {
+                if (added.length > 0) {
+                    let charsArr = await Promise.all(added.map(groupId => core.groupsController.getTrackedCharactersByGroup(groupId)));
+                    let characters = [];
+                    charsArr.map(x => characters.merge(x));
+                    await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus([_mapId], characterId, true)));
+                }
 
-            if (result.removed.length > 0) {
-                let charsArr = await Promise.all(result.removed.map(groupId => core.groupsController.getTrackedCharactersByGroup(groupId)));
-                let characters = [];
-                charsArr.map(x => characters.merge(x));
-                await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus([_mapId], characterId, false)));
+                if (removed.length > 0) {
+                    let charsArr = await Promise.all(removed.map(groupId => core.groupsController.getTrackedCharactersByGroup(groupId)));
+                    let characters = [];
+                    charsArr.map(x => characters.merge(x));
+                    await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus([_mapId], characterId, false)));
+                }
             }
         }
 
-        delete _props.groups;
-        await core.dbController.mapsDB.set(_mapId, _props);
+        await core.dbController.mapsDB.set(_mapId, {name, description, personalNote: note});
 
         await this.notifyAllowedMapsByMap(_mapId);
     }
@@ -319,50 +324,85 @@ class MapController extends Emitter {
     /**
      * @param {string} userId
      * @param {Object} data
-     * @param {String} data.name
-     * @param {String} data.description
+     * @param {String} data.mapName
+     * @param {String} data.mapDescription
+     * @param {String} data.mapNote
+     * @param {String} data.groupName
+     * @param {String} data.groupDescription
      * @param {Boolean} data.shareForCorporation
      * @param {Boolean} data.shareForAlliance
      * @param {Number} data.characterId
      * @returns {*}
      */
     async createMapFast(userId, {characterId, ...data}) {
-        // todo надо получить локальные данные о персонаже
-        // т.е. этот персонаж, полюбому есть в базе данных, и информация о его корпорации имеется
-        // наверно надо сделать какое-то хранилище, в котором указано последнее время обновления в базе данных
-        // и через него запрашивать инфу.
-        // т.е. например
-        // мы запрашиваем данные о персонаже
-        // проверяем, есть ли эти данные в локальном кеше программы
-        // если есть проверяем когда протухает
-        // если протухло, то если ева работает, запускаем обновление
-        // если не протухло - сразу возвращаем
-        // если данных нет в локальном кеше, то лезем в базу данных, и сразу спрашиваем, а протухло ли.
-        // если протухло... короче надо сделать механизм, доступа к данным, с кешированием, протуханием и обновлением...
-        // а то жопаговно
-        const corporationId = await getCorporationId(characterId);
-        const allianceId = await getAllianceId(characterId);
+        const {
+            mapName,
+            mapDescription,
+            mapNote,
+            groupName,
+            groupDescription,
+            shareForCorporation,
+            shareForAlliance,
+        } = data;
 
-        let groupOptions = {
-            name: `group_${data.name}`,
-            description: `Automatically generated group for map ${data.name}`,
+        const [corporationId, allianceId] = await Promise.all([
+            ...(shareForCorporation ? [getCorporationId(characterId)] : []),
+            ...(shareForAlliance ? [getAllianceId(characterId)] : []),
+        ]);
+
+        const [characterName, corporationName, allianceName] = await Promise.all([
+            getName(characterId),
+            ...(shareForCorporation ? [getCorporationName(corporationId)] : []),
+            ...(shareForAlliance ? [getAllianceName(allianceId)] : []),
+        ]);
+
+        let newMapDescription;
+        const currentTime = new Date().toUTCString();
+        if (mapDescription === '') {
+            newMapDescription = `This map was created in ${currentTime}.`;
+        } else {
+            newMapDescription = mapDescription;
+        }
+
+        let newMapNote;
+        if (mapNote === '') {
+            newMapNote = `This map was created by ${characterName}`;
+
+            if (shareForCorporation || shareForAlliance) {
+                newMapNote += ` for ${[corporationName, allianceName].filter(x => !!x).join(', ')}.`;
+            }
+        } else {
+            newMapNote = mapNote;
+        }
+
+        let newGroupDescription;
+        if (groupDescription === '') {
+            newGroupDescription = `This group was created in ${currentTime}.`;
+        } else {
+            newGroupDescription = groupDescription;
+        }
+
+        const groupOptions = {
+            name: groupName || `group_${mapName}`,
+            description: newGroupDescription,
             characters: [characterId],
         };
 
-        if (data.shareForCorporation) {
+        if (shareForCorporation) {
             groupOptions.corporations = [corporationId];
         }
 
-        if (data.shareForAlliance) {
+        if (shareForAlliance) {
             groupOptions.alliances = [allianceId];
         }
 
-        let lastCreatedGroupId = await core.groupsController.createGroup(userId, groupOptions);
+        const lastCreatedGroupId = await core.groupsController.createGroup(userId, groupOptions);
         await core.groupsController.updateCharacterTrack(lastCreatedGroupId, characterId, true);
 
-        let lastCreatedMapId = await this.createMap(userId, {
-            name: data.name,
-            description: data.description,
+        const lastCreatedMapId = await this.createMap(userId, {
+            name: mapName,
+            description: newMapDescription,
+            note: newMapNote,
             groups: [lastCreatedGroupId],
         });
 
@@ -371,8 +411,9 @@ class MapController extends Emitter {
         return {
             mapId: lastCreatedMapId,
             groups: [lastCreatedGroupId],
-            description: data.description,
-            name: data.name,
+            name: mapName,
+            note: newMapNote,
+            description: newMapDescription,
         };
     }
 
@@ -439,11 +480,11 @@ class MapController extends Emitter {
     /**
      *
      * @param _ownerId
-     * @return {Promise<{id: string, name: string, description: string}[]>}
+     * @return {Promise<{id: string, name: string, personalNote: string, description: string}[]>}
      */
     async getMapListByOwner(_ownerId) {
         let condition = [{name: "owner", operator: "=", value: _ownerId}];
-        return await core.dbController.mapsDB.getByCondition(condition, ["id", "name", "description"]);
+        return await core.dbController.mapsDB.getByCondition(condition, ["id", "name", "personalNote", "description"]);
     }
 
     /**
@@ -452,7 +493,7 @@ class MapController extends Emitter {
      * @return {Promise<{id: string, name: string, description: string, hubs: number[]}>}
      */
     async getMapInfo(mapId) {
-        const attributes = ['id', 'name', 'description', 'hubs'];
+        const attributes = ['id', 'name', 'description', 'personalNote', 'hubs'];
         return await core.dbController.mapsDB.get(mapId, attributes);
     }
 

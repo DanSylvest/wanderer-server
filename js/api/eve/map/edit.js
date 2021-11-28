@@ -4,7 +4,7 @@
 const helpers = require("./../../../utils/helpers.js");
 const responseName = "responseEveMapEdit";
 
-const request = async function (_connectionId, _responseId, _event) {
+const request = async function (_connectionId, _responseId, {mapId, name, description, note, groups}) {
     // we need get token by connection
     const token = core.connectionStorage.get(_connectionId);
 
@@ -16,23 +16,16 @@ const request = async function (_connectionId, _responseId, _event) {
 
     try {
         await core.tokenController.checkToken(token);
-
-        let props = {
-            name: _event.name,
-            description: _event.description,
-            groups: _event.groups,
-        };
-
-        await core.mapController.editMap(_event.mapId, props);
+        await core.mapController.editMap(mapId, {name, description, note, groups});
 
         api.send(_connectionId, _responseId, {
             eventType: responseName,
-            success: true
+            success: true,
         });
     } catch (err) {
         helpers.errResponse(_connectionId, _responseId, responseName, "Error on editing map", {
             code: 0,
-            handledError: err
+            handledError: err,
         });
     }
 };

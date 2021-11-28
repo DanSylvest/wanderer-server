@@ -3,7 +3,7 @@
  */
 const helpers = require("./../../../utils/helpers.js");
 const responseName = "responseEveMapInfo";
-const { checkAccessToMapByUser } = require('./../../../core/maps/utils/checkAccessToMapByUser');
+const {checkAccessToMapByUser} = require('./../../../core/maps/utils/checkAccessToMapByUser');
 
 /**
  *
@@ -14,14 +14,14 @@ const { checkAccessToMapByUser } = require('./../../../core/maps/utils/checkAcce
  * @returns {Promise<void>}
  */
 const request = async function (_connectionId, _responseId, _event) {
-    const { mapId } = _event;
+    const {mapId} = _event;
 
     // we need get token by connection
     const token = core.connectionStorage.get(_connectionId);
 
     // when token is undefined - it means what you have no rights
     if (token === undefined) {
-        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", { code: 1 });
+        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
         return;
     }
 
@@ -33,22 +33,22 @@ const request = async function (_connectionId, _responseId, _event) {
             helpers.errResponse(
                 _connectionId, _responseId, responseName,
                 `User '${userId}' has no access to map '${mapId}'`,
-                { code: 2 }
+                {code: 2},
             );
             return;
         }
 
-        let info = await core.mapController.getMapInfo(mapId);
+        const {id, name, description, personalNote: note, hubs} = await core.mapController.getMapInfo(mapId);
 
         api.send(_connectionId, _responseId, {
-            data: info,
+            data: {id, name, description, note, hubs},
             success: true,
-            eventType: responseName
+            eventType: responseName,
         });
     } catch (err) {
         helpers.errResponse(_connectionId, _responseId, responseName, "Error on getting map info", {
             code: 0,
-            handledError: err
+            handledError: err,
         });
     }
 };

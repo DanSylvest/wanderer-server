@@ -19,7 +19,7 @@ const request = async function (_connectionId, _responseId, _event) {
         const list = await core.mapController.getMapListByOwner(userId);
 
         api.send(_connectionId, _responseId, {
-            data: list,
+            data: list.map(({personalNote: note, ...props}) => ({note, ...props})),
             success: true,
             eventType: responseName,
         });

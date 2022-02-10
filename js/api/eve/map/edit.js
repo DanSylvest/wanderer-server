@@ -4,7 +4,7 @@
 const helpers = require("./../../../utils/helpers.js");
 const responseName = "responseEveMapEdit";
 
-const request = async function (_connectionId, _responseId, {mapId, name, description, note, groups}) {
+const request = async function (_connectionId, _responseId, {mapId, name, description, note = '', groups}) {
     // we need get token by connection
     const token = core.connectionStorage.get(_connectionId);
 

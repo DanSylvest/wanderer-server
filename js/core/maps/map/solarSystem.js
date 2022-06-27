@@ -181,8 +181,8 @@ class MapSolarSystem extends Emitter {
         }
     }
 
-    async changeVisible(bool) {
-        await mapSqlActions.updateSystem(this.mapId, this.solarSystemId, {visible: bool});
+    async changeVisible(visible) {
+        await mapSqlActions.updateSystem(this.mapId, this.solarSystemId, { visible, ...(!visible && { tag: '' }) });
     }
 
     _createDynamicInfoSubscriber() {

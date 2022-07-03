@@ -21,7 +21,7 @@ const searchDumpFile = function (_path) {
 
 const installSDE = async function (client, conString) {
     log(log.INFO, "Start Loading SDE database...");
-    let dumpFile = searchDumpFile(dirPath["+"]("eveData/sdeDump"));
+    let dumpFile = searchDumpFile(dirPath["+"]("eveData/dump"));
     log(log.INFO, `Install ${EVE_SDE_DB_NAME} db...`);
     await client.query(`DROP DATABASE IF EXISTS "${EVE_SDE_DB_NAME}";`);
     await client.query(`CREATE DATABASE "${EVE_SDE_DB_NAME}";`);

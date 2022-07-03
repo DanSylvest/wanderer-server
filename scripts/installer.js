@@ -1,5 +1,5 @@
 const pg                 = require('pg');
-const ConfReader         = require("./../utils/configReader");
+const ConfReader         = require("../js/utils/configReader");
 const reinstallEveDb     = require("./reinstallEveDb");
 const reinstallMapperDb  = require("./reinstallMapperDb");
 const reinstallCachedDB  = require("./reinstallCachedESD");
@@ -7,7 +7,7 @@ const generateSwagger    = require("./generateSwagger.js");
 const cloneStableSwagger = require("./cloneStableSwagger.js");
 const clearSignatures    = require("./clearSignatures.js");
 const args               = require("args");
-const log                = require("./../utils/log.js");
+const log                = require("../js/utils/log.js");
 
 const config = new ConfReader("conf").build();
 const MAPPER_DB = config.db.name;

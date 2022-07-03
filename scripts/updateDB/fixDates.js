@@ -1,6 +1,5 @@
 const pg                = require('pg');
-const ConfReader        = require("./../../utils/configReader");
-const log               = require("./../../utils/log.js");
+const ConfReader        = require("../../js/utils/configReader");
 
 const config = new ConfReader("conf").build();
 const MAPPER_DB = config.db.names.mapper;

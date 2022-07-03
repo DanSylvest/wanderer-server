@@ -2,9 +2,9 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 1/9/21.
  */
 
-const Path        = require('./../env/tools/path');
-const ConfReader  = require("./../utils/configReader");
-const log         = require("./../utils/log.js");
+const Path        = require('../js/env/tools/path');
+const ConfReader  = require("../js/utils/configReader");
+const log         = require("../js/utils/log.js");
 const Client      = require('pg').Client;
 
 const config = new ConfReader("conf").build();

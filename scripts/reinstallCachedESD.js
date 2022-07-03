@@ -1,11 +1,11 @@
-const Path        = require('./../env/tools/path');
+const Path        = require('../js/env/tools/path');
 const fs          = require('fs');
-const ConfReader  = require("./../utils/configReader");
-const log         = require("./../utils/log.js");
+const ConfReader  = require("../js/utils/configReader");
+const log         = require("../js/utils/log.js");
 const Client      = require('pg').Client;
-const exist       = require("./../env/tools/exist");
-const DB          = require("./../utils/db");
-require("./../env/tools/standardTypeExtend");
+const exist       = require("../js/env/tools/exist");
+const DB          = require("../js/utils/db");
+require("../js/env/tools/standardTypeExtend");
 
 const config = new ConfReader("conf").build();
 const CACHED_DB = config.db.names.cachedESD;

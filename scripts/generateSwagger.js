@@ -1,10 +1,10 @@
-const Path          = require('./../env/tools/path');
+const Path          = require('../js/env/tools/path');
 const fs            = require('fs');
-const ConfReader    = require("./../utils/configReader");
-const CustomPromise = require("./../env/promise");
+const ConfReader    = require("../js/utils/configReader");
+const CustomPromise = require("../js/env/promise");
 const https         = require('https');
 const unzipper      = require('unzipper');
-const log           = require("./../utils/log.js");
+const log           = require("../js/utils/log.js");
 
 const config = new ConfReader("conf").build();
 const dirPath  = Path.fromBackSlash(__dirname);

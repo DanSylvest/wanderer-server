@@ -1,9 +1,9 @@
-const Path        = require('./../env/tools/path');
-const printf      = require('./../env/tools/print_f');
+const Path        = require('../js/env/tools/path');
+const printf      = require('../js/env/tools/print_f');
 const fs          = require('fs');
-const execProcess = require("./../env/execProcess");
-const ConfReader  = require("./../utils/configReader");
-const log         = require("./../utils/log.js");
+const execProcess = require("../js/env/execProcess");
+const ConfReader  = require("../js/utils/configReader");
+const log         = require("../js/utils/log.js");
 
 const config = new ConfReader("conf").build();
 const EVE_SDE_DB_NAME  = config.db.names.eveSde;
@@ -21,7 +21,7 @@ const searchDumpFile = function (_path) {
 
 const installSDE = async function (client, conString) {
     log(log.INFO, "Start Loading SDE database...");
-    let dumpFile = searchDumpFile(dirPath["+"]("db/sdeDump"));
+    let dumpFile = searchDumpFile(dirPath["+"]("eveData/sdeDump"));
     log(log.INFO, `Install ${EVE_SDE_DB_NAME} db...`);
     await client.query(`DROP DATABASE IF EXISTS "${EVE_SDE_DB_NAME}";`);
     await client.query(`CREATE DATABASE "${EVE_SDE_DB_NAME}";`);

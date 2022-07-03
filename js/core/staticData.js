@@ -3,9 +3,9 @@ const fs          = require('fs');
 
 class StaticData  {
     constructor () {
-        const dirPath  = Path.fromBackSlash(__dirname);
-        dirPath.pop();
-        let path =  dirPath["+"](["db", "json"]);
+        let dirPath  = Path.fromBackSlash(__dirname);
+        dirPath = dirPath.slice(0, dirPath.size() - 2);
+        let path =  dirPath["+"](["eveData", "json"]);
 
         this.effects = JSON.parse(fs.readFileSync(path["+"]("effects.json").toString(), "utf8"));
         this.wormholeClasses = JSON.parse(fs.readFileSync(path["+"]("wormholeClasses.json").toString(), "utf8"));

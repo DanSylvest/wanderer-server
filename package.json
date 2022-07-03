@@ -19,15 +19,15 @@
 	"scripts": {
 		"dev": "node --inspect js/main.js",
 		"start": "node js/main.js",
-		"dropAll": "node js/scripts/installer.js update all",
-		"updateСached": "node js/scripts/installer.js update cached",
-		"dropMapperDb": "node js/scripts/installer.js update mapper",
-		"updateEveDb": "node js/scripts/installer.js update eve",
-		"updateManualDb": "node js/scripts/installer.js update other",
-		"updateSwagger": "node js/scripts/installer.js update swagger",
-		"clone-swagger": "node js/scripts/installer.js update clone-swagger",
-		"installApp": "node js/scripts/installer.js install",
-		"clearSignatures": "node js/scripts/installer.js update clearSignatures"
+		"dropAll": "node scripts/installer.js update all",
+		"updateСached": "node scripts/installer.js update cached",
+		"dropMapperDb": "node scripts/installer.js update mapper",
+		"updateEveDb": "node scripts/installer.js update eve",
+		"updateManualDb": "node scripts/installer.js update other",
+		"updateSwagger": "node scripts/installer.js update swagger",
+		"clone-swagger": "node scripts/installer.js update clone-swagger",
+		"installApp": "node scripts/installer.js install",
+		"clearSignatures": "node scripts/installer.js update clearSignatures"
 	},
 	"dependencies": {
 		"args": "^5.0.1",

@@ -1,7 +1,7 @@
-const Path          = require('./../env/tools/path');
+const Path          = require('../js/env/tools/path');
 const fs            = require('fs');
-const ConfReader    = require("./../utils/configReader");
-const log           = require("./../utils/log.js");
+const ConfReader    = require("../js/utils/configReader");
+const log           = require("../js/utils/log.js");
 const git           = require('simple-git');
 
 

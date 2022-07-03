@@ -32,7 +32,6 @@
     "db": {
         "names" : {
             "eveSde": "eveStaticData",
-            "eveManual": "eveManualData",
             "mapper": "mapper",
 			"cachedESD": "cachedEveStaticData"
         },

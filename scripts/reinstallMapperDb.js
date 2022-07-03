@@ -1,6 +1,6 @@
-const printf     = require('./../env/tools/print_f');
-const ConfReader = require("./../utils/configReader");
-const log        = require("./../utils/log.js");
+const printf     = require('../js/env/tools/print_f');
+const ConfReader = require("../js/utils/configReader");
+const log        = require("../js/utils/log.js");
 
 const config = new ConfReader("conf").build();
 const MAPPER_DB_NAME = config.db.names.mapper;

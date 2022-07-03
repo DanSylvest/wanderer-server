@@ -26,7 +26,7 @@ const installSDE = async function (client, conString) {
     await client.query(`DROP DATABASE IF EXISTS "${EVE_SDE_DB_NAME}";`);
     await client.query(`CREATE DATABASE "${EVE_SDE_DB_NAME}";`);
     log(log.INFO, `Restore dump database ${dumpFile} for ${EVE_SDE_DB_NAME}. ~(2-3 min)`);
-    await execProcess(printf("pg_restore --no-privileges --dbname=%s/%s %s", conString, EVE_SDE_DB_NAME, dirPath["+"]("db/sdeDump")["+"](dumpFile).toString()));
+    await execProcess(printf("pg_restore --no-privileges --dbname=%s/%s %s", conString, EVE_SDE_DB_NAME, dirPath["+"]("eveData/dump")["+"](dumpFile).toString()));
     log(log.INFO, `Installed ${EVE_SDE_DB_NAME}.`);
 }
 

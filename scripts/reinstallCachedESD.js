@@ -38,7 +38,7 @@ class buildSolarSystemTable {
         this.staticDb = new Client(`${conString}/${EVE_STATIC_DATA_DB}`);
 
 
-        let path =  dirPath["+"](["db", "json"]);
+        let path =  dirPath["+"](["eveData", "json"]);
         this.wormholeClassesInfo = JSON.parse(fs.readFileSync(path["+"]("wormholeClassesInfo.json").toString(), "utf8"));
         this.shatteredConstellations = JSON.parse(fs.readFileSync(path["+"]("shatteredConstellations.json").toString(), "utf8"));
 

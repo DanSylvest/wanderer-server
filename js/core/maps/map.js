@@ -208,6 +208,10 @@ class Map extends Emitter {
     }
 
     async dropCharacter(charId) {
+        if(!this.characters[charId]) {
+            return;
+        }
+
         let isOnline = this.characters[charId].isOnline();
         this.characters[charId].destructor();
         delete this.characters[charId];

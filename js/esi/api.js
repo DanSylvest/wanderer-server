@@ -166,19 +166,21 @@ var __esi_uiapi_waypoint = function (_accessToken, addToBeginning, clearOtherWay
     return pr.native;
 };
 
-var _search = function (_categories, _match) {
+var _search = function (_accessToken, characterId, _categories, _match) {
     var pr = new CustomPromise();
 
     var base = extend(publicData, {
-        strict: false
+      token: _accessToken,
+      strict: false
     });
 
-    searchApi.getSearch(_categories, _match, base, function (error, data, response) {
-        if(error)
-            pr.reject(error);
-        else
-            pr.resolve(data);
-    });
+    searchApi.getCharactersCharacterIdSearch(
+      _categories,
+      characterId,
+      _match,
+      base,
+      (err, data) => err ? pr.reject(err) : pr.resolve(data)
+    );
 
     return pr.native;
 };

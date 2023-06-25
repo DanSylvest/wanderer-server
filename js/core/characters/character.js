@@ -15,6 +15,7 @@ const OnlineAttribute = require("./attributes/online");
 const LocationAttribute = require("./attributes/location");
 const ShipAttribute = require("./attributes/ship");
 const WaypointEvent = require("./events/waypoint");
+const Search = require('./utils/search');
 
 class Character extends Emitter {
     constructor(_options) {
@@ -31,6 +32,7 @@ class Character extends Emitter {
         this._refreshAccessTokenMaxCount = 10;
         this._refreshAccessTokenCount = 0;
 
+        this._createUtils();
         this._createEvents();
         this._createCachedAttrs();
     }
@@ -55,6 +57,15 @@ class Character extends Emitter {
         });
 
         !core.eveServer.isOnline() && this.waypoint.serverStatusOffline();
+    }
+
+    _createUtils() {
+        this.search = new Search({
+            accessToken: this.getAccessToken.bind(this),
+            characterId: this.options.characterId
+        });
+
+        !core.eveServer.isOnline() && this.search.serverStatusOffline();
     }
 
     _createCachedAttrs() {
@@ -250,6 +261,7 @@ class Character extends Emitter {
 
     serverStatusOffline() {
         this.waypoint.serverStatusOffline();
+        this.search.serverStatusOffline();
 
         for (let attrName in this._attributes) {
             this._attributes[attrName].serverStatusOffline();
@@ -258,6 +270,7 @@ class Character extends Emitter {
 
     serverStatusOnline() {
         this.waypoint.serverStatusOnline();
+        this.search.serverStatusOnline();
 
         for (let attrName in this._attributes) {
             this._attributes[attrName].serverStatusOnline();

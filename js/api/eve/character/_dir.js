@@ -13,4 +13,5 @@ module.exports = {
     protectedInfo     : require("./protectedInfo"),
     remove            : require("./remove"),
     byUser            : require("./byUser"),
+    search            : require("../character/search.js"),
 };

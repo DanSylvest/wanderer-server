@@ -17,8 +17,8 @@
 		"eve-online"
 	],
 	"scripts": {
-		"dev": "node --inspect js/main.js",
-		"start": "node js/main.js",
+		"dev": "nodemon --inspect=0.0.0.0:9229 js/main.js",
+		"start": "nodemon js/main.js",
 		"dropAll": "node scripts/installer.js update all",
 		"updateСached": "node scripts/installer.js update cached",
 		"dropMapperDb": "node scripts/installer.js update mapper",
@@ -39,5 +39,8 @@
 		"superagent": "^6.1.0",
 		"unzipper": "^0.10.11",
 		"websocket": "^1.0.32"
+	},
+	"devDependencies": {
+		"nodemon": "^2.0.22"
 	}
 }

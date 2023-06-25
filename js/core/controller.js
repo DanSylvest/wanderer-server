@@ -20,6 +20,7 @@ class Controller {
     constructor() {
         this.esiApi = ESI_API;
         this.dbController = new DbController();
+
         this.eveServer = new ServerController();
 
         /** @type {UserController} */

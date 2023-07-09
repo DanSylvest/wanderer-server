@@ -18,9 +18,11 @@ const request = async function (_connectionId, _responseId, _event) {
     try {
         const userId = await core.tokenController.checkToken(token);
         const list = await core.groupsController.getGroupsByOwner(userId);
+        const listByManager = await core.groupsController.getGroupsByManager(userId);
+        const out = [...new Set([...list, ...listByManager])]; // dedupe
 
         api.send(_connectionId, _responseId, {
-            data: list,
+            data: out,
             success: true,
             eventType: responseName,
         });

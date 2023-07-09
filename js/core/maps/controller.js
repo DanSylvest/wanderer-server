@@ -377,7 +377,7 @@ class MapController extends Emitter {
 
         let newGroupDescription;
         if (groupDescription === '') {
-            newGroupDescription = `This group was created in ${currentTime}.`;
+            newGroupDescription = `This access list was created in ${currentTime}.`;
         } else {
             newGroupDescription = groupDescription;
         }
@@ -493,7 +493,7 @@ class MapController extends Emitter {
      * @return {Promise<{id: string, name: string, description: string, hubs: number[]}>}
      */
     async getMapInfo(mapId) {
-        const attributes = ['id', 'name', 'description', 'personalNote', 'hubs'];
+        const attributes = ['id', 'name', 'description', 'personalNote', 'hubs', 'owner'];
         return await core.dbController.mapsDB.get(mapId, attributes);
     }
 

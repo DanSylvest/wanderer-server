@@ -72,8 +72,8 @@ class GroupsController extends Emitter {
         if (exist(alliances))
             await this._abstractUpdateGroupList(DBController.linksTableTypes.groupToAlliance, id, alliances);
 
-        // if (exist(moderators))
-        //     await this._abstractUpdateGroupList(DBController.linksTableTypes.groupToModerator, id, moderators);
+        if (exist(moderators))
+            await this._abstractUpdateGroupList(DBController.linksTableTypes.groupToModerator, id, moderators);
 
         await core.dbController.groupsDB.add({id, owner, name, description});
 
@@ -117,12 +117,12 @@ class GroupsController extends Emitter {
         let updCharactersPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCharacter, _groupId, _props.characters);
         let updCorporationsPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToCorporation, _groupId, _props.corporations);
         let updAlliancesPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToAlliance, _groupId, _props.alliances);
-        // let updModeratorsPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToAlliance, _groupId, _props.moderators);
+        let updModeratorsPr = this._abstractUpdateGroupList(DBController.linksTableTypes.groupToModerator, _groupId, _props.moderators);
 
         let characters = await updCharactersPr;
         let corporations = await updCorporationsPr;
         let alliances = await updAlliancesPr;
-        // let moderators = await updModeratorsPr;
+        let moderators = await updModeratorsPr;
 
         // надо получить всех персонажей, которые в результате данной операции,
         // должны быть отключены от наблюдения со всех карт, к которым прикреплена данная группа
@@ -252,16 +252,39 @@ class GroupsController extends Emitter {
         }], ["id", "name", "description"]);
     }
 
+    async getGroupsByManager(ownerId) {
+        let characters = await core.userController.getUserCharacters(ownerId);
+
+        const groups = await Promise.all(characters.map(x => this.getGroupsByModerator(x)));
+        const flatGroups = [...new Set(groups.flatMap(x => x))]; // dedupe and flat
+
+        if (flatGroups.length === 0) {
+            return [];
+        }
+
+        const out = await core.dbController.groupsDB.getByCondition(
+            {
+                operator: "OR",
+                condition: flatGroups.map(x => ({ name: "id", operator: "=", value: x }))
+            },
+            ["id", "name", "description"]
+        )
+
+        return out;
+    }
+
     async getProtectedInfo(groupId) {
         let charPr = this.getGroupCharacters(groupId);
         let corpPr = this.getGroupCorporations(groupId);
         let allyPr = this.getGroupAlliances(groupId);
+        let moderatorsPr = this.getGroupModerators(groupId);
 
         let characters = await charPr;
         let corporations = await corpPr;
         let alliances = await allyPr;
+        let moderators = await moderatorsPr;
 
-        return {characters, corporations, alliances};
+        return {characters, corporations, alliances, moderators};
     }
 
     async getGroupCharacters(_groupId) {
@@ -286,6 +309,15 @@ class GroupsController extends Emitter {
     async getGroupAlliances(_groupId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.groupToAlliance},
+            {name: "first", operator: "=", value: _groupId}
+        ];
+        let result = await core.dbController.linksTable.getByCondition(condition, ["second"]);
+        return result.map(x => x.second * 1);
+    }
+
+    async getGroupModerators(_groupId) {
+        let condition = [
+            {name: "type", operator: "=", value: DBController.linksTableTypes.groupToModerator},
             {name: "first", operator: "=", value: _groupId}
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["second"]);
@@ -324,6 +356,16 @@ class GroupsController extends Emitter {
     async getGroupsByCharacter(_characterId) {
         let condition = [
             {name: "type", operator: "=", value: DBController.linksTableTypes.groupToCharacter},
+            {name: "second", operator: "=", value: _characterId}
+        ];
+        let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);
+        return result.map(_x => _x.first);
+    }
+
+
+    async getGroupsByModerator(_characterId) {
+        let condition = [
+            {name: "type", operator: "=", value: DBController.linksTableTypes.groupToModerator},
             {name: "second", operator: "=", value: _characterId}
         ];
         let result = await core.dbController.linksTable.getByCondition(condition, ["first"]);

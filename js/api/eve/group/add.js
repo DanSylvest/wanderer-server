@@ -39,7 +39,7 @@ const request = async function (_connectionId, _responseId, _event) {
             success: true
         });
     } catch (err) {
-        helpers.errResponse(_connectionId, _responseId, responseName, "Error on add group", {
+        helpers.errResponse(_connectionId, _responseId, responseName, "Error on add access list", {
             code: 0,
             handledError: err
         });

@@ -28,17 +28,19 @@ const request = async function (_connectionId, _responseId, _event) {
     try {
         const userId = await core.tokenController.checkToken(token);
 
-        const hasAccess = await checkAccessToMapByUser(userId, mapId);
-        if (!hasAccess) {
-            helpers.errResponse(
-                _connectionId, _responseId, responseName,
-                `User '${userId}' has no access to map '${mapId}'`,
-                {code: 2},
-            );
-            return;
-        }
+        const { id, name, description, personalNote: note, hubs, owner } = await core.mapController.getMapInfo(mapId);
 
-        const {id, name, description, personalNote: note, hubs} = await core.mapController.getMapInfo(mapId);
+        if (owner !== userId) { // if user own this map - we should give ability to see this map in list of maps
+            const hasAccess = await checkAccessToMapByUser(userId, mapId);
+            if (!hasAccess) {
+                helpers.errResponse(
+                    _connectionId, _responseId, responseName,
+                    `User '${userId}' has no access to map '${mapId}'`,
+                    {code: 2},
+                );
+                return;
+            }
+        }
 
         api.send(_connectionId, _responseId, {
             data: {id, name, description, note, hubs},

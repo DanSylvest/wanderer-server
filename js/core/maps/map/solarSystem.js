@@ -224,6 +224,7 @@ class MapSolarSystem extends Emitter {
             data: {
                 isLocked: info.isLocked,
                 name: info.name,
+                userName: info.userName,
                 description: info.description,
                 tag: info.tag,
                 status: info.status,

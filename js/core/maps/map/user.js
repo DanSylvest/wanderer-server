@@ -92,7 +92,7 @@ class MapUser extends Emitter {
         if (this._notifyAllowedCharacters) {
             this._allowedCharactersSubscriber.notify({
                 type: "onlineChanged",
-                data: {charId, online}
+                data: { charId, online }
             });
         }
     }

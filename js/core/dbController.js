@@ -258,6 +258,7 @@ class DBController extends Emitter {
                 {name: "mapId",         type: String},
                 {name: "isLocked",      type: Boolean},
                 {name: "name",          type: String},                       // by default it will default solar system name
+                {name: "userName",      type: String,  willEscaped: true},   // user title of system - will override main
                 {name: "description",   type: String,  willEscaped: true},   // some description about this system
                 {name: "tag",           type: String},                       // system tag
                 {name: "status",        type: Number,  defaultValue: 0},     // system tag

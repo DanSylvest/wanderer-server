@@ -423,7 +423,8 @@ class Map extends Emitter{
     const { systemClass } = info;
 
     let isExists = await this.systemExists(solarSystemId, true);
-    let isAbleToEnter = !prohibitedSystemClasses.includes(systemClass) && !prohibitedSystems.includes(solarSystemId);
+    let isAbleToEnter = !prohibitedSystemClasses.includes(parseInt(systemClass))
+      && !prohibitedSystems.includes(parseInt(solarSystemId));
 
     // It happens when system is not exists on map
     if (!isExists && isAbleToEnter) {
@@ -442,15 +443,12 @@ class Map extends Emitter{
     // But also system can be chained by the wormhole also, but we can detect it.
     let isJump = await core.sdeController.checkSystemJump(_oldSystem, _newSystem);
 
-    let isAbleToMove = /*solarSystemTypesNotAbleToMove.indexOf(_newSystem) === -1*/ true;
-    // const solarSystemTypesNotAbleToMove = [19,20,21,22,23,24];
+    const info = await solarSystemSql.getSolarSystemInfo(_newSystem);
+    const { systemClass } = info;
 
-    // This is will filter Jita. Because wormhole can not be open to Jita.
-    switch (_newSystem) {
-      case 30000142:
-        isAbleToMove = false;
-        break;
-    }
+    // This is will filter Jita and Abyss systems.
+    let isAbleToMove = !prohibitedSystemClasses.includes(parseInt(systemClass))
+      && !prohibitedSystems.includes(parseInt(_newSystem));
 
     if (!isJump && isAbleToMove) {
       let isSystemExists = await this.systemExists(_oldSystem);
@@ -791,8 +789,6 @@ const removeIntersection = function (pairsArr) {
   return out;
 };
 
-const solarSystemTypesNotAbleToEnter = [7, 8, 9, 19, 20, 21, 22, 23, 24];
-// const solarSystemTypesNotAbleToMove = [19,20,21,22,23,24];
 const minimumRouteAttrs = [
   'systemClass',
   'classTitle',

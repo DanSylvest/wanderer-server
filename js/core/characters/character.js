@@ -52,6 +52,10 @@ class Character extends Emitter {
     }
 
     _createEvents() {
+      if(this.options.characterId === undefined) {
+        debugger
+      }
+
         this.waypoint = new WaypointEvent({
             accessToken: this.getAccessToken.bind(this)
         });

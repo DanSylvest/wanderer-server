@@ -10,7 +10,7 @@ class Waypoint extends Emitter{
     super();
     this.options = extend({
       accessToken: null,
-      showLogs: true,
+      // showLogs: true,
     }, _options);
 
     this._paused = false;

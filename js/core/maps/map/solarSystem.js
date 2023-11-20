@@ -7,6 +7,7 @@ const CustomPromise = require("./../../../env/promise.js");
 const exist = require("./../../../env/tools/exist.js");
 const Subscriber = require("./../../../utils/subscriber");
 const mapSqlActions = require("./../sql/mapSqlActions.js");
+const { getSolarSystemInfo } = require('../sql/solarSystemSql');
 
 class MapSolarSystem extends Emitter {
     constructor(mapId, solarSystemId) {
@@ -72,11 +73,9 @@ class MapSolarSystem extends Emitter {
         ]
 
         let mapInfo = await core.dbController.mapSystemsTable.getByCondition(condition, core.dbController.mapSystemsTable.attributes());
-        let solarSystemInfo = await core.dbController.solarSystemsTable.getByCondition({
-            name: "solarSystemId", operator: "=", value: this.solarSystemId
-        }, core.dbController.solarSystemsTable.attributes());
+        let solarSystemInfo = await getSolarSystemInfo(this.solarSystemId);
 
-        if (!solarSystemInfo[0])
+        if (!solarSystemInfo)
             throw "exception";
 
         if (!mapInfo[0])

@@ -16,25 +16,26 @@ const MapSubscribers = require('./map/mapSubscribers.js');
 const MapChain = require('./map/chain.js');
 const CollectCharactersForBulk = require('./map/mixins/collectCharactersForBulk.js');
 const { prohibitedSystemClasses, prohibitedSystems } = require('./../helpers/environment');
+const { getSolarSystemInfo } = require('./sql/solarSystemSql');
 
 class Map extends Emitter{
   constructor (_options) {
     super();
     this.options = Object.create(null);
 
-    let __mapId = null;
-    Object.defineProperty(this.options, 'mapId', {
-      get: function () {
-        return __mapId;
-      },
-      set: function (_val) {
-        if (_val === undefined) {
-          debugger;
-        }
-
-        __mapId = _val;
-      },
-    });
+    // let __mapId = null;
+    // Object.defineProperty(this.options, 'mapId', {
+    //   get: function () {
+    //     return __mapId;
+    //   },
+    //   set: function (_val) {
+    //     if (_val === undefined) {
+    //       debugger;
+    //     }
+    //
+    //     __mapId = _val;
+    //   },
+    // });
 
     this.options.mapId = _options.mapId;
 
@@ -420,6 +421,10 @@ class Map extends Emitter{
    */
   async _characterEnterToSystem (_characterId, solarSystemId) {
     let info = await solarSystemSql.getSolarSystemInfo(solarSystemId);
+    if (info === null) {
+      return;
+    }
+
     const { systemClass } = info;
 
     let isExists = await this.systemExists(solarSystemId, true);
@@ -444,6 +449,10 @@ class Map extends Emitter{
     let isJump = await core.sdeController.checkSystemJump(_oldSystem, _newSystem);
 
     const info = await solarSystemSql.getSolarSystemInfo(_newSystem);
+    if (info === null) {
+      return;
+    }
+
     const { systemClass } = info;
 
     // This is will filter Jita and Abyss systems.
@@ -603,7 +612,7 @@ class Map extends Emitter{
       let destination = hubs[a];
       let route = arrRoutes[a];
 
-      let arrInfo = await Promise.all(route.systems.map(x => this.getSolarSystem(x).staticInfo(minimumRouteAttrs)));
+      let arrInfo = await Promise.all(route.systems.map(x => getSolarSystemInfo(x.solarSystemId, minimumRouteAttrs)));
 
       out.push({
         hasConnection: route.hasConnection,

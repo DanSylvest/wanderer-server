@@ -1,10 +1,11 @@
-const Path        = require('../js/env/tools/path');
-const fs          = require('fs');
-const ConfReader  = require("../js/utils/configReader");
-const log         = require("../js/utils/log.js");
-const Client      = require('pg').Client;
-const exist       = require("../js/env/tools/exist");
-const DB          = require("../js/utils/db");
+const Path               = require('../js/env/tools/path');
+const fs                 = require('fs');
+const ConfReader         = require("../js/utils/configReader");
+const log                = require("../js/utils/log.js");
+const Client             = require('pg').Client;
+const exist              = require("../js/env/tools/exist");
+const DB                 = require("../js/utils/db");
+const additionalSystems  = require("./additionalSystems.json");
 require("../js/env/tools/standardTypeExtend");
 
 const config = new ConfReader("conf").build();
@@ -93,6 +94,7 @@ ORDER BY t."solarSystemID"`);
 
         log(log.INFO, `Elements count "${result.rows.length}"`);
         let prarr = [];
+        const ids = new Set();
 
         for(let a = 0; a < result.rows.length; a++) {
             let solarSystemInfo = result.rows[a];
@@ -159,7 +161,19 @@ ORDER BY t."solarSystemID"`);
                 wanderers: wanderers,
                 triglavianInvasionStatus: triglavianInvasionStatus,
             }));
+
+            ids.add(solarSystemInfo.solarSystemID);
         }
+
+        log(log.INFO, "Manual add");
+        additionalSystems.forEach(sys => {
+            if(ids.has(sys.solarSystemId)) {
+                return;
+            }
+
+            prarr.push(this.solarSystemsTable.add(sys))
+        });
+        log(log.INFO, "Manual added");
 
         await Promise.all(prarr);
 

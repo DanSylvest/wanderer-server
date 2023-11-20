@@ -10,66 +10,6 @@ var SdeController = classCreator("SdeController", Emitter, {
     destructor: function () {
         Emitter.prototype.destructor.call(this);
     },
-    getSolarSystemInfo: async function (_solarSystemId) {
-        var pr = new CustomPromise();
-
-        try {
-            var query = `SELECT "regionID", "constellationID", "solarSystemID", "solarSystemName", security
-            FROM public."mapSolarSystems"
-            WHERE "solarSystemID"='` + _solarSystemId + `';`;
-
-            counterLog("SQL", query);
-            var result = await core.dbController.sdeDB.custom(query);
-
-            pr.resolve(result.rowCount > 0 ? result.rows[0] : null);
-
-        } catch (_err) {
-            debugger;
-            pr.reject(_err);
-        }
-
-        return pr.native;
-    },
-    getConstellationInfo: async function (_constellationId) {
-        var pr = new CustomPromise();
-
-        try {
-            var query = `SELECT "constellationName"
-            FROM public."mapConstellations"
-            WHERE "constellationID"='` + _constellationId + `';`;
-
-            counterLog("SQL", query);
-            var result = await core.dbController.sdeDB.custom(query);
-
-            pr.resolve(result.rowCount > 0 ? result.rows[0] : null);
-
-        } catch (_err) {
-            debugger;
-            pr.reject(_err);
-        }
-
-        return pr.native;
-    },
-    getRegionInfo: async function (_regionId) {
-        var pr = new CustomPromise();
-
-        try {
-            var query = `SELECT "regionName"
-            FROM public."mapRegions"
-            WHERE "regionID"='` + _regionId + `';`;
-
-            counterLog("SQL", query);
-            var result = await core.dbController.sdeDB.custom(query);
-
-            pr.resolve(result.rowCount > 0 ? result.rows[0] : null);
-
-        } catch (_err) {
-            debugger;
-            pr.reject(_err);
-        }
-
-        return pr.native;
-    },
     //TODO - Всё это можно пересчитать один раз на установке, и не делать запрос на получение группы шипа
     // Так же можно будет запросить катеогрию и что-нибудь еще - и сложить это всё в одну таблицу.
     async getShipTypeInfo (_shipTypeId) {

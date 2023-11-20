@@ -18,6 +18,7 @@ var corporationApi   = new ESI.CorporationApi();
 var allianceApi      = new ESI.AllianceApi();
 var userInterfaceApi = new ESI.UserInterfaceApi();
 var statusApi        = new ESI.StatusApi();
+const universeApi    = new ESI.UniverseApi();
 
 var publicData = {
     datasource: config.eve.datasource
@@ -236,6 +237,51 @@ const _get_status = function () {
     return pr.native;
 };
 
+const __esi_universeApi_system = function (systemId) {
+  var pr = new CustomPromise();
+
+  var base = extend(publicData, {});
+
+  universeApi.getUniverseSystemsSystemId(systemId, base, function (error, data, response) {
+    if(error)
+      pr.reject(error);
+    else
+      pr.resolve(data);
+  });
+
+  return pr.native;
+};
+
+const __esi_universeApi_constellation = function (constellationId) {
+  var pr = new CustomPromise();
+
+  var base = extend(publicData, {});
+
+  universeApi.getUniverseConstellationsConstellationId(constellationId, base, function (error, data, response) {
+    if(error)
+      pr.reject(error);
+    else
+      pr.resolve(data);
+  });
+
+  return pr.native;
+};
+
+const __esi_universeApi_region = function (regionId) {
+  var pr = new CustomPromise();
+
+  var base = extend(publicData, {});
+
+  universeApi.getUniverseRegionsRegionId(regionId, base, function (error, data, response) {
+    if(error)
+      pr.reject(error);
+    else
+      pr.resolve(data);
+  });
+
+  return pr.native;
+};
+
 module.exports = {
     uiapi: {
         waypoint: __esi_uiapi_waypoint
@@ -254,6 +300,12 @@ module.exports = {
     characters: {
         portrait: __esi_characters_portrait,
         info: __esi_characters_info,
+    },
+
+    universe: {
+      system: __esi_universeApi_system,
+      constellation: __esi_universeApi_constellation,
+      region: __esi_universeApi_region,
     },
     status: _get_status,
     search: _search,

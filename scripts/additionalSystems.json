@@ -1,0 +1,21 @@
+[
+  {
+    "systemClass": 100100,
+    "solarSystemId": 30100000,
+    "solarSystemName": "Zarzakh",
+    "solarSystemNameLC": "zarzakh",
+    "constellationName": "Duzna Kah",
+    "regionName": "Duzna Kah",
+    "constellationId": 20010000,
+    "regionId": 10001000,
+    "security": -1.0,
+    "effectName": "",
+    "effectPower": 0,
+    "statics": [],
+    "wanderers": [],
+    "triglavianInvasionStatus": "Normal",
+    "typeDescription": "Zarzakh",
+    "classTitle": "-1.0",
+    "isShattered": false
+  }
+]

@@ -606,13 +606,17 @@ class Map extends Emitter{
 
     let out = [];
 
-    let arrRoutes = await Promise.all(hubs.map(destination => this.loadRoute(destination, solarSystemId, defaultSettings.pathType, connections, avoidanceList)));
+    let arrRoutes = await Promise.all(
+      hubs.map(destination =>
+        this.loadRoute(destination, solarSystemId, defaultSettings.pathType, connections, avoidanceList),
+      ),
+    );
 
     for (let a = 0; a < arrRoutes.length; a++) {
       let destination = hubs[a];
       let route = arrRoutes[a];
 
-      let arrInfo = await Promise.all(route.systems.map(x => getSolarSystemInfo(x.solarSystemId, minimumRouteAttrs)));
+      let arrInfo = await Promise.all(route.systems.map(x => getSolarSystemInfo(x, minimumRouteAttrs)));
 
       out.push({
         hasConnection: route.hasConnection,
@@ -634,8 +638,8 @@ class Map extends Emitter{
 
     core.esiApi.routes(dest, origin, flag, connections, avoidanceList)
       .then(
-        event => pr.resolve({ hasConnection: true, systems: event }),
-        err => pr.resolve({ hasConnection: false, systems: [dest] }),
+        event => pr.resolve({ hasConnection: event.length > 0, systems: event.length === 0 ? [dest] : event }),
+        () => pr.resolve({ hasConnection: false, systems: [dest] }),
       );
 
     return pr.native;

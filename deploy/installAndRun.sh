@@ -45,6 +45,9 @@ echo "{
       \"client_id\": \"${EVE_CLIENT_KEY}\",
       \"secret_key\": \"${EVE_SECRET_KEY}\"
     }
+  },
+  \"api\": {
+    \"routesHost\": \"${EVE_ROUTE_BUILDER_HOST}\"
   }
 }" > "$ROOT/js/conf/custom.json";
 

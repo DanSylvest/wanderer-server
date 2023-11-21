@@ -120,14 +120,6 @@ class MapSolarSystem extends Emitter {
         return out;
     }
 
-    async staticInfo(attrs) {
-        let result = await core.dbController.solarSystemsTable.getByCondition({
-            name: "solarSystemId", operator: "=", value: this.solarSystemId
-        }, exist(attrs) ? attrs : core.dbController.solarSystemsTable.attributes());
-
-        return result.length === 1 ? result[0] : null;
-    }
-
     async addCharacter(characterId) {
         await mapSqlActions.addCharacterToSystem(this.mapId, this.solarSystemId, characterId);
         this.onlineCharacters.push(characterId);

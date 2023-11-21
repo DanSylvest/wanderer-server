@@ -8,8 +8,8 @@ var CustomPromise    = require("./../env/promise");
 var extend           = require("./../env/tools/extend");
 var exist            = require("./../env/tools/exist");
 var ESI              = require("./generated/javascript-client/src/index.js");
-const fs             = require("fs")
-
+const fs             = require("fs");
+const axios          = require('axios');
 var locationApi      = new ESI.LocationApi();
 var searchApi        = new ESI.SearchApi();
 var routesApi        = new ESI.RoutesApi();
@@ -186,23 +186,19 @@ var _search = function (_accessToken, characterId, _categories, _match) {
     return pr.native;
 };
 
-const _routes = function (destination, origin, flag, connections, avoidanceList) {
-    let pr = new CustomPromise();
-
+const _routes = async function (destination, origin, flag, connections, avoidanceList) {
     let base = extend(publicData, {
         flag: flag || "secure",
         connections: connections || [],
         avoid: avoidanceList || []
     });
 
-    routesApi.getRouteOriginDestination(destination, origin, base, function (error, data, response) {
-        if(error)
-            pr.reject(error);
-        else
-            pr.resolve(data);
-    });
-
-    return pr.native;
+    try {
+        const response = await axios.post(`${config.api.routesHost}/route/${ origin }/${ destination }`, base);
+        return response.data;
+    } catch (error) {
+        return error;
+    }
 };
 
 const _get_status = function () {

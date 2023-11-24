@@ -166,5 +166,11 @@
 		"shortName": "P",
 		"wormholeClassID": 25,
 		"title": "Triglavian space (Pochven)"
+	},
+	{
+		"id": "zarzakh",
+		"shortName": "N",
+		"wormholeClassID": 10100,
+		"title": "Pirate space"
 	}
 ]

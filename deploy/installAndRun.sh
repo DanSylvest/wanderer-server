@@ -65,7 +65,7 @@ if [ "$(find eveData | grep dump)" == "" ]; then
 fi
 
 cd "$ROOT/eveData/dump" || exit;
-rm -rf .
+rm -f *
 
 latestURL='https://www.fuzzwork.co.uk/dump/latest/';
 RX='postgres.*TRANQUILITY.dmp';

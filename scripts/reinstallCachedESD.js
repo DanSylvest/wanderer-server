@@ -171,7 +171,10 @@ ORDER BY t."solarSystemID"`);
                 return;
             }
 
-            prarr.push(this.solarSystemsTable.add(sys))
+            prarr.push(this.solarSystemsTable.add({
+              ...sys,
+              security: sys.security.toFixed(1)
+            }))
         });
         log(log.INFO, "Manual added");
 
@@ -201,6 +204,10 @@ ORDER BY t."solarSystemID"`);
     }
 
     async systemClass (regionId, constellationId, solarSystemId) {
+        if (solarSystemId === 30100000) { // Zarzakh
+          return 10100;
+        }
+
         let query = `Select Table1.*
                 FROM
                   (Select CASE

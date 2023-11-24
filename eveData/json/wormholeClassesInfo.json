@@ -25,7 +25,8 @@
 		"a4": 22,
 		"a5": 23,
 		"ccp4": 24,
-		"pochven": 25
+		"pochven": 25,
+		"zarzakh": 10100
 	},
 	"classes": {
 		"-1": "ccp1",
@@ -53,6 +54,7 @@
 		"22": "a4",
 		"23": "a5",
 		"24": "ccp4",
-		"25": "pochven"
+		"25": "pochven",
+		"10100": "zarzakh"
 	}
 }

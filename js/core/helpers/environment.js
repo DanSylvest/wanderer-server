@@ -25,6 +25,7 @@ const systemClasses = {
   a5: 23,
   ccp4: 24,
   pochven: 25,
+  zarzakh: 10100,
 
   unknown: 100100, // this class of systems will guaranty that no one real class will take that place
 };

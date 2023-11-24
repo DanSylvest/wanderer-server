@@ -1,6 +1,6 @@
 [
   {
-    "systemClass": 100100,
+    "systemClass": 10100,
     "solarSystemId": 30100000,
     "solarSystemName": "Zarzakh",
     "solarSystemNameLC": "zarzakh",
@@ -15,7 +15,7 @@
     "wanderers": [],
     "triglavianInvasionStatus": "Normal",
     "typeDescription": "Zarzakh",
-    "classTitle": "-1.0",
+    "classTitle": "",
     "isShattered": false
   }
 ]

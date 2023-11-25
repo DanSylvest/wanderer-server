@@ -17,6 +17,7 @@ const MapChain = require('./map/chain.js');
 const CollectCharactersForBulk = require('./map/mixins/collectCharactersForBulk.js');
 const { prohibitedSystemClasses, prohibitedSystems } = require('./../helpers/environment');
 const { getSolarSystemInfo } = require('./sql/solarSystemSql');
+const { getSystemInfo } = require('./sql/mapSqlActions');
 
 class Map extends Emitter{
   constructor (_options) {
@@ -617,12 +618,14 @@ class Map extends Emitter{
       let route = arrRoutes[a];
 
       let arrInfo = await Promise.all(route.systems.map(x => getSolarSystemInfo(x, minimumRouteAttrs)));
+      let info = await getSystemInfo(this.options.mapId, destination, true);
 
       out.push({
         hasConnection: route.hasConnection,
         systems: arrInfo,
         origin: solarSystemId,
-        destination: destination,
+        destination,
+        destinationName: info?.userName || arrInfo[arrInfo.length - 1].solarSystemName,
       });
     }
 

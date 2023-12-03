@@ -1,8 +1,9 @@
 /**
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/20/20.
  */
-const helpers = require("./../../../../utils/helpers.js");
-const responseName = "responseEveMapSystemRemove";
+const helpers = require('./../../../../utils/helpers.js');
+const { saveMapUserActions } = require('../../../../core/maps/sql/mapSqlUserActions');
+const responseName = 'responseEveMapSystemRemove';
 
 /**
  *
@@ -14,31 +15,33 @@ const responseName = "responseEveMapSystemRemove";
  * @returns {Promise<void>}
  */
 const request = async function (_connectionId, _responseId, _event) {
-    // we need get token by connection
-    const token = core.connectionStorage.get(_connectionId);
+  // we need get token by connection
+  const token = core.connectionStorage.get(_connectionId);
 
-    // when token is undefined - it means what you have no rights
-    if (token === undefined) {
-        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
-        return;
-    }
+  // when token is undefined - it means what you have no rights
+  if (token === undefined) {
+    helpers.errResponse(_connectionId, _responseId, responseName, 'You not authorized or token was expired', { code: 1 });
+    return;
+  }
 
-    try {
-        await core.tokenController.checkToken(token);
+  try {
+    const userId = await core.tokenController.checkToken(token);
 
-        let map = core.mapController.get(_event.mapId);
-        await Promise.all(_event.systemIds.map(x => map.systemRemove(x.toString())));
+    let map = core.mapController.get(_event.mapId);
+    await Promise.all(_event.systemIds.map(x => map.systemRemove(x.toString())));
 
-        api.send(_connectionId, _responseId, {
-            success: true,
-            eventType: responseName
-        });
-    } catch (err) {
-        helpers.errResponse(_connectionId, _responseId, responseName, "Error on remove solar system", {
-            code: 0,
-            handledError: err
-        });
-    }
+    await saveMapUserActions(userId, _event.mapId, 'removeSolarSystems', { solarSystemIds: _event.systemIds });
+
+    api.send(_connectionId, _responseId, {
+      success: true,
+      eventType: responseName,
+    });
+  } catch (err) {
+    helpers.errResponse(_connectionId, _responseId, responseName, 'Error on remove solar system', {
+      code: 0,
+      handledError: err,
+    });
+  }
 };
 
 module.exports = request;

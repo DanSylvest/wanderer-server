@@ -494,7 +494,10 @@ class Map extends Emitter{
 
     if (!link) {
       await this._addLink(sourceSolarSystemId, targetSolarSystemId);
+      return true;
     }
+
+    return false;
   }
 
   async addManual (solarSystemId, x, y) {
@@ -502,7 +505,9 @@ class Map extends Emitter{
     let solarSystem = this._systems[solarSystemId];
     let result = await solarSystem.isSystemExistsAndVisible();
 
+
     if (result.visible) {
+      return false;
       throw 'System already exists in map';
     }
 
@@ -514,6 +519,8 @@ class Map extends Emitter{
         await this._characterJoinToSystem(characterId, solarSystemId);
       }
     }
+
+    return true;
   }
 
   async addHub (solarSystemId) {

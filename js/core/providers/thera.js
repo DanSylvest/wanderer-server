@@ -62,7 +62,7 @@ const TheraProvider = classCreator("TheraProvider", Provider, {
 const theraAPIRequest = function () {
     let pr = new CustomPromise();
 
-    request.get({url: 'https://www.eve-scout.com/api/wormholes'}, function (error, response, body) {
+    request.get({url: 'https://api.eve-scout.com/v2/public/signatures?system_name=thera'}, function (error, response, body) {
 
         if(!error) {
             switch (response.statusCode) {

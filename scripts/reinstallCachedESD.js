@@ -77,6 +77,7 @@ class buildSolarSystemTable {
                 {name: "wanderers",                type: Array},
                 {name: "solarSystemNameLC",        type: String},
                 {name: "triglavianInvasionStatus", type: String},
+                {name: "sunTypeId",                type: Number},
             ]
         });
         await this.solarSystemsTable.init();
@@ -89,6 +90,7 @@ class buildSolarSystemTable {
      , t."solarSystemName"
      , t.security
      , t."factionID"
+     , t."sunTypeID"
 FROM public."mapSolarSystems" t
 ORDER BY t."solarSystemID"`);
 
@@ -160,6 +162,7 @@ ORDER BY t."solarSystemID"`);
                 statics: statics,
                 wanderers: wanderers,
                 triglavianInvasionStatus: triglavianInvasionStatus,
+                sunTypeId: solarSystemInfo.sunTypeID,
             }));
 
             ids.add(solarSystemInfo.solarSystemID);

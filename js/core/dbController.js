@@ -310,6 +310,7 @@ class DBController extends Emitter{
         { name: 'wanderers', type: Array },
         { name: 'solarSystemNameLC', type: String },
         { name: 'triglavianInvasionStatus', type: String },
+        { name: 'sunTypeId', type: Number },
       ],
     });
   }

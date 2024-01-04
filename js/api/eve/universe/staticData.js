@@ -22,6 +22,7 @@ const request = async function (_connectionId, _responseId, _event) {
             effects: core.staticData.effects,
             wormholeClasses: core.staticData.wormholeClasses,
             wormholes: core.staticData.wormholes,
+            sunTypes: core.staticData.sunTypes,
         },
         success: true,
         eventType: responseName

@@ -38,6 +38,28 @@ const prohibitedSystems = [
   namedSystems.Jita,
 ];
 
+const whSpace = [
+  systemClasses.c1,
+  systemClasses.c2,
+  systemClasses.c3,
+  systemClasses.c4,
+  systemClasses.c5,
+  systemClasses.c6,
+  systemClasses.c13,
+  systemClasses.thera,
+  systemClasses.sentinel,
+  systemClasses.baribican,
+  systemClasses.vidette,
+  systemClasses.conflux,
+  systemClasses.redoubt,
+]
+
+const knownSpace = [
+  systemClasses.hs,
+  systemClasses.ls,
+  systemClasses.ns,
+]
+
 const prohibitedSystemClasses = [
   systemClasses.a1,
   systemClasses.a2,
@@ -48,6 +70,8 @@ const prohibitedSystemClasses = [
 ];
 
 module.exports = {
+  whSpace,
+  knownSpace,
   systemClasses,
   namedSystems,
   prohibitedSystemClasses,

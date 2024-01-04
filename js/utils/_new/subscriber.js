@@ -18,7 +18,8 @@ class SubscriptionsController extends Emitter {
             onStart: () => {},
             onStop: () => {},
             responseCommand: "",
-            changeCheck: true
+            changeCheck: true,
+            showLog: false
         }, _options);
 
         this._subscribers = [];
@@ -32,7 +33,7 @@ class SubscriptionsController extends Emitter {
     }
 
     addSubscriber(_connectionId, _responseId) {
-        log(log.DEBUG, printf("SubscriptionController [%s] add subscriber [%s - %s]", this.options.name, _connectionId, _responseId));
+        this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] add subscriber [%s - %s]", this.options.name, _connectionId, _responseId));
 
         this._subscribers.push({
             connectionId: _connectionId,
@@ -45,7 +46,7 @@ class SubscriptionsController extends Emitter {
     }
 
     removeSubscriber(_connectionId, _responseId) {
-        log(log.DEBUG, printf("SubscriptionController [%s] remove subscriber [%s - %s]", this.options.name, _connectionId, _responseId));
+        this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] remove subscriber [%s - %s]", this.options.name, _connectionId, _responseId));
 
         for (var a = 0; a < this._subscribers.length; a++) {
             if (this._subscribers[a].connectionId === _connectionId && this._subscribers[a].responseId === _responseId) {
@@ -60,7 +61,7 @@ class SubscriptionsController extends Emitter {
     }
 
     removeSubscribersByConnection(_connectionId) {
-        log(log.DEBUG, printf("SubscriptionController [%s] remove subscriber by connection [%s]", this.options.name, _connectionId));
+        this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] remove subscriber by connection [%s]", this.options.name, _connectionId));
         for (var a = 0; a < this._subscribers.length; a++) {
             if (this._subscribers[a].connectionId === _connectionId) {
                 this._subscribers.removeByIndex(a);
@@ -80,7 +81,7 @@ class SubscriptionsController extends Emitter {
     }
 
     _onValueChanged(_value) {
-        log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
+        this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
 
         if (this._subscribers.length > 0) {
             this._notify();
@@ -90,7 +91,7 @@ class SubscriptionsController extends Emitter {
     notifyFor(connectionId, responseId, data) {
         if (!this.options.changeCheck || this._data !== data) {
             this._data = data;
-            log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
+            this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
 
             if (this._subscribers.length > 0) {
                 for (let a = 0; a < this._subscribers.length; a++) {
@@ -108,7 +109,7 @@ class SubscriptionsController extends Emitter {
         if (!this.options.changeCheck || this._data !== _data) {
 
             this._data = _data;
-            log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
+            this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
 
             if (this._subscribers.length > 0) {
                 this._notify();
@@ -117,7 +118,7 @@ class SubscriptionsController extends Emitter {
     }
 
     _notify() {
-        log(log.DEBUG, printf("SubscriptionController [%s] notify subscribers", this.options.name));
+        this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] notify subscribers", this.options.name));
 
         for (var a = 0; a < this._subscribers.length; a++) {
             var subscriber = this._subscribers[a];

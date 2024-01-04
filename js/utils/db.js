@@ -154,7 +154,7 @@ var Table = classCreator("Table", Emitter, {
             name: null,
             properties: [],
             idField: "id",
-            enableLog: true
+            enableLog: false
         }, _options);
 
         Emitter.prototype.constructor.call(this);

@@ -17,7 +17,8 @@ var SubscriptionsController = classCreator("SubscriptionsController", Emitter, {
             onStart: null,
             onStop: null,
             responseCommand: "",
-            changeCheck: true
+            changeCheck: true,
+            showLog: false
         }, _options);
 
         Emitter.prototype.constructor.call(this);
@@ -31,7 +32,7 @@ var SubscriptionsController = classCreator("SubscriptionsController", Emitter, {
         Emitter.prototype.destructor.call(this);
     },
     addSubscriber: function (_connectionId, _responseId) {
-        log(log.DEBUG, printf("SubscriptionController [%s] add subscriber [%s - %s]", this.options.name, _connectionId, _responseId));
+        this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] add subscriber [%s - %s]", this.options.name, _connectionId, _responseId));
 
         this._subscribers.push({
             connectionId: _connectionId,
@@ -43,7 +44,7 @@ var SubscriptionsController = classCreator("SubscriptionsController", Emitter, {
         }
     },
     removeSubscriber: function (_connectionId, _responseId) {
-        log(log.DEBUG, printf("SubscriptionController [%s] remove subscriber [%s - %s]", this.options.name, _connectionId, _responseId));
+        this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] remove subscriber [%s - %s]", this.options.name, _connectionId, _responseId));
 
         for (var a = 0; a < this._subscribers.length; a++) {
             if(this._subscribers[a].connectionId === _connectionId && this._subscribers[a].responseId === _responseId) {
@@ -57,7 +58,7 @@ var SubscriptionsController = classCreator("SubscriptionsController", Emitter, {
         }
     },
     removeSubscribersByConnection: function (_connectionId) {
-        log(log.DEBUG, printf("SubscriptionController [%s] remove subscriber by connection [%s]", this.options.name, _connectionId));
+        this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] remove subscriber by connection [%s]", this.options.name, _connectionId));
         for (var a = 0; a < this._subscribers.length; a++) {
             if(this._subscribers[a].connectionId === _connectionId) {
                 this._subscribers.removeByIndex(a);
@@ -75,7 +76,7 @@ var SubscriptionsController = classCreator("SubscriptionsController", Emitter, {
         return this._subscribers.length > 0;
     },
     _onValueChanged: function (_value) {
-        log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
+        this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
 
         if(this._subscribers.length > 0) {
             this._notify();
@@ -84,7 +85,7 @@ var SubscriptionsController = classCreator("SubscriptionsController", Emitter, {
     notifyFor (connectionId, responseId, data) {
         if(!this.options.changeCheck || this._data !== data){
             this._data = data;
-            log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
+            this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
 
             if(this._subscribers.length > 0) {
                 for (let a = 0; a < this._subscribers.length; a++) {
@@ -101,7 +102,7 @@ var SubscriptionsController = classCreator("SubscriptionsController", Emitter, {
         if(!this.options.changeCheck || this._data !== _data){
 
             this._data = _data;
-            log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
+            this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] value updated [%s]", this.options.name, JSON.stringify(this._data)));
 
             if(this._subscribers.length > 0) {
                 this._notify();
@@ -109,7 +110,7 @@ var SubscriptionsController = classCreator("SubscriptionsController", Emitter, {
         }
     },
     _notify: function () {
-        log(log.DEBUG, printf("SubscriptionController [%s] notify subscribers", this.options.name));
+        this.options.showLog && log(log.DEBUG, printf("SubscriptionController [%s] notify subscribers", this.options.name));
 
         for (var a = 0; a < this._subscribers.length; a++) {
             var subscriber = this._subscribers[a];

@@ -71,7 +71,7 @@ var Connector = classCreator("Connector", Emitter, {
     },
     _onMessage: function(_connection_id, _message){
         if (_message.type === 'utf8') {
-            log(log.INFO, "\nIN:\n" + _message.utf8Data.toString());
+            // log(log.INFO, "\nIN:\n" + _message.utf8Data.toString());
             this.emit("data", _connection_id, JSON.parse(_message.utf8Data));
         }
     },
@@ -82,7 +82,7 @@ var Connector = classCreator("Connector", Emitter, {
         }
 
         var str = JSON.stringify(_data);
-        log(log.DEBUG, "\nOUT:\n" + str);
+        false && log(log.DEBUG, "\nOUT:\n" + str);
 
         var send = function () {
             try {

@@ -66,7 +66,14 @@ class ZkbDataProvider extends Emitter{
   }
 
   async loadSystemData () {
-    const res = await this.fetchSystemData();
+    let res;
+    try {
+      res = await this.fetchSystemData();
+    } catch (err) {
+      this.tick();
+      return;
+    }
+
     if (res.status === axios.HttpStatusCode.BadRequest) {
       this.tick();
       return;

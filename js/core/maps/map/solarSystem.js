@@ -4,11 +4,11 @@
 
 const Emitter = require('./../../../env/_new/tools/emitter');
 const CustomPromise = require('./../../../env/promise.js');
-const exist = require('./../../../env/tools/exist.js');
+// const exist = require('./../../../env/tools/exist.js');
 const Subscriber = require('./../../../utils/subscriber');
 const mapSqlActions = require('./../sql/mapSqlActions.js');
 const { getSolarSystemInfo } = require('../sql/solarSystemSql');
-const { ZkbDataProvider } = require('../../providers/zkbSystemProvider');
+// const { ZkbDataProvider } = require('../../providers/zkbSystemProvider');
 
 class MapSolarSystem extends Emitter{
   constructor (mapId, solarSystemId) {
@@ -19,23 +19,23 @@ class MapSolarSystem extends Emitter{
     this.onlineCharacters = [];
     this._loadPromise = new CustomPromise();
     this._notifyDynamicInfoSubscriber = false;
-    this.createZkbProvider();
+    // this.createZkbProvider();
   }
 
   destructor () {
     this._loadPromise.native.cancel();
     this._loadPromise = new CustomPromise();
     this.onlineCharacters = [];
-    this.zkbProvider.destructor();
-    delete this.zkbProvider;
+    // this.zkbProvider.destructor();
+    // delete this.zkbProvider;
 
     super.destructor();
   }
 
-  createZkbProvider () {
-    this.zkbProvider = new ZkbDataProvider(this.solarSystemId);
-    this.zkbProvider.on('loaded', this.onZkbProviderLoaded.bind(this));
-  }
+  // createZkbProvider () {
+  //   this.zkbProvider = new ZkbDataProvider(this.solarSystemId);
+  //   this.zkbProvider.on('loaded', this.onZkbProviderLoaded.bind(this));
+  // }
 
   connectionBreak (_connectionId) {
     this._notifyDynamicInfoSubscriber && this._dynamicInfoSubscriber.removeSubscribersByConnection(_connectionId);
@@ -76,17 +76,17 @@ class MapSolarSystem extends Emitter{
     });
   }
 
-  onZkbProviderLoaded ({ kills, type }) {
-    if (this._notifyDynamicInfoSubscriber) {
-      this._dynamicInfoSubscriber.notify({
-        type: 'systemUpdated',
-        data: {
-          killsCount: kills.length,
-          activityState: type,
-        },
-      });
-    }
-  }
+  // onZkbProviderLoaded ({ kills, type }) {
+  //   if (this._notifyDynamicInfoSubscriber) {
+  //     this._dynamicInfoSubscriber.notify({
+  //       type: 'systemUpdated',
+  //       data: {
+  //         killsCount: kills.length,
+  //         activityState: type,
+  //       },
+  //     });
+  //   }
+  // }
 
   async getInfo () {
     let condition = [
@@ -105,7 +105,7 @@ class MapSolarSystem extends Emitter{
       throw 'exception';
     }
 
-    const zkbInfo = this.zkbProvider.info();
+    // const zkbInfo = this.zkbProvider.info();
 
     solarSystemInfo = solarSystemInfo[0];
     mapInfo = mapInfo[0];
@@ -142,8 +142,8 @@ class MapSolarSystem extends Emitter{
       onlineCount: this.onlineCharacters.length,
       onlineCharacters: this.onlineCharacters,
 
-      killsCount: zkbInfo.kills.length,
-      activityState: zkbInfo.type,
+      // killsCount: zkbInfo.kills.length,
+      // activityState: zkbInfo.type,
     };
 
     return out;
@@ -211,10 +211,10 @@ class MapSolarSystem extends Emitter{
         responseCommand: 'responseEveMapSolarSystemData',
         onStart: function () {
           this._notifyDynamicInfoSubscriber = true;
-          this.zkbProvider.start();
+          // this.zkbProvider.start();
         }.bind(this),
         onStop: function () {
-          this.zkbProvider.stop();
+          // this.zkbProvider.stop();
           this._notifyDynamicInfoSubscriber = false;
         }.bind(this),
       });
@@ -241,7 +241,7 @@ class MapSolarSystem extends Emitter{
       return;
     }
 
-    const zkbInfo = this.zkbProvider.info();
+    // const zkbInfo = this.zkbProvider.info();
 
     this._dynamicInfoSubscriber.notifyFor(connectionId, responseId, {
       type: 'bulk',
@@ -256,8 +256,8 @@ class MapSolarSystem extends Emitter{
         position: info.position,
         onlineCount: this.onlineCharacters.length,
         onlineCharacters: this.onlineCharacters,
-        killsCount: zkbInfo.kills.length,
-        activityState: zkbInfo.type,
+        // killsCount: zkbInfo.kills.length,
+        // activityState: zkbInfo.type,
       },
     });
   }

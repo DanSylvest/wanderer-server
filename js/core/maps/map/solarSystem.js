@@ -138,8 +138,8 @@ class MapSolarSystem extends Emitter{
       onlineCount: this.onlineCharacters.length,
       onlineCharacters: this.onlineCharacters,
 
-      // killsCount: zkbInfo.kills.length,
-      // activityState: zkbInfo.type,
+      killsCount: this.zkbInfo.kills.length,
+      activityState: this.zkbInfo.zkbInfo.type,
     };
 
     return out;
@@ -207,10 +207,8 @@ class MapSolarSystem extends Emitter{
         responseCommand: 'responseEveMapSolarSystemData',
         onStart: function () {
           this._notifyDynamicInfoSubscriber = true;
-          // this.zkbProvider.start();
         }.bind(this),
         onStop: function () {
-          // this.zkbProvider.stop();
           this._notifyDynamicInfoSubscriber = false;
         }.bind(this),
       });
@@ -233,11 +231,8 @@ class MapSolarSystem extends Emitter{
     let info = await mapSqlActions.getSystemInfo(this.mapId, this.solarSystemId);
 
     if (info === null) {
-      // debugger;
       return;
     }
-
-    // const zkbInfo = this.zkbProvider.info();
 
     this._dynamicInfoSubscriber.notifyFor(connectionId, responseId, {
       type: 'bulk',

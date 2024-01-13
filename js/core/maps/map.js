@@ -11,6 +11,7 @@ const MapSolarSystem = require('./map/solarSystem.js');
 const mapSqlActions = require('./sql/mapSqlActions.js');
 const solarSystemSql = require('./sql/solarSystemSql.js');
 const ChainsManager = require('./map/chainsManager.js');
+const {ZkbSystemsProvider} = require('./../providers/ZkbSystemsProvider.js');
 const log = require('./../../utils/log.js');
 const MapSubscribers = require('./map/mapSubscribers.js');
 const MapChain = require('./map/chain.js');
@@ -73,9 +74,11 @@ class Map extends Emitter{
     this._addingSystems = Object.create(null);
 
     this._createChainsManager();
+    this._createZkbSystemsProvider();
   }
 
   destructor () {
+    this.zkbSystemsProvider.destructor();
     this.chainsManager.destructor();
     this.subscribers.destructor();
 
@@ -84,6 +87,7 @@ class Map extends Emitter{
 
   async init () {
     this.chainsManager.start();
+    this.zkbSystemsProvider.start();
   }
 
   deinit () {
@@ -98,6 +102,8 @@ class Map extends Emitter{
     for (let characterId in this.characters) {
       this.characters[characterId].destructor();
     }
+
+    this.zkbSystemsProvider.stop();
 
     this.options = Object.create(null);
     this.characters = Object.create(null);
@@ -119,6 +125,10 @@ class Map extends Emitter{
   getSolarSystem (solarSystemId) {
     this._createSystemObject(solarSystemId);
     return this._systems[solarSystemId];
+  }
+
+  hasSolarSystem (systemId) {
+    return exist(this._systems[systemId]);
   }
 
   async getChain (chainId) {
@@ -158,12 +168,17 @@ class Map extends Emitter{
   _createChainsManager () {
     this.chainsManager = new ChainsManager(this.options.mapId);
     this.chainsManager.on('changedChains', this._onChainsChanged.bind(this));
+  }
 
+  _createZkbSystemsProvider () {
+    this.zkbSystemsProvider = new ZkbSystemsProvider([]);
+    this.zkbSystemsProvider.on('loaded', this.onZkbInfoLoaded.bind(this));
   }
 
   _createSystemObject (_systemId) {
     if (!exist(this._systems[_systemId])) {
       this._systems[_systemId] = new MapSolarSystem(this.options.mapId, _systemId);
+      this.zkbSystemsProvider.addSystem(_systemId);
     }
   }
 
@@ -200,6 +215,15 @@ class Map extends Emitter{
     log(log.WARN, `STOPPED observe [${ this.options.mapId }:${ charId }]`);
 
     this.characters[charId] && this.characters[charId].startDropTimer();
+  }
+
+  async onZkbInfoLoaded (data) {
+    data.forEach(({ systemId, ...data }) => {
+      if(!this._systems[systemId]) {
+        return;
+      }
+      this._systems[systemId].updateZkbKills(data)
+    })
   }
 
   async _onCharacterDrop (characterId) {
@@ -748,6 +772,7 @@ class Map extends Emitter{
     }));
 
     this.subscribers.notifySystemRemoved(_systemId);
+    this.zkbSystemsProvider.removeSystem(_systemId);
 
     this._systems[_systemId].destructor();
 

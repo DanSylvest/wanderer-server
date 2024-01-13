@@ -1,7 +1,4 @@
 // link example https://zkillboard.com/api/w-space/systemID/31002041/pastSeconds/3600/
-
-const { getSolarSystemInfo } = require('../maps/sql/solarSystemSql');
-
 const Emitter = require('./../../env/_new/tools/emitter');
 const { random } = require('./../../env/_new/tools/random');
 const { systemClasses, whSpace, knownSpace } = require('../helpers/environment');
@@ -9,26 +6,27 @@ const axios = require('axios');
 
 // const TIME_IN_PAST = 60 * 60 * 1;
 // const DELAY_RANDOM_MAX_MS = 1000 * 60 * 5;
-const REQUEST_TIMEOUT_MS = 1000 * 60 * 1
+// const REQUEST_TIMEOUT_MS = 1000 * 60 * 1
+const REQUEST_TIMEOUT_MS = 1000 * 10;
 
 // const DELAY_RANDOM_MAX_MS = 1000 * 10;
 // const REQUEST_TIMEOUT_MS = 1000 * 10;
 
-class ZkbDataProvider extends Emitter{
-  systemIds = [];
-  systemsData = [];
-  data = [];
+class ZkbSystemsProvider extends Emitter{
+  systemIds = new Map();
   tid = -1;
 
   constructor (systemIds) {
     super();
 
-    this.systemIds = systemIds;
+    this.systemIds = new Map();
+    systemIds.map(x => {
+      this.systemIds.set(parseInt(x), []);
+    });
   }
 
   destructor () {
-    this.data = [];
-    this.systemId = undefined;
+    this.systemIds.clear();
 
     if (this.tid !== -1) {
       clearTimeout(this.tid);
@@ -38,13 +36,7 @@ class ZkbDataProvider extends Emitter{
     super.destructor();
   }
 
-  async start () {
-    const { systemClass } = await getSolarSystemInfo(this.systemId);
-    this.systemClass = systemClass;
-    if (!this.availableSpaces(systemClass)) {
-      return;
-    }
-
+  start () {
     this.tid = setTimeout(async () => {
       this.tid = -1;
       await this.loadSystemData();
@@ -56,7 +48,6 @@ class ZkbDataProvider extends Emitter{
       clearTimeout(this.tid);
       this.tid = -1;
     }
-
   }
 
   tick () {
@@ -66,13 +57,17 @@ class ZkbDataProvider extends Emitter{
   }
 
   addSystem (systemId) {
-    this.systemIds.push(systemId);
+    this.systemIds.set(parseInt(systemId), []);
+  }
+
+  removeSystem (systemId) {
+    this.systemIds.delete(Number.isInteger(systemId) ? systemId : parseInt(systemId));
   }
 
   async loadSystemData () {
     let res;
     try {
-      res = await this.fetchSystemData();
+      res = await this.fetchData();
     } catch (err) {
       this.tick();
       return;
@@ -88,12 +83,10 @@ class ZkbDataProvider extends Emitter{
       return;
     }
 
-    if (this.data.length === res.data.length) {
-      this.tick();
-      return;
-    }
+    res.data.forEach(({ systemId, kills }) => {
+      this.systemIds.has(systemId) && this.systemIds.set(systemId, kills);
+    });
 
-    this.data = res.data;
     this.emit('loaded', this.info());
     this.tick();
   }
@@ -114,30 +107,21 @@ class ZkbDataProvider extends Emitter{
     return 'danger';
   }
 
-  info () {
+  getKillInfo (systemId, kills) {
     return {
-      systemId: this.systemId,
-      kills: this.data,
-      type: this.getActivityType(this.data),
+      systemId: parseInt(systemId),
+      kills,
+      type: this.getActivityType(kills),
     };
   }
 
-  availableSpaces (systemClass) {
-    return whSpace.includes(systemClass)
-      || knownSpace.includes(systemClass)
-      || systemClasses.pochven === systemClass;
+  info() {
+    return [...this.systemIds.entries()].map(([systemId, kills]) => this.getKillInfo(systemId, kills))
   }
 
-  async fetchSystemData () {
-    const type = whSpace.includes(this.systemClass) ? 'w-space/' : '';
-
-    return axios.post(
-      `http://zkbkills:2002/kills/systems/`,
-      {
-        systemIds: []
-      },
-    );
+  async fetchData () {
+    return axios.post(`http://zkbkills:2002/kills/systems`, { systemIds: [...this.systemIds.keys()] });
   }
 }
 
-module.exports = { ZkbDataProvider };
+module.exports = { ZkbSystemsProvider };

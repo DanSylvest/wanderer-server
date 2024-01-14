@@ -1,6 +1,5 @@
 // link example https://zkillboard.com/api/w-space/systemID/31002041/pastSeconds/3600/
 const Emitter = require('./../../env/_new/tools/emitter');
-const { random } = require('./../../env/_new/tools/random');
 const axios = require('axios');
 const log = require("./../../utils/log");
 
@@ -8,11 +7,13 @@ const REQUEST_TIMEOUT_MS = 1000 * 20;
 
 class ZkbSystemsProvider extends Emitter{
   systemIds = new Map();
+  mapId;
   tid = -1;
 
-  constructor (systemIds) {
+  constructor (mapId, systemIds) {
     super();
 
+    this.mapId = mapId;
     this.systemIds = new Map();
     systemIds.map(x => {
       this.systemIds.set(parseInt(x), []);
@@ -31,10 +32,14 @@ class ZkbSystemsProvider extends Emitter{
   }
 
   start () {
+    if(this.tid !== -1) {
+      return;
+    }
+
     this.tid = setTimeout(async () => {
       this.tid = -1;
       await this.loadSystemData();
-    }, random(0, REQUEST_TIMEOUT_MS));
+    }, REQUEST_TIMEOUT_MS);
   }
 
   stop () {
@@ -47,7 +52,7 @@ class ZkbSystemsProvider extends Emitter{
   tick () {
     this.tid = setTimeout(async () => {
       await this.loadSystemData();
-    }, random(0, REQUEST_TIMEOUT_MS));
+    }, REQUEST_TIMEOUT_MS);
   }
 
   addSystem (systemId) {
@@ -59,6 +64,11 @@ class ZkbSystemsProvider extends Emitter{
   }
 
   async loadSystemData () {
+    if(this.systemIds.size === 0) {
+      this.tick();
+      return;
+    }
+
     let res;
     try {
       res = await this.fetchData();
@@ -67,23 +77,15 @@ class ZkbSystemsProvider extends Emitter{
       return;
     }
 
-    log(log.DEBUG, 'loadSystemData res', res.status);
-
     if (res.status === axios.HttpStatusCode.BadRequest) {
       this.tick();
       return;
     }
 
-    log(log.DEBUG, 'loadSystemData Not bad request', res.status);
-
-
     if (res.status !== axios.HttpStatusCode.Ok) {
       this.tick();
       return;
     }
-
-
-    log(log.DEBUG, 'loadSystemData OK request', res.status);
 
     res.data.forEach(({ systemId, kills }) => {
       this.systemIds.has(systemId) && this.systemIds.set(systemId, kills);
@@ -122,16 +124,11 @@ class ZkbSystemsProvider extends Emitter{
   }
 
   async fetchData () {
-    log(log.DEBUG, 'fetchData TRY', [...this.systemIds.keys()].toString())
-
+    log(log.DEBUG, `Zkb Provider: Map - [${this.mapId}] try to fetch; Count of systems: ${this.systemIds.size}`)
 
     if (!config.api.zkbKillsHost) {
       return { res: axios.HttpStatusCode.BadRequest };
     }
-
-    log(log.DEBUG, 'fetchData URL', `${ config.api.zkbKillsHost }/kills/systems`)
-    log(log.DEBUG, 'fetchData BEFORE CALL', [...this.systemIds.keys()].toString())
-
 
     return axios.post(`${ config.api.zkbKillsHost }/kills/systems`, { systemIds: [...this.systemIds.keys()] });
   }

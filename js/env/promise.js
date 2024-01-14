@@ -22,6 +22,8 @@ var promise = function ( ){
     this.reject = function () {
         !data.is_cancel && this.__reject.apply(this.native, arguments)
     }
+
+    this.cancel = () => this._cancel(data);
 };
 
 promise.prototype =  {

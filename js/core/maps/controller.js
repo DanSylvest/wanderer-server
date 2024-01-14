@@ -57,6 +57,7 @@ class MapController extends Emitter{
   get (_mapId) {
     if (!this.has(_mapId)) {
       this._add(_mapId, new Map({ mapId: _mapId }));
+      this._maps[_mapId].init();
     }
 
     return this._maps[_mapId];

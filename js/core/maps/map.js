@@ -171,7 +171,7 @@ class Map extends Emitter{
   }
 
   _createZkbSystemsProvider () {
-    this.zkbSystemsProvider = new ZkbSystemsProvider([]);
+    this.zkbSystemsProvider = new ZkbSystemsProvider(this.options.mapId, []);
     this.zkbSystemsProvider.on('loaded', this.onZkbInfoLoaded.bind(this));
   }
 

@@ -19,6 +19,7 @@
 	"scripts": {
 		"dev": "nodemon --inspect=0.0.0.0:9229 js/main.js",
 		"start": "node js/main.js",
+		"start:debug": "node --inspect=0.0.0.0:9229 js/main.js",
 		"dropAll": "node scripts/installer.js update all",
 		"updateСached": "node scripts/installer.js update cached",
 		"dropMapperDb": "node scripts/installer.js update mapper",

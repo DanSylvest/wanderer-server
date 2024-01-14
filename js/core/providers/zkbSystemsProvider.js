@@ -2,6 +2,7 @@
 const Emitter = require('./../../env/_new/tools/emitter');
 const { random } = require('./../../env/_new/tools/random');
 const axios = require('axios');
+const log = require("./../../utils/log");
 
 const REQUEST_TIMEOUT_MS = 1000 * 20;
 
@@ -66,15 +67,23 @@ class ZkbSystemsProvider extends Emitter{
       return;
     }
 
+    log(log.DEBUG, 'loadSystemData res', res.status);
+
     if (res.status === axios.HttpStatusCode.BadRequest) {
       this.tick();
       return;
     }
 
+    log(log.DEBUG, 'loadSystemData Not bad request', res.status);
+
+
     if (res.status !== axios.HttpStatusCode.Ok) {
       this.tick();
       return;
     }
+
+
+    log(log.DEBUG, 'loadSystemData OK request', res.status);
 
     res.data.forEach(({ systemId, kills }) => {
       this.systemIds.has(systemId) && this.systemIds.set(systemId, kills);
@@ -113,9 +122,16 @@ class ZkbSystemsProvider extends Emitter{
   }
 
   async fetchData () {
+    log(log.DEBUG, 'fetchData TRY', [...this.systemIds.keys()].toString())
+
+
     if (!config.api.zkbKillsHost) {
       return { res: axios.HttpStatusCode.BadRequest };
     }
+
+    log(log.DEBUG, 'fetchData URL', `${ config.api.zkbKillsHost }/kills/systems`)
+    log(log.DEBUG, 'fetchData BEFORE CALL', [...this.systemIds.keys()].toString())
+
 
     return axios.post(`${ config.api.zkbKillsHost }/kills/systems`, { systemIds: [...this.systemIds.keys()] });
   }

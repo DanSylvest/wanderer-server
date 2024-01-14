@@ -108,12 +108,16 @@ class ZkbSystemsProvider extends Emitter{
     };
   }
 
-  info() {
-    return [...this.systemIds.entries()].map(([systemId, kills]) => this.getKillInfo(systemId, kills))
+  info () {
+    return [...this.systemIds.entries()].map(([systemId, kills]) => this.getKillInfo(systemId, kills));
   }
 
   async fetchData () {
-    return axios.post(`http://zkbkills:2002/kills/systems`, { systemIds: [...this.systemIds.keys()] });
+    if (!config.api.zkbKillsHost) {
+      return { res: axios.HttpStatusCode.BadRequest };
+    }
+
+    return axios.post(`${ config.api.zkbKillsHost }/kills/systems`, { systemIds: [...this.systemIds.keys()] });
   }
 }
 

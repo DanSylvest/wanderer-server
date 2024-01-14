@@ -46,6 +46,7 @@
 		"lifeTime": 86400000
 	},
     "api": {
-      "routesHost": "https://esi.evetech.net/latest"
+      "routesHost": "https://esi.evetech.net/latest",
+      "zkbKillsHost": null
     }
 }

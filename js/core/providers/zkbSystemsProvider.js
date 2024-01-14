@@ -1,16 +1,9 @@
 // link example https://zkillboard.com/api/w-space/systemID/31002041/pastSeconds/3600/
 const Emitter = require('./../../env/_new/tools/emitter');
 const { random } = require('./../../env/_new/tools/random');
-const { systemClasses, whSpace, knownSpace } = require('../helpers/environment');
 const axios = require('axios');
 
-// const TIME_IN_PAST = 60 * 60 * 1;
-// const DELAY_RANDOM_MAX_MS = 1000 * 60 * 5;
-// const REQUEST_TIMEOUT_MS = 1000 * 60 * 1
-const REQUEST_TIMEOUT_MS = 1000 * 10;
-
-// const DELAY_RANDOM_MAX_MS = 1000 * 10;
-// const REQUEST_TIMEOUT_MS = 1000 * 10;
+const REQUEST_TIMEOUT_MS = 1000 * 20;
 
 class ZkbSystemsProvider extends Emitter{
   systemIds = new Map();

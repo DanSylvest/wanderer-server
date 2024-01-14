@@ -11,7 +11,6 @@ const MapSolarSystem = require('./map/solarSystem.js');
 const mapSqlActions = require('./sql/mapSqlActions.js');
 const solarSystemSql = require('./sql/solarSystemSql.js');
 const ChainsManager = require('./map/chainsManager.js');
-const {ZkbSystemsProvider} = require('./../providers/ZkbSystemsProvider.js');
 const log = require('./../../utils/log.js');
 const MapSubscribers = require('./map/mapSubscribers.js');
 const MapChain = require('./map/chain.js');
@@ -19,6 +18,7 @@ const CollectCharactersForBulk = require('./map/mixins/collectCharactersForBulk.
 const { prohibitedSystemClasses, prohibitedSystems } = require('./../helpers/environment');
 const { getSolarSystemInfo } = require('./sql/solarSystemSql');
 const { getSystemInfo } = require('./sql/mapSqlActions');
+const { ZkbSystemsProvider } = require('./../providers/zkbSystemsProvider');
 
 class Map extends Emitter{
   constructor (_options) {

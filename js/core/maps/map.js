@@ -219,11 +219,11 @@ class Map extends Emitter{
 
   async onZkbInfoLoaded (data) {
     data.forEach(({ systemId, ...data }) => {
-      if(!this._systems[systemId]) {
+      if (!this._systems[systemId]) {
         return;
       }
-      this._systems[systemId].updateZkbKills(data)
-    })
+      this._systems[systemId].updateZkbKills(data);
+    });
   }
 
   async _onCharacterDrop (characterId) {
@@ -747,9 +747,14 @@ class Map extends Emitter{
     // todo - процес удаления линка может быть только один раз
     // поэтому его надо блокировать
     let chainInfo = await mapSqlActions.linkRemove(this.options.mapId, chainId);
-    let info = this._chains[chainInfo.source + '_' + chainInfo.target] || this._chains[chainInfo.target
-    + '_'
-    + chainInfo.source];
+    let info;
+
+    if (chainInfo) {
+      info =
+        this._chains[chainInfo.source + '_' + chainInfo.target] ||
+        this._chains[chainInfo.target + '_' + chainInfo.source];
+    }
+
     if (info) {
       this._chains[chainId].model.destructor();
 

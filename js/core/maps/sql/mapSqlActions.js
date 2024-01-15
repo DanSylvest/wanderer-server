@@ -13,6 +13,11 @@ const linkRemove = async function (mapId, linkId) {
   let info = await core.dbController.mapLinksTable.getByCondition(condition, core.dbController.mapLinksTable.attributes());
   await core.dbController.mapLinksTable.removeByCondition(condition);
 
+  // TODO !!check in future why it can happen
+  if(!info[0]) {
+    return;
+  }
+
   return {
     source: info[0].solarSystemSource,
     target: info[0].solarSystemTarget,

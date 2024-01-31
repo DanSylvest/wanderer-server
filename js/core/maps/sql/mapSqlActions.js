@@ -303,6 +303,20 @@ const unlinkMapGroups = async function (mapId) {
   ]);
 };
 
+const getMapLeaderboard = async (mapId) => {
+  let q = `
+    SELECT "mapId", "characterId", COUNT(*) as record_count
+    FROM public.map_chain_passages
+    WHERE "mapId"='${mapId}'
+    GROUP BY "mapId", "characterId"
+    ORDER BY record_count DESC;
+  `;
+
+  const { rows, rowCount } = await core.dbController.db.custom(q);
+
+  return rowCount === 0 ? [] : rows;
+}
+
 module.exports = {
   linkRemove,
   getLinksBySystem,
@@ -328,4 +342,5 @@ module.exports = {
   systemExists,
   removeMap,
   unlinkMapGroups,
+  getMapLeaderboard,
 };

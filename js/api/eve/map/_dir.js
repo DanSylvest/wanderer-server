@@ -21,4 +21,5 @@ module.exports = {
     subscribeAllowedCharacters  : require("./subscribeAllowedCharacters"),
     subscribeOnlineCharacters   : require("./subscribeOnlineCharacters"),
     groups                      : require("./groups"),
+    leaderboard                 : require("./leaderboard"),
 };

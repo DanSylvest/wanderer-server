@@ -20,6 +20,11 @@ const { getSolarSystemInfo } = require('./sql/solarSystemSql');
 const { getSystemInfo } = require('./sql/mapSqlActions');
 const { ZkbSystemsProvider } = require('./../providers/zkbSystemsProvider');
 
+const SYSTEM_LIFETIME_LIMIT_CHECK_TIMEOUT = 1000 * 60;
+const SYSTEM_LIFETIME_LIMIT_MS = 1000 * 60 * 5
+// const SYSTEM_LIFETIME_LIMIT_CHECK_TIMEOUT = 1000 * 5;
+// const SYSTEM_LIFETIME_LIMIT_MS = 1000 * 30
+
 class Map extends Emitter{
   constructor (_options) {
     super();
@@ -73,6 +78,8 @@ class Map extends Emitter{
      */
     this._addingSystems = Object.create(null);
 
+    this._timeoutId = null;
+
     this._createChainsManager();
     this._createZkbSystemsProvider();
   }
@@ -88,6 +95,7 @@ class Map extends Emitter{
   async init () {
     this.chainsManager.start();
     this.zkbSystemsProvider.start();
+    this._startClearTimeout();
   }
 
   deinit () {
@@ -110,6 +118,11 @@ class Map extends Emitter{
     this._systems = Object.create(null);
     this._charactersOnSystem = Object.create(null);
     this._chains = Object.create(null);
+
+    if(this._timeoutId !== null) {
+      clearTimeout(this._timeoutId);
+      this._timeoutId = null;
+    }
   }
 
   connectionBreak (_connectionId) {
@@ -120,6 +133,47 @@ class Map extends Emitter{
 
     for (let chainId in this._chains)
       this._chains[chainId].model.connectionBreak(_connectionId);
+  }
+
+  _startClearTimeout() {
+    this._timeoutId = setTimeout(this._tick.bind(this), SYSTEM_LIFETIME_LIMIT_CHECK_TIMEOUT);
+  }
+
+  async _tick() {
+    this._timeoutId = null;
+
+    let links = await mapSqlActions.getLinksWithData(
+      this.options.mapId,
+      ["timeStatus", "created", "updated", "solarSystemSource", "solarSystemTarget"]
+    );
+    let systems = await mapSqlActions.getSystemsInfo(this.options.mapId);
+
+    const counted = systems
+      .map(x => x.id)
+      .reduce((acc, sys) => ({
+        ...acc,
+        [sys]: (acc[sys] || 0) + (links.filter(x => x.solarSystemSource === sys || x.solarSystemTarget === sys)?.length || 0)
+      }), {})
+
+    const currentTime = +new Date
+
+    let needToRemove = systems
+      .filter(x => counted[x.id] === 0)
+      .filter(x => !x.isLocked)
+      .filter(x => (currentTime - +new Date(x.updatedTime)) > SYSTEM_LIFETIME_LIMIT_MS )
+      .map(x => x.id)
+
+
+    if (needToRemove.length > 0) {
+      const res = await mapSqlActions.countOnlineCharactersByLocations(needToRemove)
+
+      needToRemove = needToRemove
+        .filter(sys => parseInt(res.find(x => x.location === sys)?.character_count ?? '0') === 0)
+    }
+
+    await Promise.all(needToRemove.map(x => this.systemRemove(x)))
+
+    this._startClearTimeout();
   }
 
   getSolarSystem (solarSystemId) {
@@ -342,12 +396,18 @@ class Map extends Emitter{
       await this._addingSystems[solarSystemId].native;
     }
 
-    let result = await solarSystem.isSystemExistsAndVisible();
+    let result = await mapSqlActions.isSystemExistsAndVisible(this.options.mapId, solarSystemId);
     if (result.exists && result.visible) {
       // do nothing
       solarSystem.resolve();
     } else if (result.exists && !result.visible) {
-      await this._systems[solarSystemId].changeVisible(true);
+      await mapSqlActions.changeSystemVisibility(this.options.mapId, solarSystemId, true);
+
+      let isOldVisible = await mapSqlActions.isSystemExistsAndVisible(this.options.mapId, _oldSystem);
+      if(_oldSystem !== null && !isOldVisible.visible) {
+        await mapSqlActions.changeSystemVisibility(this.options.mapId, _oldSystem, true);
+        await this._notifySystemAdd(_oldSystem);
+      }
 
       if (!exist(position)) {
         pos = await this.findPosition(_oldSystem, solarSystemId);
@@ -430,6 +490,9 @@ class Map extends Emitter{
   }
 
   async _characterLeaveSystem (_characterId, _systemId) {
+    // TODO it should update system time - need for removeing system from map.
+    await mapSqlActions.updateSystem(this.options.mapId, _systemId, {})
+
     if (exist(this._systems[_systemId])) {
       await this._systems[_systemId].removeCharacter(_characterId);
       delete this._charactersOnSystem[_characterId];
@@ -749,6 +812,9 @@ class Map extends Emitter{
     let chainInfo = await mapSqlActions.linkRemove(this.options.mapId, chainId);
     let info;
 
+    await mapSqlActions.updateSystem(this.options.mapId, chainInfo.source)
+    await mapSqlActions.updateSystem(this.options.mapId, chainInfo.target)
+
     if (chainInfo) {
       info =
         this._chains[chainInfo.source + '_' + chainInfo.target] ||
@@ -766,20 +832,20 @@ class Map extends Emitter{
   }
 
   async systemRemove (_systemId) {
-    await this._systems[_systemId].changeVisible(false);
-    // await mapSqlActions.updateSystem(this.options.mapId, _systemId, {visible: false});
+    await mapSqlActions.changeSystemVisibility(this.options.mapId, _systemId, false)
+
     let affectedLinks = await mapSqlActions.getLinksBySystem(this.options.mapId, _systemId);
     await Promise.all(affectedLinks.map(linkId => this.linkRemove(linkId)));
 
-    await Promise.all(this._systems[_systemId].onlineCharacters.map(x => {
+    await Promise.all(this._systems[_systemId]?.onlineCharacters?.map(x => {
       delete this._charactersOnSystem[x];
       return mapSqlActions.removeCharacterFromSystem(this.options.mapId, _systemId, x);
-    }));
+    }) || []);
 
     this.subscribers.notifySystemRemoved(_systemId);
     this.zkbSystemsProvider.removeSystem(_systemId);
 
-    this._systems[_systemId].destructor();
+    this._systems[_systemId]?.destructor();
 
     delete this._systems[_systemId];
   }

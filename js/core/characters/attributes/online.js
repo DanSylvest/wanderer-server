@@ -61,19 +61,19 @@ const Online = classCreator("Online", AttributeAbstract, {
 
         this.observer.object().on("change", this._updateOnline.bind(this));
     },
-    _updateOnline: function (_isOnline) {
+    _updateOnline: async function (_isOnline) {
         if(!exist(this._value) || this._value !== _isOnline) {
             this._value = _isOnline;
-            // also we need update database state
-            core.dbController.charactersDB.set(this.options.characterId, "online", _isOnline).then(function () {
-                this._subscriber && this._subscriber.notify({
-                    type: "update",
-                    data: _isOnline
-                });
-                this.emit("change", _isOnline);
-            }.bind(this), function () {
-                // do nothing
-            }.bind(this));
+            try {
+              await core.dbController.charactersDB.set(this.options.characterId, "online", _isOnline)
+              this._subscriber && this._subscriber.notify({
+                type: "update",
+                data: _isOnline
+              });
+              this.emit("change", _isOnline);
+            } catch (e) {
+              // do nothing
+            }
         }
     },
     serverStatusOffline () {

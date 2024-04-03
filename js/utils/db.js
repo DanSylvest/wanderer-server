@@ -132,12 +132,12 @@ var DB = classCreator("DB", Emitter, {
 
         return pr.native;
     },
-    custom: function (_query) {
+    custom: function (_query, params) {
         var pr = new CustomPromise();
 
         counterLog("SQL", `CUSTOM QUERY: ${_query}`);
 
-        this._client.query(_query).then(function (_result) {
+        this._client.query(_query, params).then(function (_result) {
             pr.resolve(_result);
         }.bind(this), function (_err) {
             pr.reject(_err)

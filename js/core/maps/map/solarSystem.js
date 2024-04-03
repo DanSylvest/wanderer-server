@@ -113,6 +113,7 @@ class MapSolarSystem extends Emitter{
       name: mapInfo.name,
       description: mapInfo.description,
       tag: mapInfo.tag,
+      labels: mapInfo.labels,
       status: mapInfo.status,
       signatures: mapInfo.signatures,
       visible: mapInfo.visible,
@@ -197,10 +198,6 @@ class MapSolarSystem extends Emitter{
     }
   }
 
-  async changeVisible (visible) {
-    await mapSqlActions.updateSystem(this.mapId, this.solarSystemId, { visible, ...(!visible && { tag: '' }) });
-  }
-
   _createDynamicInfoSubscriber () {
     if (!this._dynamicInfoSubscriber) {
       this._dynamicInfoSubscriber = new Subscriber({
@@ -243,6 +240,7 @@ class MapSolarSystem extends Emitter{
         description: info.description,
         tag: info.tag,
         status: info.status,
+        labels: info.labels,
         signatures: info.signatures,
         position: info.position,
         onlineCount: this.onlineCharacters.length,

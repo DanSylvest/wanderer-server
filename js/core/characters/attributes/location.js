@@ -52,7 +52,7 @@ const Location = classCreator("Location", AttributeAbstract, {
             }.bind(this));
         }
     },
-    __createSubscriber: function (resolve, reject) {
+    __createSubscriber: async function (resolve, reject) {
         if(!this._subscriber) {
             core.dbController.charactersDB.get(this.options.characterId, "location").then(function(_value){
                 this._subscriber = new Subscriber({

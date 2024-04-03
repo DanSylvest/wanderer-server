@@ -264,10 +264,14 @@ class DBController extends Emitter{
         { name: 'userName', type: String, willEscaped: true },    // user title of system - will override main
         { name: 'description', type: String, willEscaped: true }, // some description about this system
         { name: 'tag', type: String },                            // system tag
+        { name: 'labels', type: String },                         // system tag
         { name: 'status', type: Number, defaultValue: 0 },        // system tag
         { name: 'signatures', type: Array },
         { name: 'visible', type: Boolean, defaultValue: true },   // if it false system is not show at the map (this flag for delete)
         { name: 'position', type: Object, defaultValue: () => ({ x: 0, y: 0 }) },
+        { name: 'firstAddTime', type: Date, defaultValue: () => new Date },
+        { name: 'lastAddTime', type: Date, defaultValue: () => new Date },
+        { name: 'updatedTime', type: Date, defaultValue: () => new Date },
       ],
     });
   }

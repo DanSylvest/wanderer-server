@@ -148,7 +148,10 @@ const updateSystem = async function (mapId, systemId, data) {
     { name: 'mapId', operator: '=', value: mapId },
   ];
 
-  await core.dbController.mapSystemsTable.setByCondition(condition, data);
+  await core.dbController.mapSystemsTable.setByCondition(condition, {
+    ...data,
+    updatedTime: new Date()
+  });
 };
 
 const updateChain = async function (mapId, chainId, data) {
@@ -183,6 +186,7 @@ const updateSystemsPosition = async function (mapId, systemsData) {
         x: systemPosition.x,
         y: systemPosition.y,
       },
+      updatedTime: new Date(),
     }));
   }
 
@@ -201,6 +205,7 @@ const updateSystemPosition = async function (mapId, solarSystemId, x, y) {
       x: x,
       y: y,
     },
+    updatedTime: new Date(),
   });
 };
 
@@ -221,6 +226,19 @@ const getSystems = async function (mapId) {
   ];
   let result = await core.dbController.mapSystemsTable.getByCondition(condition, ['id']);
   return result.map(x => x.id);
+};
+
+
+const getSystemsInfo = async function (mapId) {
+  let condition = [
+    { name: 'mapId', operator: '=', value: mapId },
+    { name: 'visible', operator: '=', value: true },
+  ];
+  let result = await core.dbController.mapSystemsTable.getByCondition(
+    condition,
+    core.dbController.mapSystemsTable.attributes()
+  );
+  return result
 };
 
 const getLinks = async function (mapId) {
@@ -317,6 +335,54 @@ const getMapLeaderboard = async (mapId) => {
   return rowCount === 0 ? [] : rows;
 }
 
+const changeSystemVisibility = async (mapId, systemId, visible) => {
+  await updateSystem(mapId, systemId, { visible, ...(!visible ? { tag: '' } : { lastAddTime: new Date() }) });
+
+}
+
+const isSystemExistsAndVisible =  async (mapId, systemId) => {
+  let condition = [
+    { name: 'id', operator: '=', value: systemId },
+    { name: 'mapId', operator: '=', value: mapId },
+  ];
+
+  let result = await core.dbController.mapSystemsTable.getByCondition(condition, ['visible']);
+
+  return {
+    exists: result.length > 0,
+    visible: result.length > 0 && result[0].visible,
+  };
+}
+
+async function countOnlineCharactersByLocations(locations) {
+  // Проверяем, не пуст ли список локаций
+  if (locations.length === 0) {
+    return [];
+  }
+
+  // Формируем строку для условия SQL-запроса, чтобы выбрать строки, где location совпадает с одним из элементов массива
+  const locationsPlaceholder = locations.map((_, index) => `$${index + 1}`).join(', ');
+
+  // Формируем SQL-запрос
+  const query = `
+    SELECT location, COUNT(*) as character_count
+    FROM characters
+    WHERE online = TRUE AND location IN (${locationsPlaceholder})
+    GROUP BY location;
+  `;
+
+  // Выполняем запрос, передавая список локаций как параметры
+  try {
+    const result = await core.dbController.db.custom(query, locations);
+    // Возвращаем результат
+    return result.rows;
+  } catch (error) {
+    console.error('Error executing query:', error);
+    return [];
+  }
+}
+
+
 module.exports = {
   linkRemove,
   getLinksBySystem,
@@ -334,6 +400,7 @@ module.exports = {
 
   getLinkInfo,
   getSystems,
+  getSystemsInfo,
   getSystemInfo,
   getLinks,
   getLinkPairsAdvanced,
@@ -343,4 +410,7 @@ module.exports = {
   removeMap,
   unlinkMapGroups,
   getMapLeaderboard,
+  changeSystemVisibility,
+  isSystemExistsAndVisible,
+  countOnlineCharactersByLocations,
 };

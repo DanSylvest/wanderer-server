@@ -411,9 +411,8 @@ class Map extends Emitter{
 
       if (!exist(position)) {
         pos = await this.findPosition(_oldSystem, solarSystemId);
-        await this._systems[solarSystemId].updatePositions(pos.x, pos.y);
       }
-
+      await this._systems[solarSystemId].updatePositions(pos.x, pos.y);
       await this._notifySystemAdd(solarSystemId);
       solarSystem.resolve();
     } else if (!result.exists) {
@@ -812,10 +811,10 @@ class Map extends Emitter{
     let chainInfo = await mapSqlActions.linkRemove(this.options.mapId, chainId);
     let info;
 
-    await mapSqlActions.updateSystem(this.options.mapId, chainInfo.source)
-    await mapSqlActions.updateSystem(this.options.mapId, chainInfo.target)
-
     if (chainInfo) {
+      await mapSqlActions.updateSystem(this.options.mapId, chainInfo.source)
+      await mapSqlActions.updateSystem(this.options.mapId, chainInfo.target)
+
       info =
         this._chains[chainInfo.source + '_' + chainInfo.target] ||
         this._chains[chainInfo.target + '_' + chainInfo.source];

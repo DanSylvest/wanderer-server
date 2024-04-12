@@ -336,7 +336,11 @@ const getMapLeaderboard = async (mapId) => {
 }
 
 const changeSystemVisibility = async (mapId, systemId, visible) => {
-  await updateSystem(mapId, systemId, { visible, ...(!visible ? { tag: '' } : { lastAddTime: new Date() }) });
+  await updateSystem(
+    mapId,
+    systemId,
+    { visible, ...(!visible ? { tag: '', labels: '', position: { x: 0, y: 0 } } : { lastAddTime: new Date() }) }
+  );
 
 }
 

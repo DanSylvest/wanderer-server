@@ -547,15 +547,21 @@ class Map extends Emitter{
       && !prohibitedSystems.includes(parseInt(_newSystem));
 
     if (!isJump && isAbleToMove) {
-      let isSystemExists = await this.systemExists(_oldSystem);
+      let isSystemExists = await this.systemExists(_oldSystem, true);
       if (isSystemExists) {
         await this._addSystem(_oldSystem, _newSystem);
         await this._characterLeaveSystem(_characterId, _oldSystem);
         await this._characterJoinToSystem(_characterId, _newSystem);
         await this._linkPassage(_oldSystem, _newSystem, _characterId);
       } else {
-        await this._addSystem(null, _oldSystem);
-        await this._addSystem(_oldSystem, _newSystem);
+        const isNextSystemExists = await this.systemExists(_newSystem, true);
+        if(isNextSystemExists) {
+          await this._addSystem(_newSystem, _oldSystem);
+        } else {
+          await this._addSystem(null, _oldSystem);
+          await this._addSystem(_oldSystem, _newSystem);
+        }
+
         await this._characterJoinToSystem(_characterId, _newSystem);
         await this._linkPassage(_oldSystem, _newSystem, _characterId);
       }
@@ -850,9 +856,6 @@ class Map extends Emitter{
   }
 
   /**
-   * todo - тут явно присутствует какая-то ошибка
-   *
-   * 1) почему запрашиваются все персонажи пользака? Должны же быть, только те, которые доступны по карте
    *
    * @param connectionId
    * @param responseId

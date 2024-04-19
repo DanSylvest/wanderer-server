@@ -3,23 +3,23 @@
  */
 
 class Storage {
-    _bindings = Object.create(null);
+  _bindings = Object.create(null);
 
-    set(_key, _value) {
-        this._bindings[_key] = _value;
-    }
+  set(_key, _value) {
+    this._bindings[_key] = _value;
+  }
 
-    get(_key) {
-        return this._bindings[_key];
-    }
+  get(_key) {
+    return this._bindings[_key];
+  }
 
-    has(_key) {
-        return !!this._bindings[_key];
-    }
+  has(_key) {
+    return !!this._bindings[_key];
+  }
 
-    del(_key) {
-        delete this._bindings[_key];
-    }
+  del(_key) {
+    delete this._bindings[_key];
+  }
 }
 
 module.exports = Storage;

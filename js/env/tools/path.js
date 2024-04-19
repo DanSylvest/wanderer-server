@@ -2,116 +2,119 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 3/4/20.
  */
 
-var classCreator = require("./class");
-var exist        = require("./exist");
+const classCreator = require("./class");
+const exist = require("./exist");
 
-var Path = classCreator("Path", null, {
-    constructor: function (_path, _isRelative) {
-        this._data = [];
-        this._isRelative = exist(_isRelative) ? _isRelative : false;
+const Path = classCreator(
+  "Path",
+  null,
+  {
+    constructor(_path, _isRelative) {
+      this._data = [];
+      this._isRelative = exist(_isRelative) ? _isRelative : false;
 
-        if (exist(_path)) {
-            if (typeof _path === "string" && _path !== "") {
-                this._data = _path.split("/");
-            } else if (_path instanceof Array) {
-                this._data = _path;
-            } else if (_path instanceof Path) {
-                this["+="](_path);
-            }
+      if (exist(_path)) {
+        if (typeof _path === "string" && _path !== "") {
+          this._data = _path.split("/");
+        } else if (_path instanceof Array) {
+          this._data = _path;
+        } else if (_path instanceof Path) {
+          this["+="](_path);
         }
+      }
     },
     "+=": function (_path) {
-        if (_path instanceof Path) {
-            this._data = this._data.concat(_path._data);
-        } else if (typeof _path === "string") {
-            this._data.push(_path);
-        } else if (_path instanceof Array) {
-            this._data = this._data.concat(_path);
-        }
+      if (_path instanceof Path) {
+        this._data = this._data.concat(_path._data);
+      } else if (typeof _path === "string") {
+        this._data.push(_path);
+      } else if (_path instanceof Array) {
+        this._data = this._data.concat(_path);
+      }
 
-        return this;
+      return this;
     },
     "+": function (_path) {
-        return this.copy()["+="](_path);
+      return this.copy()["+="](_path);
     },
-    copy: function () {
-        return new Path(this._data.join("/"));
+    copy() {
+      return new Path(this._data.join("/"));
     },
-    valueOf: function () {
-        return this.toString();
+    valueOf() {
+      return this.toString();
     },
-    toString: function () {
-        if(this._isRelative) {
-            return "./" + this._data.join("/");
-        } else {
-            return this._data.join("/");
-        }
+    toString() {
+      if (this._isRelative) {
+        return `./${this._data.join("/")}`;
+      }
+      return this._data.join("/");
     },
-    slice: function (_index, _count) {
-        return new Path(this._data.slice(_index, _count));
+    slice(_index, _count) {
+      return new Path(this._data.slice(_index, _count));
     },
-    pop: function (returnThis) {
-        var last = this.last();
-        this._data = this._data.slice(0, this.size() - 1);
-        return returnThis ? this : last;
+    pop(returnThis) {
+      const last = this.last();
+      this._data = this._data.slice(0, this.size() - 1);
+      return returnThis ? this : last;
     },
-    size: function () {
-        return this._data.length;
+    size() {
+      return this._data.length;
     },
-    last: function () {
-        return this._data[this._data.length - 1];
+    last() {
+      return this._data[this._data.length - 1];
     },
-    at: function (_index) {
-        return this._data[_index];
+    at(_index) {
+      return this._data[_index];
     },
-    getRelativeBy: function (_path) {
-        var out = new Path(null, true);
+    getRelativeBy(_path) {
+      const out = new Path(null, true);
 
-        var _pathA = this.slice(0, this.size() - 1);
-        var _pathB = _path.slice(0, _path.size() - 1);
+      const _pathA = this.slice(0, this.size() - 1);
+      const _pathB = _path.slice(0, _path.size() - 1);
 
-        var state = 0;
-        var a = 0;
-        var isBreak = false;
-        while(true) {
-            switch (state) {
-                case 0:
-                    var hopA = _pathA.at(a);
-                    var hopB = _pathB.at(a);
+      let state = 0;
+      let a = 0;
+      let isBreak = false;
 
-                    if (hopA !== hopB) {
-                        state = 1;
-                    } else {
-                        if (a === _pathA.size() - 1)
-                            state = 1;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        switch (state) {
+          case 0:
+            const hopA = _pathA.at(a);
+            const hopB = _pathB.at(a);
 
-                        a++;
-                    }
-                    break;
-                case 1:
-                    var count = _pathA.size() - a;
+            if (hopA !== hopB) {
+              state = 1;
+            } else {
+              if (a === _pathA.size() - 1) state = 1;
 
-                    for (var b = 0; b < count; b++)
-                        out["+="]("..");
-
-                    var pathB = _pathB.slice(a, _pathB.size());
-                    out["+="](pathB);
-                    out["+="](_path.last());
-
-                    isBreak = true;
-                    break;
+              a++;
             }
+            break;
+          case 1:
+            const count = _pathA.size() - a;
 
-            if(isBreak)
-                break;
+            for (let b = 0; b < count; b++) out["+="]("..");
+
+            const pathB = _pathB.slice(a, _pathB.size());
+            out["+="](pathB);
+            out["+="](_path.last());
+
+            isBreak = true;
+            break;
         }
 
-        return out;
-    }
-}, {
-    fromBackSlash: function (_path) {
-        return new Path(_path.split("\\").join("/"));
-    }
-});
+        if (isBreak) break;
+      }
+
+      return out;
+    },
+  },
+  {
+    fromBackSlash(_path) {
+      return new Path(_path.split("\\").join("/"));
+    },
+  },
+);
 
 module.exports = Path;

@@ -2,30 +2,36 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/22/20.
  */
 
-var Provider        = require("./../../utils/provider");
-var classCreator    = require("./../../env/tools/class");
-var extend          = require("./../../env/tools/extend");
-var log             = require("./../../utils/log");
+const Provider = require("../../utils/provider");
+const classCreator = require("../../env/tools/class");
+const extend = require("../../env/tools/extend");
+const log = require("../../utils/log");
 
-var Online = classCreator("Online", Provider, {
-    constructor: function Online(_options) {
-        var base = extend({
-            /** @type Number - this is a character identifier */
-            characterId: null,
-            name: "onlineObserver",
-            timeout: 10000
-        }, _options);
+const Online = classCreator("Online", Provider, {
+  constructor: function Online(_options) {
+    const base = extend(
+      {
+        /** @type Number - this is a character identifier */
+        characterId: null,
+        name: "onlineObserver",
+        timeout: 10000,
+      },
+      _options,
+    );
 
-        Provider.prototype.constructor.call(this, base);
-    },
-    _sendRequest: function () {
-        core.esiApi.location.online(this._token, this.options.characterId).then(function(_event){
-            this._notify(_event.online);
-        }.bind(this), function(_err){
-            log(log.INFO, "Was next in Online for %s", this.options.characterId);
-            this._next();
-        }.bind(this));
-    }
+    Provider.prototype.constructor.call(this, base);
+  },
+  _sendRequest() {
+    core.esiApi.location.online(this._token, this.options.characterId).then(
+      (_event) => {
+        this._notify(_event.online);
+      },
+      () => {
+        log(log.INFO, "Was next in Online for %s", this.options.characterId);
+        this._next();
+      },
+    );
+  },
 });
 
 module.exports = Online;

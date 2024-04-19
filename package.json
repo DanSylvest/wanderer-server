@@ -9,7 +9,7 @@
 	"description": "A mapper - tool for navigation in w-space",
 	"main": "js/main.js",
 	"private": true,
-	"keywords": [
+    "keywords": [
 		"wanderer",
 		"eve",
 		"mapper",
@@ -28,7 +28,8 @@
 		"updateSwagger": "node scripts/installer.js update swagger",
 		"clone-swagger": "node scripts/installer.js update clone-swagger",
 		"installApp": "node scripts/installer.js install",
-		"clearSignatures": "node scripts/installer.js update clearSignatures"
+		"clearSignatures": "node scripts/installer.js update clearSignatures",
+		"lint": "eslint . --fix"
 	},
 	"dependencies": {
 		"args": "^5.0.1",
@@ -43,6 +44,19 @@
 		"websocket": "^1.0.32"
 	},
 	"devDependencies": {
-		"nodemon": "^2.0.22"
+		"@babel/core": "^7.24.4",
+		"@babel/eslint-parser": "^7.24.1",
+		"@eslint/eslintrc": "^3.0.2",
+		"@eslint/js": "^9.0.0",
+		"eslint": "^9.0.0",
+		"eslint-config-prettier": "^9.1.0",
+		"eslint-plugin-import": "^2.29.1",
+		"eslint-plugin-prettier": "^5.1.3",
+		"globals": "^15.0.0",
+		"nodemon": "^2.0.22",
+		"prettier": "^3.2.5"
+	},
+	"imports": {
+		"#root/*": "./*"
 	}
 }

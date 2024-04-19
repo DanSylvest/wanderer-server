@@ -3,15 +3,15 @@
  */
 
 module.exports = {
-    add               : require("./add"),
-    refresh           : require("./refresh"),
-    list              : require("./list"),
-    online            : require("./online"),
-    subscribeLocation : require("./subscribeLocation"),
-    subscribeShip     : require("./subscribeShip"),
-    fastSearch        : require("./fastSearch"),
-    protectedInfo     : require("./protectedInfo"),
-    remove            : require("./remove"),
-    byUser            : require("./byUser"),
-    search            : require("../character/search.js"),
+  add: require("./add"),
+  refresh: require("./refresh"),
+  list: require("./list"),
+  online: require("./online"),
+  subscribeLocation: require("./subscribeLocation"),
+  subscribeShip: require("./subscribeShip"),
+  fastSearch: require("./fastSearch"),
+  protectedInfo: require("./protectedInfo"),
+  remove: require("./remove"),
+  byUser: require("./byUser"),
+  search: require("./search"),
 };

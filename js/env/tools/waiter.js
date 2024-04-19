@@ -3,10 +3,10 @@
  */
 
 const waiter = function (ms) {
-    ms = ms || 0;
-    return new Promise((resolve, reject) => {
-        setTimeout(resolve, ms);
-    });
+  ms = ms || 0;
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 };
 
 module.exports = waiter;

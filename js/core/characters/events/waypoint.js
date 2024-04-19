@@ -1,53 +1,55 @@
 /**
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 10/1/20.
  */
-const Emitter = require('./../../../env/_new/tools/emitter');
-const extend = require('./../../../env/tools/extend');
-const WaypointProvider = require('./../../providers/waypoint');
+const Emitter = require("../../../env/_new/tools/emitter");
+const extend = require("../../../env/tools/extend");
+const WaypointProvider = require("../../providers/waypoint");
 
-class Waypoint extends Emitter{
-  constructor (_options) {
+class Waypoint extends Emitter {
+  constructor(_options) {
     super();
-    this.options = extend({
-      accessToken: null,
-      // showLogs: true,
-    }, _options);
+    this.options = extend(
+      {
+        accessToken: null,
+        // showLogs: true,
+      },
+      _options,
+    );
 
     this._paused = false;
     this._lastRequest = null;
   }
 
-  destructor () {
+  destructor() {
     this.options = Object.create(null);
     this._destroyProvider();
 
     super.destructor();
   }
 
-  connectionBreak (_connectionId) {
+  // eslint-disable-next-line no-unused-vars
+  connectionBreak(_connectionId) {}
 
-  }
-
-  _createProvider () {
+  _createProvider() {
     this._provider = new WaypointProvider({
       accessToken: this.options.accessToken,
       destinationId: this.destinationId,
       clearOtherWaypoints: this.clearOtherWaypoints,
       addToBeginning: this.addToBeginning,
     });
-    this._provider.on('change', this._onChange.bind(this));
+    this._provider.on("change", this._onChange.bind(this));
     this._provider.start();
   }
 
-  _destroyProvider () {
+  _destroyProvider() {
     this._provider && this._provider.destructor();
   }
 
-  _onChange () {
+  _onChange() {
     this._destroyProvider();
   }
 
-  set (_type, _destinationSolarSystemId) {
+  set(_type, _destinationSolarSystemId) {
     if (this._paused) {
       this._lastRequest = [_type, _destinationSolarSystemId];
       return;
@@ -79,12 +81,12 @@ class Waypoint extends Emitter{
     // Но пока можно без нее обойтись
   }
 
-  serverStatusOffline () {
+  serverStatusOffline() {
     this._paused = true;
     this._provider && this._provider.stop();
   }
 
-  serverStatusOnline () {
+  serverStatusOnline() {
     if (this._lastRequest) {
       this._paused = false;
       this._provider && this._provider.start();
@@ -93,6 +95,5 @@ class Waypoint extends Emitter{
     }
   }
 }
-
 
 module.exports = Waypoint;

@@ -1,10 +1,8 @@
-const helpers = require('./../../../utils/helpers.js');
-const { checkAccessToMapByUser } = require('./../../../core/maps/utils/checkAccessToMapByUser');
-const { getMapLeaderboard } = require('../../../core/maps/sql/mapSqlActions');
+const helpers = require("../../../utils/helpers.js");
+const { getMapLeaderboard } = require("../../../core/maps/sql/mapSqlActions");
 
-const responseName = 'responseEveMapLeaderboard';
+const responseName = "responseEveMapLeaderboard";
 const NodeCache = require("node-cache");
-
 
 const dataCache = new NodeCache({
   stdTTL: 60 * 60 * 10,
@@ -28,7 +26,13 @@ const request = async function (_connectionId, _responseId, _event) {
 
   // when token is undefined - it means what you have no rights
   if (token === undefined) {
-    helpers.errResponse(_connectionId, _responseId, responseName, 'You not authorized or token was expired', { code: 1 });
+    helpers.errResponse(
+      _connectionId,
+      _responseId,
+      responseName,
+      "You not authorized or token was expired",
+      { code: 1 },
+    );
     return;
   }
 
@@ -49,10 +53,16 @@ const request = async function (_connectionId, _responseId, _event) {
       eventType: responseName,
     });
   } catch (err) {
-    helpers.errResponse(_connectionId, _responseId, responseName, 'Error on getting map leaderboard', {
-      code: 0,
-      handledError: err,
-    });
+    helpers.errResponse(
+      _connectionId,
+      _responseId,
+      responseName,
+      "Error on getting map leaderboard",
+      {
+        code: 0,
+        handledError: err,
+      },
+    );
   }
 };
 

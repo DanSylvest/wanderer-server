@@ -1,9 +1,12 @@
 /**
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/20/20.
  */
-const helpers = require("./../../../utils/helpers.js");
+const helpers = require("../../../utils/helpers.js");
+
 const responseName = "responseEveMapInfo";
-const {checkAccessToMapByUser} = require('./../../../core/maps/utils/checkAccessToMapByUser');
+const {
+  checkAccessToMapByUser,
+} = require("../../../core/maps/utils/checkAccessToMapByUser");
 
 /**
  *
@@ -14,45 +17,73 @@ const {checkAccessToMapByUser} = require('./../../../core/maps/utils/checkAccess
  * @returns {Promise<void>}
  */
 const request = async function (_connectionId, _responseId, _event) {
-    const {mapId} = _event;
+  const { mapId } = _event;
 
-    // we need get token by connection
-    const token = core.connectionStorage.get(_connectionId);
+  // we need get token by connection
+  const token = core.connectionStorage.get(_connectionId);
 
-    // when token is undefined - it means what you have no rights
-    if (token === undefined) {
-        helpers.errResponse(_connectionId, _responseId, responseName, "You not authorized or token was expired", {code: 1});
+  // when token is undefined - it means what you have no rights
+  if (token === undefined) {
+    helpers.errResponse(
+      _connectionId,
+      _responseId,
+      responseName,
+      "You not authorized or token was expired",
+      { code: 1 },
+    );
+    return;
+  }
+
+  try {
+    const userId = await core.tokenController.checkToken(token);
+
+    const {
+      id,
+      name,
+      description,
+      personalNote: note,
+      hubs,
+      owner,
+    } = await core.mapController.getMapInfo(mapId);
+
+    if (owner !== userId) {
+      // if user own this map - we should give ability to see this map in list of maps
+      const hasAccess = await checkAccessToMapByUser(userId, mapId);
+      if (!hasAccess) {
+        helpers.errResponse(
+          _connectionId,
+          _responseId,
+          responseName,
+          `User '${userId}' has no access to map '${mapId}'`,
+          { code: 2 },
+        );
         return;
+      }
     }
 
-    try {
-        const userId = await core.tokenController.checkToken(token);
-
-        const { id, name, description, personalNote: note, hubs, owner } = await core.mapController.getMapInfo(mapId);
-
-        if (owner !== userId) { // if user own this map - we should give ability to see this map in list of maps
-            const hasAccess = await checkAccessToMapByUser(userId, mapId);
-            if (!hasAccess) {
-                helpers.errResponse(
-                    _connectionId, _responseId, responseName,
-                    `User '${userId}' has no access to map '${mapId}'`,
-                    {code: 2},
-                );
-                return;
-            }
-        }
-
-        api.send(_connectionId, _responseId, {
-            data: {id, name, description, note, hubs},
-            success: true,
-            eventType: responseName,
-        });
-    } catch (err) {
-        helpers.errResponse(_connectionId, _responseId, responseName, "Error on getting map info", {
-            code: 0,
-            handledError: err,
-        });
-    }
+    api.send(_connectionId, _responseId, {
+      data: {
+        id,
+        name,
+        description,
+        note,
+        hubs,
+      },
+      success: true,
+      eventType: responseName,
+    });
+  } catch (err) {
+    helpers.errResponse(
+      _connectionId,
+      _responseId,
+      responseName,
+      "Error on getting map info",
+      {
+        code: 0,
+        handledError: err,
+      },
+    );
+  }
 };
 
 module.exports = request;

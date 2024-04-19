@@ -1,39 +1,38 @@
-var Emitter         = require("./../env/tools/emitter");
-var classCreator    = require("./../env/tools/class");
-var extend          = require("./../env/tools/extend");
-var Path            = require("./../env/tools/path");
-var fs              = require("fs");
+const fs = require("fs");
+const Emitter = require("../env/tools/emitter");
+const classCreator = require("../env/tools/class");
+const extend = require("../env/tools/extend");
+const Path = require("../env/tools/path");
 
+const ConfReader = classCreator("ConfReader", Emitter, {
+  constructor: function ConfReader(_folder) {
+    Emitter.prototype.constructor.call(this);
 
-var ConfReader = classCreator("ConfReader", Emitter, {
-    constructor: function ConfReader(_folder) {
-        Emitter.prototype.constructor.call(this);
+    const path = Path.fromBackSlash(__dirname);
+    path.pop();
+    this.path = path["+"](_folder.split("/"));
+  },
+  build() {
+    let file = fs.readFileSync(this.path["+"]("main.json").toString(), "utf8");
+    const confMain = JSON.parse(file);
 
-        let path = Path.fromBackSlash(__dirname);
-        path.pop();
-        this.path = path["+"](_folder.split("/"));
-    },
-    build: function () {
-        var file = fs.readFileSync(this.path["+"]("main.json").toString(), "utf8");
-        var confMain = JSON.parse(file);
+    const dir = fs.readdirSync(this.path.toString());
 
-        var dir = fs.readdirSync(this.path.toString());
+    for (let a = 0; a < dir.length; a++) {
+      const filePath = dir[a];
 
-        for (var a = 0; a < dir.length; a++) {
-            var file = dir[a];
+      if (filePath === "main.json") {
+        continue;
+      }
 
-            if(file === "main.json")
-                continue;
+      file = fs.readFileSync(this.path["+"](filePath).toString(), "utf8");
+      const conf = JSON.parse(file);
 
-            file = fs.readFileSync(this.path["+"](file).toString(), "utf8");
-            var conf = JSON.parse(file);
+      extend(confMain, conf);
+    }
 
-            extend(confMain, conf);
-        }
-
-        return confMain;
-    },
+    return confMain;
+  },
 });
-
 
 module.exports = ConfReader;

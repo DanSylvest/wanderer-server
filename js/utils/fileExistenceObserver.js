@@ -5,7 +5,7 @@
 const fs = require("fs");
 
 module.exports = {
-    fileExists (path) {
-        return fs.existsSync(path);
-    }
+  fileExists(path) {
+    return fs.existsSync(path);
+  },
 };

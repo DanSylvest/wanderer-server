@@ -1,13 +1,14 @@
-var parseQuery = function (_query) {
-    var out = Object.create(null);
+const parseQuery = function (_query) {
+  const out = Object.create(null);
 
-    var variablesArr = _query.split("&");
-    for (var a = 0; a < variablesArr.length; a++) {
-        var keyValuesArr = variablesArr[a].split("=");
-        out[keyValuesArr[0]] = keyValuesArr[1];
-    }
+  const variablesArr = _query.split("&");
+  for (let a = 0; a < variablesArr.length; a++) {
+    const keyValuesArr = variablesArr[a].split("=");
 
-    return out;
+    out[keyValuesArr[0]] = keyValuesArr[1];
+  }
+
+  return out;
 };
 
 module.exports = parseQuery;

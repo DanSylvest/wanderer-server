@@ -2,22 +2,26 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/21/20.
  */
 
-const Emitter = require('./../../env/_new/tools/emitter');
-const log = require('./../../utils/log');
-const DBController = require('./../dbController');
-const Map = require('./map');
-const md5 = require('md5');
-const UserMapWatcher = require('./userMapWatcher.js');
-const UserSubscriptions = require('./userSubscriptions.js');
-const mapSqlActions = require('./sql/mapSqlActions.js');
-const { getCorporationId, getAllianceId } = require('./../characters/utils');
-const { getCorporationName, getAllianceName, getName } = require('../characters/utils');
-const { saveMapUserActions } = require('./sql/mapSqlUserActions');
+const md5 = require("md5");
+const Emitter = require("../../env/_new/tools/emitter");
+const log = require("../../utils/log");
+const DBController = require("../dbController");
+const Map = require("./map");
+const UserMapWatcher = require("./userMapWatcher");
+const UserSubscriptions = require("./userSubscriptions");
+const mapSqlActions = require("./sql/mapSqlActions");
+const { getCorporationId, getAllianceId } = require("../characters/utils");
+const {
+  getCorporationName,
+  getAllianceName,
+  getName,
+} = require("../characters/utils");
+const { saveMapUserActions } = require("./sql/mapSqlUserActions");
 
 const USER_DROP_TIMEOUT = 10000;
 
-class MapController extends Emitter{
-  constructor () {
+class MapController extends Emitter {
+  constructor() {
     super();
 
     /**
@@ -31,13 +35,13 @@ class MapController extends Emitter{
     this._us = new UserSubscriptions();
   }
 
-  destructor () {
+  destructor() {
     super.destructor(this);
   }
 
-  async init () {
-    let allMaps = await this.getAllMaps();
-    await Promise.all(allMaps.map(_map => this.get(_map.id).init()));
+  async init() {
+    const allMaps = await this.getAllMaps();
+    await Promise.all(allMaps.map((_map) => this.get(_map.id).init()));
   }
 
   /**
@@ -45,7 +49,7 @@ class MapController extends Emitter{
    * @param {string} _mapId
    * @returns {boolean}
    */
-  has (_mapId) {
+  has(_mapId) {
     return !!this._maps[_mapId];
   }
 
@@ -54,7 +58,7 @@ class MapController extends Emitter{
    * @param {string} _mapId
    * @returns {Map}
    */
-  get (_mapId) {
+  get(_mapId) {
     if (!this.has(_mapId)) {
       this._add(_mapId, new Map({ mapId: _mapId }));
       this._maps[_mapId].init();
@@ -63,44 +67,47 @@ class MapController extends Emitter{
     return this._maps[_mapId];
   }
 
-  remove (_mapId) {
+  remove(_mapId) {
     if (this.has(_mapId)) {
       this._maps[_mapId].deinit();
       delete this._maps[_mapId];
     }
   }
 
-  _add (_mapId, _mapInstance) {
+  _add(_mapId, _mapInstance) {
     this._maps[_mapId] = _mapInstance;
   }
 
-  async connectionBreak (_connectionId) {
-    for (let mapId in this._maps) {
+  async connectionBreak(_connectionId) {
+    for (const mapId in this._maps) {
       this._maps[mapId].connectionBreak(_connectionId);
     }
   }
 
-  async removeCharactersFromObserve (userId, mapId, characters) {
+  async removeCharactersFromObserve(userId, mapId, characters) {
     if (this._maps[mapId]) {
       await this._maps[mapId].removeCharactersFromTracking(userId, characters);
     }
   }
 
-  userOffline (userId) {
-    this._onlineUsers[userId].tid = setTimeout(async function (userId) {
-      this._onlineUsers[userId].tid = -1;
-      this._onlineUsers[userId].online = false;
+  userOffline(userId) {
+    this._onlineUsers[userId].tid = setTimeout(
+      async function (userId) {
+        this._onlineUsers[userId].tid = -1;
+        this._onlineUsers[userId].online = false;
 
-      this._umw.removeUser(userId);
-      this._us.removeUser(userId);
-      delete this._onlineUsers[userId];
-      log(log.INFO, 'User [%s] now is offline.', userId);
+        this._umw.removeUser(userId);
+        this._us.removeUser(userId);
+        delete this._onlineUsers[userId];
+        log(log.INFO, "User [%s] now is offline.", userId);
 
-      await core.userController.setOnline(userId, false);
-    }.bind(this, userId), USER_DROP_TIMEOUT);
+        await core.userController.setOnline(userId, false);
+      }.bind(this, userId),
+      USER_DROP_TIMEOUT,
+    );
   }
 
-  userOnline (_userId) {
+  userOnline(_userId) {
     if (!this._onlineUsers[_userId]) {
       this._onlineUsers[_userId] = {
         online: true,
@@ -112,7 +119,7 @@ class MapController extends Emitter{
       this._onlineUsers[_userId].online = true;
       return;
     }
-    log(log.INFO, 'User [%s] now is online.', _userId);
+    log(log.INFO, "User [%s] now is online.", _userId);
   }
 
   /**
@@ -122,24 +129,28 @@ class MapController extends Emitter{
    * @param {boolean }state
    * @return {Promise<void>}
    */
-  async updateCharacterTrackStatus (maps, characterId, state) {
+  async updateCharacterTrackStatus(maps, characterId, state) {
     const userId = await core.userController.getUserByCharacter(characterId);
     if (state) {
       for (let a = 0; a < maps.length; a++) {
-        this.has(maps[a]) && this.get(maps[a]).addCharactersToObserve(userId, [characterId]);
+        this.has(maps[a]) &&
+          this.get(maps[a]).addCharactersToObserve(userId, [characterId]);
       }
       return;
     }
 
     /**
      * Get all groups where character are tracking */
-    const groups = await core.groupsController.getGroupsByTrackedCharacterId(characterId);
+    const groups =
+      await core.groupsController.getGroupsByTrackedCharacterId(characterId);
 
     //
     /**
      * Get all maps which contains current groups
      * Пример: [[111,222], [222,333]] */
-    const mapsArr = await Promise.all(groups.map(x => core.groupsController.getMapsByGroup(x)));
+    const mapsArr = await Promise.all(
+      groups.map((x) => core.groupsController.getMapsByGroup(x)),
+    );
 
     /**
      * Convert maps array into object for easy search and filter from duplicates
@@ -147,34 +158,38 @@ class MapController extends Emitter{
      */
     const otherMaps = mapsArr.flat().convertToMap();
     const hasOtherMaps = Object.keys(otherMaps).length > 0;
-    await Promise.all(maps.reduce((acc, mapId) => {
-      if (this.has(mapId) && (!hasOtherMaps || !otherMaps[mapId])) {
-        acc.push(this.get(mapId).removeCharactersFromTracking(userId, [characterId]));
-      }
+    await Promise.all(
+      maps.reduce((acc, mapId) => {
+        if (this.has(mapId) && (!hasOtherMaps || !otherMaps[mapId])) {
+          acc.push(
+            this.get(mapId).removeCharactersFromTracking(userId, [characterId]),
+          );
+        }
 
-      return acc;
-    }, []));
+        return acc;
+      }, []),
+    );
   }
 
-  async getMapsByGroupsWithCharacters (_input) {
-    let prarr = [];
-    let infoGroups = [];
-    for (let groupId in _input) {
-      infoGroups.push({ groupId: groupId, characterIds: _input[groupId] });
+  async getMapsByGroupsWithCharacters(_input) {
+    const prarr = [];
+    const infoGroups = [];
+    for (const groupId in _input) {
+      infoGroups.push({ groupId, characterIds: _input[groupId] });
       prarr.push(core.groupsController.getMapsByGroup(groupId));
     }
 
     // Получаем массив идентификаторов карт
-    let arrMapIds = await Promise.all(prarr);
+    const arrMapIds = await Promise.all(prarr);
 
     // Разложим персонажей по картам
-    let filteredMaps = Object.create(null);
+    const filteredMaps = Object.create(null);
     for (let a = 0; a < arrMapIds.length; a++) {
-      let mapIds = arrMapIds[a];
-      let groupInfo = infoGroups[a];
+      const mapIds = arrMapIds[a];
+      const groupInfo = infoGroups[a];
 
       for (let b = 0; b < mapIds.length; b++) {
-        let mapId = mapIds[b];
+        const mapId = mapIds[b];
 
         if (!filteredMaps[mapId]) {
           filteredMaps[mapId] = [];
@@ -186,53 +201,91 @@ class MapController extends Emitter{
     return filteredMaps;
   }
 
-  async _updateGroups (_mapId, _groups) {
-    let condition = [
-      { name: 'type', operator: '=', value: DBController.linksTableTypes.mapToGroups },
-      { name: 'first', operator: '=', value: _mapId },
+  async _updateGroups(_mapId, _groups) {
+    const condition = [
+      {
+        name: "type",
+        operator: "=",
+        value: DBController.linksTableTypes.mapToGroups,
+      },
+      { name: "first", operator: "=", value: _mapId },
     ];
 
-    let result = await core.dbController.linksTable.getByCondition(condition, ['first', 'second']);
+    const result = await core.dbController.linksTable.getByCondition(
+      condition,
+      ["first", "second"],
+    );
 
-    let added = [], removed = [], transactionArr = [];
+    const added = [];
+    const removed = [];
+    const transactionArr = [];
     for (let a = 0; a < _groups.length; a++) {
-      if (result.searchByObjectKey('second', _groups[a]) === null) {
-        transactionArr.push(core.dbController.linksTable.add({
-          type: DBController.linksTableTypes.mapToGroups,
-          first: _mapId,
-          second: _groups[a],
-        }, true));
+      if (result.searchByObjectKey("second", _groups[a]) === null) {
+        transactionArr.push(
+          core.dbController.linksTable.add(
+            {
+              type: DBController.linksTableTypes.mapToGroups,
+              first: _mapId,
+              second: _groups[a],
+            },
+            true,
+          ),
+        );
         added.push(_groups[a]);
       }
     }
 
     for (let b = 0; b < result.length; b++) {
       if (_groups.indexOf(result[b].second) === -1) {
-        transactionArr.push(core.dbController.linksTable.removeByCondition([
-          { name: 'type', operator: '=', value: DBController.linksTableTypes.mapToGroups },
-          { name: 'first', operator: '=', value: _mapId },
-          { name: 'second', operator: '=', value: result[b].second },
-        ], true));
+        transactionArr.push(
+          core.dbController.linksTable.removeByCondition(
+            [
+              {
+                name: "type",
+                operator: "=",
+                value: DBController.linksTableTypes.mapToGroups,
+              },
+              { name: "first", operator: "=", value: _mapId },
+              { name: "second", operator: "=", value: result[b].second },
+            ],
+            true,
+          ),
+        );
         removed.push(result[b].second);
       }
     }
 
     await core.dbController.db.transaction(transactionArr);
-    return { added: added, removed: removed };
+    return { added, removed };
   }
 
-  async actualizeOfflineCharactersForMaps (maps, characters) {
-    await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus(maps, characterId, false)));
+  async actualizeOfflineCharactersForMaps(maps, characters) {
+    await Promise.all(
+      characters.map((characterId) =>
+        this.updateCharacterTrackStatus(maps, characterId, false),
+      ),
+    );
   }
 
-  async actualizeOnlineCharactersForMaps (maps, characters) {
-    await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus(maps, characterId, false)));
+  async actualizeOnlineCharactersForMaps(maps, characters) {
+    await Promise.all(
+      characters.map((characterId) =>
+        this.updateCharacterTrackStatus(maps, characterId, false),
+      ),
+    );
   }
 
-  async addChainManual (owner, mapId, sourceSolarSystemId, targetSolarSystemId) {
-    let map = this.get(mapId);
-    const added = await map.addChainManual(sourceSolarSystemId, targetSolarSystemId);
-    await saveMapUserActions(owner, mapId, 'addChainManual', { sourceSolarSystemId, targetSolarSystemId, added });
+  async addChainManual(owner, mapId, sourceSolarSystemId, targetSolarSystemId) {
+    const map = this.get(mapId);
+    const added = await map.addChainManual(
+      sourceSolarSystemId,
+      targetSolarSystemId,
+    );
+    await saveMapUserActions(owner, mapId, "addChainManual", {
+      sourceSolarSystemId,
+      targetSolarSystemId,
+      added,
+    });
   }
 
   /**
@@ -245,11 +298,11 @@ class MapController extends Emitter{
    * @param _data.groups {Array<string>}
    * @returns {Promise<any> | Promise<unknown>}
    */
-  async createMap (_owner, _data) {
-    let id = md5(config.app.solt + '_' + +new Date);
+  async createMap(_owner, _data) {
+    const id = md5(`${config.app.solt}_${+new Date()}`);
 
-    let props = {
-      id: id,
+    const props = {
+      id,
       owner: _owner,
       name: _data.name,
       personalNote: _data.note,
@@ -269,35 +322,55 @@ class MapController extends Emitter{
    * @param _props
    * @returns {Promise<void>}
    */
-  async editMap (_mapId, { name, description, note, groups }) {
+  async editMap(_mapId, { name, description, note, groups }) {
     // todo Тут наверно надо сделать очередь на редактирование.
     // нельзя что бы эдитилось сразу 2 карты...
     // хз надо об этом подумать
 
     if (groups) {
-      let oldGroups = await this.getMapGroups(_mapId);
-      let { added, removed } = await this._updateGroups(_mapId, groups);
+      const oldGroups = await this.getMapGroups(_mapId);
+      const { added, removed } = await this._updateGroups(_mapId, groups);
 
       // персонажей надо добавлять в онлайн только при условии, что у карты были хотя бы
       // какие-то группы, т.к. если их не было, то смотреть на карту невозможно
       if (oldGroups.length !== 0) {
         if (added.length > 0) {
-          let charsArr = await Promise.all(added.map(groupId => core.groupsController.getTrackedCharactersByGroup(groupId)));
-          let characters = [];
-          charsArr.map(x => characters.merge(x));
-          await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus([_mapId], characterId, true)));
+          const charsArr = await Promise.all(
+            added.map((groupId) =>
+              core.groupsController.getTrackedCharactersByGroup(groupId),
+            ),
+          );
+          const characters = [];
+          charsArr.map((x) => characters.merge(x));
+          await Promise.all(
+            characters.map((characterId) =>
+              this.updateCharacterTrackStatus([_mapId], characterId, true),
+            ),
+          );
         }
 
         if (removed.length > 0) {
-          let charsArr = await Promise.all(removed.map(groupId => core.groupsController.getTrackedCharactersByGroup(groupId)));
-          let characters = [];
-          charsArr.map(x => characters.merge(x));
-          await Promise.all(characters.map(characterId => this.updateCharacterTrackStatus([_mapId], characterId, false)));
+          const charsArr = await Promise.all(
+            removed.map((groupId) =>
+              core.groupsController.getTrackedCharactersByGroup(groupId),
+            ),
+          );
+          const characters = [];
+          charsArr.map((x) => characters.merge(x));
+          await Promise.all(
+            characters.map((characterId) =>
+              this.updateCharacterTrackStatus([_mapId], characterId, false),
+            ),
+          );
         }
       }
     }
 
-    await core.dbController.mapsDB.set(_mapId, { name, description, personalNote: note });
+    await core.dbController.mapsDB.set(_mapId, {
+      name,
+      description,
+      personalNote: note,
+    });
 
     await this.notifyAllowedMapsByMap(_mapId);
   }
@@ -313,7 +386,7 @@ class MapController extends Emitter{
    * @param _mapId
    * @returns {Promise<unknown>}
    */
-  async removeMap (_mapId) {
+  async removeMap(_mapId) {
     await mapSqlActions.removeMap(_mapId);
     await mapSqlActions.unlinkMapGroups(_mapId);
 
@@ -336,7 +409,7 @@ class MapController extends Emitter{
    * @param {Number} data.characterId
    * @returns {*}
    */
-  async createMapFast (userId, { characterId, ...data }) {
+  async createMapFast(userId, { characterId, ...data }) {
     const {
       mapName,
       mapDescription,
@@ -360,32 +433,32 @@ class MapController extends Emitter{
 
     let newMapDescription;
     const currentTime = new Date().toUTCString();
-    if (mapDescription === '') {
-      newMapDescription = `This map was created in ${ currentTime }.`;
+    if (mapDescription === "") {
+      newMapDescription = `This map was created in ${currentTime}.`;
     } else {
       newMapDescription = mapDescription;
     }
 
     let newMapNote;
-    if (mapNote === '') {
-      newMapNote = `This map was created by ${ characterName }`;
+    if (mapNote === "") {
+      newMapNote = `This map was created by ${characterName}`;
 
       if (shareForCorporation || shareForAlliance) {
-        newMapNote += ` for ${ [corporationName, allianceName].filter(x => !!x).join(', ') }.`;
+        newMapNote += ` for ${[corporationName, allianceName].filter((x) => !!x).join(", ")}.`;
       }
     } else {
       newMapNote = mapNote;
     }
 
     let newGroupDescription;
-    if (groupDescription === '') {
-      newGroupDescription = `This access list was created in ${ currentTime }.`;
+    if (groupDescription === "") {
+      newGroupDescription = `This access list was created in ${currentTime}.`;
     } else {
       newGroupDescription = groupDescription;
     }
 
     const groupOptions = {
-      name: groupName || `group_${ mapName }`,
+      name: groupName || `group_${mapName}`,
       description: newGroupDescription,
       characters: [characterId],
     };
@@ -398,8 +471,15 @@ class MapController extends Emitter{
       groupOptions.alliances = [allianceId];
     }
 
-    const lastCreatedGroupId = await core.groupsController.createGroup(userId, groupOptions);
-    await core.groupsController.updateCharacterTrack(lastCreatedGroupId, characterId, true);
+    const lastCreatedGroupId = await core.groupsController.createGroup(
+      userId,
+      groupOptions,
+    );
+    await core.groupsController.updateCharacterTrack(
+      lastCreatedGroupId,
+      characterId,
+      true,
+    );
 
     const lastCreatedMapId = await this.createMap(userId, {
       name: mapName,
@@ -419,60 +499,69 @@ class MapController extends Emitter{
     };
   }
 
-  async notifyAllowedMapsByAffectedCharacters (characters) {
-    let usersOnCharacters = await core.userController.getUsersByCharacters(characters);
-    let usersObj = Object.create(null);
-    usersOnCharacters.map(x => usersObj[x.userId] = true);
-    let users = Object.keys(usersObj);
-    await Promise.all(users.map(userId => this.notifyAllowedMapsByUser(userId)));
+  async notifyAllowedMapsByAffectedCharacters(characters) {
+    const usersOnCharacters =
+      await core.userController.getUsersByCharacters(characters);
+    const usersObj = Object.create(null);
+    usersOnCharacters.map((x) => (usersObj[x.userId] = true));
+    const users = Object.keys(usersObj);
+    await Promise.all(
+      users.map((userId) => this.notifyAllowedMapsByUser(userId)),
+    );
   }
 
-  async notifyAllowedMapsByUser (userId) {
+  async notifyAllowedMapsByUser(userId) {
     if (this._us.getUser(userId).allowedMaps.notify) {
-      let lastUpdatedMaps = this._us.getUser(userId).allowedMaps.getData(); // было
-      let allowedMaps = await this.getMapsWhereCharacterTrackByUser(userId); // стало
+      const lastUpdatedMaps = this._us.getUser(userId).allowedMaps.getData(); // было
+      const allowedMaps = await this.getMapsWhereCharacterTrackByUser(userId); // стало
 
-      let diff = lastUpdatedMaps.diff(allowedMaps);
+      const diff = lastUpdatedMaps.diff(allowedMaps);
 
       if (diff.added.length > 0) {
-        diff.added.map(x => lastUpdatedMaps.push(x));
+        diff.added.map((x) => lastUpdatedMaps.push(x));
         this._us.getUser(userId).allowedMaps.subscription.notify({
-          type: 'added',
+          type: "added",
           maps: diff.added,
         });
       }
 
       if (diff.removed.length > 0) {
-        diff.removed.map(x => lastUpdatedMaps.removeByValue(x));
+        diff.removed.map((x) => lastUpdatedMaps.removeByValue(x));
         this._us.getUser(userId).allowedMaps.subscription.notify({
-          type: 'removed',
+          type: "removed",
           maps: diff.removed,
         });
       }
     }
   }
 
-  async notifyAllowedMapsByMap (mapId) {
+  async notifyAllowedMapsByMap(mapId) {
     let users = this._us.getUsers();
-    users = users.filter(userId => this._us.getUser(userId).allowedMaps.notify);
+    users = users.filter(
+      (userId) => this._us.getUser(userId).allowedMaps.notify,
+    );
 
-    let charsArr = await Promise.all(users.map(userId => this.getTrackingCharactersForMapByUser(mapId, userId)));
+    const charsArr = await Promise.all(
+      users.map((userId) =>
+        this.getTrackingCharactersForMapByUser(mapId, userId),
+      ),
+    );
 
     users.map((userId, index) => {
-      let hasTrackedCharacters = charsArr[index].length > 0;
-      let lastUpdatedMaps = this._us.getUser(userId).allowedMaps.getData();
-      let hasMap = lastUpdatedMaps.indexOf(mapId) !== -1;
+      const hasTrackedCharacters = charsArr[index].length > 0;
+      const lastUpdatedMaps = this._us.getUser(userId).allowedMaps.getData();
+      const hasMap = lastUpdatedMaps.indexOf(mapId) !== -1;
 
       if (hasMap && !hasTrackedCharacters) {
         lastUpdatedMaps.removeByValue(mapId);
         this._us.getUser(userId).allowedMaps.subscription.notify({
-          type: 'removed',
+          type: "removed",
           maps: [mapId],
         });
       } else if (!hasMap && hasTrackedCharacters) {
         lastUpdatedMaps.push(mapId);
         this._us.getUser(userId).allowedMaps.subscription.notify({
-          type: 'added',
+          type: "added",
           maps: [mapId],
         });
       }
@@ -484,9 +573,14 @@ class MapController extends Emitter{
    * @param _ownerId
    * @return {Promise<{id: string, name: string, personalNote: string, description: string}[]>}
    */
-  async getMapListByOwner (_ownerId) {
-    let condition = [{ name: 'owner', operator: '=', value: _ownerId }];
-    return await core.dbController.mapsDB.getByCondition(condition, ['id', 'name', 'personalNote', 'description']);
+  async getMapListByOwner(_ownerId) {
+    const condition = [{ name: "owner", operator: "=", value: _ownerId }];
+    return await core.dbController.mapsDB.getByCondition(condition, [
+      "id",
+      "name",
+      "personalNote",
+      "description",
+    ]);
   }
 
   /**
@@ -494,32 +588,46 @@ class MapController extends Emitter{
    * @param mapId
    * @return {Promise<{id: string, name: string, description: string, hubs: number[]}>}
    */
-  async getMapInfo (mapId) {
-    const attributes = ['id', 'name', 'description', 'personalNote', 'hubs', 'owner'];
+  async getMapInfo(mapId) {
+    const attributes = [
+      "id",
+      "name",
+      "description",
+      "personalNote",
+      "hubs",
+      "owner",
+    ];
     return await core.dbController.mapsDB.get(mapId, attributes);
   }
 
-  async getMapGroups (mapId) {
-    let condition = [
-      { name: 'type', operator: '=', value: DBController.linksTableTypes.mapToGroups },
-      { name: 'first', operator: '=', value: mapId },
+  async getMapGroups(mapId) {
+    const condition = [
+      {
+        name: "type",
+        operator: "=",
+        value: DBController.linksTableTypes.mapToGroups,
+      },
+      { name: "first", operator: "=", value: mapId },
     ];
-    let result = await core.dbController.linksTable.getByCondition(condition, ['second']);
-    return result.map(x => x.second);
+    const result = await core.dbController.linksTable.getByCondition(
+      condition,
+      ["second"],
+    );
+    return result.map((x) => x.second);
   }
 
-  async getAllMaps () {
+  async getAllMaps() {
     return await core.dbController.mapsDB.all();
   }
 
-  async setMapWatchStatus (connectionId, userId, mapId, status) {
+  async setMapWatchStatus(connectionId, userId, mapId, status) {
     // Если текущий статус слежения за картой, выставлен в тру.
     if (status) {
       // Если нет слежения по текущему конекшну то создадим новый
       this._umw.addConnection(userId, connectionId);
 
       // Для всех карт пройдемся и зададим значение в false
-      let prarr = [];
+      const prarr = [];
       this._umw.eachMap(userId, connectionId, (_mapId, _isWatch) => {
         if (_isWatch) {
           this._umw.set(userId, connectionId, _mapId, false);
@@ -547,61 +655,74 @@ class MapController extends Emitter{
     }
   }
 
-  async getTrackingCharactersForMapByUser (mapId, userId) {
-    let groupsPr = this.getMapGroups(mapId);
-    let userCharactersPr = core.userController.getUserCharacters(userId);
-    let groups = await groupsPr;
-    let userCharacters = await userCharactersPr;
+  async getTrackingCharactersForMapByUser(mapId, userId) {
+    const groupsPr = this.getMapGroups(mapId);
+    const userCharactersPr = core.userController.getUserCharacters(userId);
+    const groups = await groupsPr;
+    const userCharacters = await userCharactersPr;
 
-    let cond = [];
+    const cond = [];
     for (let a = 0; a < groups.length; a++) {
       for (let b = 0; b < userCharacters.length; b++) {
         cond.push([
-          { name: 'characterId', operator: '=', value: userCharacters[b] },
-          { name: 'groupId', operator: '=', value: groups[a] },
-          { name: 'track', operator: '=', value: true },
+          { name: "characterId", operator: "=", value: userCharacters[b] },
+          { name: "groupId", operator: "=", value: groups[a] },
+          { name: "track", operator: "=", value: true },
         ]);
       }
     }
 
     let result = [];
     if (cond.length > 0) {
-      let dbRes = await core.dbController.groupToCharacterTable.getByCondition({
-        condition: cond,
-        operator: 'OR',
-      }, ['characterId', 'groupId', 'track']);
-      result = dbRes.map(x => x.characterId);
+      const dbRes =
+        await core.dbController.groupToCharacterTable.getByCondition(
+          {
+            condition: cond,
+            operator: "OR",
+          },
+          ["characterId", "groupId", "track"],
+        );
+      result = dbRes.map((x) => x.characterId);
     }
 
     return result;
   }
 
-  async getMapsWhereCharacterTrackByUser (userId) {
-    let characters = await core.userController.getUserCharacters(userId);
-    let maps = [];
+  async getMapsWhereCharacterTrackByUser(userId) {
+    const characters = await core.userController.getUserCharacters(userId);
+    const maps = [];
 
     if (characters.length > 0) {
-      let condition = {
-        operator: 'OR',
-        condition: characters.map(characterId => ({
-          operator: 'AND',
-          left: { name: 'characterId', operator: '=', value: characterId },
-          right: { name: 'track', operator: '=', value: true },
+      const condition = {
+        operator: "OR",
+        condition: characters.map((characterId) => ({
+          operator: "AND",
+          left: { name: "characterId", operator: "=", value: characterId },
+          right: { name: "track", operator: "=", value: true },
         })),
       };
 
-      let dbRes = await core.dbController.groupToCharacterTable.getByCondition(condition, ['groupId']);
-      let mapsArr = await Promise.all(dbRes.map(x => core.groupsController.getMapsByGroup(x.groupId)));
-      mapsArr.map(x => maps.merge(x));
+      const dbRes =
+        await core.dbController.groupToCharacterTable.getByCondition(
+          condition,
+          ["groupId"],
+        );
+      const mapsArr = await Promise.all(
+        dbRes.map((x) => core.groupsController.getMapsByGroup(x.groupId)),
+      );
+      mapsArr.map((x) => maps.merge(x));
     }
 
     return maps;
   }
 
-  async updateMapWatchStatus (userId, mapId, status) {
-    let characters = await this.getTrackingCharactersForMapByUser(mapId, userId);
+  async updateMapWatchStatus(userId, mapId, status) {
+    const characters = await this.getTrackingCharactersForMapByUser(
+      mapId,
+      userId,
+    );
 
-    let map = this.get(mapId);
+    const map = this.get(mapId);
 
     if (status) {
       map.addCharactersToObserve(userId, characters);
@@ -610,9 +731,9 @@ class MapController extends Emitter{
     }
   }
 
-  async dropCharsFromMapsByUserAndConnection (userId, connectionId) {
+  async dropCharsFromMapsByUserAndConnection(userId, connectionId) {
     if (this._umw.hasUser(userId)) {
-      let prarr = [];
+      const prarr = [];
       this._umw.eachMap(userId, connectionId, (mapId, isWatch) => {
         if (isWatch) {
           this._umw.set(userId, connectionId, mapId, false);
@@ -625,44 +746,56 @@ class MapController extends Emitter{
     }
   }
 
-  async subscribeAllowedMaps (userId, connectionId, responseId) {
-    let user = this._us.getUser(userId);
-    let needBulk = !user.allowedMaps.notify;
+  async subscribeAllowedMaps(userId, connectionId, responseId) {
+    const user = this._us.getUser(userId);
+    const needBulk = !user.allowedMaps.notify;
 
     user.allowedMaps.subscribe(connectionId, responseId);
 
     if (needBulk) {
-      let allowedMaps = await this.getMapsWhereCharacterTrackByUser(userId);
+      const allowedMaps = await this.getMapsWhereCharacterTrackByUser(userId);
       user.allowedMaps.setData(allowedMaps);
     }
 
-    this._us.getUser(userId).allowedMaps.subscription.notifyFor(connectionId, responseId, {
-      type: 'add',
-      maps: user.allowedMaps.getData(),
-    });
+    this._us
+      .getUser(userId)
+      .allowedMaps.subscription.notifyFor(connectionId, responseId, {
+        type: "add",
+        maps: user.allowedMaps.getData(),
+      });
   }
 
-  async unsubscribeAllowedMaps (userId, connectionId, responseId) {
-    let user = this._us.getUser(userId);
+  async unsubscribeAllowedMaps(userId, connectionId, responseId) {
+    const user = this._us.getUser(userId);
     user.allowedMaps.unsubscribe(connectionId, responseId);
     this._us.removeUser(userId);
   }
 
-  async searchSolarSystems (match) {
+  async searchSolarSystems(match) {
     let matchLC = match.toLowerCase();
 
     matchLC = matchLC
-      .replace(/^( *?)([a-z0-9])/igm, '$2') // remove spaces before
-      .replace(/([a-z0-9])( *?)$/igm, '$1') // remove spaces after
-      .replace(/\s+/img, ' ');               // remove more than one spaces between symbols
+      .replace(/^( *?)([a-z0-9])/gim, "$2") // remove spaces before
+      .replace(/([a-z0-9])( *?)$/gim, "$1") // remove spaces after
+      .replace(/\s+/gim, " "); // remove more than one spaces between symbols
 
-    let cond = { name: 'solarSystemNameLC', operator: 'LIKE', value: `%${ matchLC }%` };
-    let result = await core.dbController.solarSystemsTable.getByCondition(cond, core.dbController.solarSystemsTable.attributes());
+    const cond = {
+      name: "solarSystemNameLC",
+      operator: "LIKE",
+      value: `%${matchLC}%`,
+    };
+    const result = await core.dbController.solarSystemsTable.getByCondition(
+      cond,
+      core.dbController.solarSystemsTable.attributes(),
+    );
 
-    let indexed = result.map(x => ({ index: x.solarSystemNameLC.indexOf(matchLC), data: x }));
-    let sorted = indexed.sort((a, b) => a.index - b.index);
+    const indexed = result.map((x) => ({
+      index: x.solarSystemNameLC.indexOf(matchLC),
+      data: x,
+    }));
+    const sorted = indexed.sort((a, b) => a.index - b.index);
 
-    return sorted.map(x => ({
+    return sorted.map((x) => ({
       systemClass: x.data.systemClass,
       security: x.data.security,
       solarSystemId: x.data.solarSystemId,

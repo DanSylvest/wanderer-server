@@ -2,16 +2,16 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 11/16/20.
  */
 
-const Emitter = require('./../../../env/_new/tools/emitter');
-const CustomPromise = require('./../../../env/promise.js');
-const Subscriber = require('./../../../utils/subscriber');
-const mapSqlActions = require('./../sql/mapSqlActions.js');
-const { getSolarSystemInfo } = require('../sql/solarSystemSql');
+const Emitter = require("./../../../env/_new/tools/emitter");
+const CustomPromise = require("./../../../env/promise.js");
+const Subscriber = require("./../../../utils/subscriber");
+const mapSqlActions = require("./../sql/mapSqlActions.js");
+const { getSolarSystemInfo } = require("../sql/solarSystemSql");
 
-class MapSolarSystem extends Emitter{
-  zkbInfo = { kills: [], type: 'noActivity' };
+class MapSolarSystem extends Emitter {
+  zkbInfo = { kills: [], type: "noActivity" };
 
-  constructor (mapId, solarSystemId) {
+  constructor(mapId, solarSystemId) {
     super();
 
     this.mapId = mapId;
@@ -21,7 +21,7 @@ class MapSolarSystem extends Emitter{
     this._notifyDynamicInfoSubscriber = false;
   }
 
-  destructor () {
+  destructor() {
     this._loadPromise.native.cancel();
     this._loadPromise = new CustomPromise();
     this.onlineCharacters = [];
@@ -29,17 +29,21 @@ class MapSolarSystem extends Emitter{
     super.destructor();
   }
 
-  connectionBreak (_connectionId) {
-    this._notifyDynamicInfoSubscriber && this._dynamicInfoSubscriber.removeSubscribersByConnection(_connectionId);
+  connectionBreak(_connectionId) {
+    this._notifyDynamicInfoSubscriber &&
+      this._dynamicInfoSubscriber.removeSubscribersByConnection(_connectionId);
   }
 
-  async isSystemExistsAndVisible () {
-    let condition = [
-      { name: 'id', operator: '=', value: this.solarSystemId },
-      { name: 'mapId', operator: '=', value: this.mapId },
+  async isSystemExistsAndVisible() {
+    const condition = [
+      { name: "id", operator: "=", value: this.solarSystemId },
+      { name: "mapId", operator: "=", value: this.mapId },
     ];
 
-    let result = await core.dbController.mapSystemsTable.getByCondition(condition, ['visible']);
+    const result = await core.dbController.mapSystemsTable.getByCondition(
+      condition,
+      ["visible"],
+    );
 
     return {
       exists: result.length > 0,
@@ -47,19 +51,19 @@ class MapSolarSystem extends Emitter{
     };
   }
 
-  loadPromise () {
+  loadPromise() {
     return this._loadPromise.native;
   }
 
-  resolve () {
+  resolve() {
     this._loadPromise.resolve();
   }
 
-  reject () {
+  reject() {
     this._loadPromise.reject();
   }
 
-  async create (name, position) {
+  async create(name, position) {
     await core.dbController.mapSystemsTable.add({
       mapId: this.mapId,
       id: this.solarSystemId,
@@ -68,8 +72,11 @@ class MapSolarSystem extends Emitter{
     });
   }
 
-  updateZkbKills ({ kills, type }) {
-    if (this.zkbInfo.kills.length === kills.length && this.zkbInfo.type === type) {
+  updateZkbKills({ kills, type }) {
+    if (
+      this.zkbInfo.kills.length === kills.length &&
+      this.zkbInfo.type === type
+    ) {
       return;
     }
 
@@ -77,7 +84,7 @@ class MapSolarSystem extends Emitter{
 
     if (this._notifyDynamicInfoSubscriber) {
       this._dynamicInfoSubscriber.notify({
-        type: 'systemUpdated',
+        type: "systemUpdated",
         data: {
           killsCount: kills.length,
           activityState: type,
@@ -86,27 +93,30 @@ class MapSolarSystem extends Emitter{
     }
   }
 
-  async getInfo () {
-    let condition = [
-      { name: 'id', operator: '=', value: this.solarSystemId },
-      { name: 'mapId', operator: '=', value: this.mapId },
+  async getInfo() {
+    const condition = [
+      { name: "id", operator: "=", value: this.solarSystemId },
+      { name: "mapId", operator: "=", value: this.mapId },
     ];
 
-    let mapInfo = await core.dbController.mapSystemsTable.getByCondition(condition, core.dbController.mapSystemsTable.attributes());
+    let mapInfo = await core.dbController.mapSystemsTable.getByCondition(
+      condition,
+      core.dbController.mapSystemsTable.attributes(),
+    );
     let solarSystemInfo = await getSolarSystemInfo(this.solarSystemId);
 
     if (!solarSystemInfo) {
-      throw 'exception';
+      throw "exception";
     }
 
     if (!mapInfo[0]) {
-      throw 'exception';
+      throw "exception";
     }
 
     solarSystemInfo = solarSystemInfo[0];
     mapInfo = mapInfo[0];
 
-    let out = {
+    const out = {
       id: mapInfo.id,
       mapId: mapInfo.mapId,
       isLocked: mapInfo.isLocked,
@@ -146,62 +156,81 @@ class MapSolarSystem extends Emitter{
     return out;
   }
 
-  async addCharacter (characterId) {
-    await mapSqlActions.addCharacterToSystem(this.mapId, this.solarSystemId, characterId);
+  async addCharacter(characterId) {
+    await mapSqlActions.addCharacterToSystem(
+      this.mapId,
+      this.solarSystemId,
+      characterId,
+    );
     this.onlineCharacters.push(characterId);
 
     if (this._notifyDynamicInfoSubscriber) {
       this._dynamicInfoSubscriber.notify({
-        type: 'multipleEvents',
+        type: "multipleEvents",
         list: [
-          { type: 'onlineUpdate', data: { onlineCount: this.onlineCharacters.length } },
-          { type: 'userJoin', data: { characterId } },
+          {
+            type: "onlineUpdate",
+            data: { onlineCount: this.onlineCharacters.length },
+          },
+          { type: "userJoin", data: { characterId } },
         ],
       });
     }
   }
 
-  async removeCharacter (characterId) {
-    await mapSqlActions.removeCharacterFromSystem(this.mapId, this.solarSystemId, characterId);
+  async removeCharacter(characterId) {
+    await mapSqlActions.removeCharacterFromSystem(
+      this.mapId,
+      this.solarSystemId,
+      characterId,
+    );
     this.onlineCharacters.removeByValue(characterId);
 
     if (this._notifyDynamicInfoSubscriber) {
       this._dynamicInfoSubscriber.notify({
-        type: 'multipleEvents',
+        type: "multipleEvents",
         list: [
-          { type: 'onlineUpdate', data: { onlineCount: this.onlineCharacters.length } },
-          { type: 'userLeave', data: { characterId } },
+          {
+            type: "onlineUpdate",
+            data: { onlineCount: this.onlineCharacters.length },
+          },
+          { type: "userLeave", data: { characterId } },
         ],
       });
     }
   }
 
-  async updatePositions (x, y) {
-    await mapSqlActions.updateSystemPosition(this.mapId, this.solarSystemId, x, y);
+  async updatePositions(x, y) {
+    await mapSqlActions.updateSystemPosition(
+      this.mapId,
+      this.solarSystemId,
+      x,
+      y,
+    );
 
     if (this._notifyDynamicInfoSubscriber) {
       this._dynamicInfoSubscriber.notify({
-        type: 'updatedSystemsPosition',
+        type: "updatedSystemsPosition",
         data: { position: { x, y } },
       });
     }
   }
 
-  async update (data) {
+  async update(data) {
     await mapSqlActions.updateSystem(this.mapId, this.solarSystemId, data);
 
     if (this._notifyDynamicInfoSubscriber) {
       this._dynamicInfoSubscriber.notify({
-        type: 'systemUpdated',
+        type: "systemUpdated",
         data: data,
       });
     }
   }
 
-  _createDynamicInfoSubscriber () {
+  _createDynamicInfoSubscriber() {
     if (!this._dynamicInfoSubscriber) {
       this._dynamicInfoSubscriber = new Subscriber({
-        responseCommand: 'responseEveMapSolarSystemData',
+        responseCommand: "responseEveMapSolarSystemData",
         onStart: function () {
           this._notifyDynamicInfoSubscriber = true;
         }.bind(this),
@@ -212,27 +241,30 @@ class MapSolarSystem extends Emitter{
     }
   }
 
-  subscribeDynamicInfo (connectionId, responseId) {
+  subscribeDynamicInfo(connectionId, responseId) {
     this._createDynamicInfoSubscriber();
     this._dynamicInfoSubscriber.addSubscriber(connectionId, responseId);
     this._bulkDynamicInfo(connectionId, responseId);
   }
 
-  unsubscribeDynamicInfo (_connectionId, _responseId) {
+  unsubscribeDynamicInfo(_connectionId, _responseId) {
     if (this._dynamicInfoSubscriber) {
       this._dynamicInfoSubscriber.removeSubscriber(_connectionId, _responseId);
     }
   }
 
-  async _bulkDynamicInfo (connectionId, responseId) {
-    let info = await mapSqlActions.getSystemInfo(this.mapId, this.solarSystemId);
+  async _bulkDynamicInfo(connectionId, responseId) {
+    const info = await mapSqlActions.getSystemInfo(
+      this.mapId,
+      this.solarSystemId,
+    );
 
     if (info === null) {
       return;
     }
 
     this._dynamicInfoSubscriber.notifyFor(connectionId, responseId, {
-      type: 'bulk',
+      type: "bulk",
       data: {
         isLocked: info.isLocked,
         name: info.name,

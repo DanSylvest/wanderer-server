@@ -31,12 +31,10 @@ const systemClasses = {
 };
 
 const namedSystems = {
-  'Jita': 30000142,
+  Jita: 30000142,
 };
 
-const prohibitedSystems = [
-  namedSystems.Jita,
-];
+const prohibitedSystems = [namedSystems.Jita];
 
 const whSpace = [
   systemClasses.c1,
@@ -52,13 +50,9 @@ const whSpace = [
   systemClasses.vidette,
   systemClasses.conflux,
   systemClasses.redoubt,
-]
+];
 
-const knownSpace = [
-  systemClasses.hs,
-  systemClasses.ls,
-  systemClasses.ns,
-]
+const knownSpace = [systemClasses.hs, systemClasses.ls, systemClasses.ns];
 
 const prohibitedSystemClasses = [
   systemClasses.a1,

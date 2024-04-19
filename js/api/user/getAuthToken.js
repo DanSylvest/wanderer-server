@@ -1,7 +1,7 @@
 /**
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/20/20.
  */
-const exist = require("./../../env/tools/exist")
+const exist = require("../../env/tools/exist");
 
 /**
  *
@@ -11,31 +11,39 @@ const exist = require("./../../env/tools/exist")
  * @param _event.type {string}
  * @returns {Promise<void>}
  */
-var request = async function (_connection_id, _response_id, _event) {
-    if(!exist(_event.type) || typeof _event.type !== "string" || !_event.type.match(/auth|attach|refresh/i)) {
-        api.send(_connection_id, _response_id, {
-            message: "Not found parameter 'type' or incorrect. Type should be 'auth' or 'attach' or 'refresh'",
-            event_type: "responseAuthToken",
-            success: false
-        });
-        return
-    }
+const request = async function (_connection_id, _response_id, _event) {
+  if (
+    !exist(_event.type) ||
+    typeof _event.type !== "string" ||
+    !_event.type.match(/auth|attach|refresh/i)
+  ) {
+    api.send(_connection_id, _response_id, {
+      message:
+        "Not found parameter 'type' or incorrect. Type should be 'auth' or 'attach' or 'refresh'",
+      event_type: "responseAuthToken",
+      success: false,
+    });
+    return;
+  }
 
-    try {
-        let token = await core.tokenController.generateToken(_event.type, +new Date + 1000 * 60 * 30);
-        api.send(_connection_id, _response_id, {
-            token: token,
-            event_type: "responseAuthToken",
-            success: true
-        });
-
-    } catch (_err) {
-        api.send(_connection_id, _response_id, {
-            message: "Error on get token",
-            event_type: "responseAuthToken",
-            success: false
-        });
-    }
+  try {
+    const token = await core.tokenController.generateToken(
+      _event.type,
+      +new Date() + 1000 * 60 * 30,
+    );
+    api.send(_connection_id, _response_id, {
+      token,
+      event_type: "responseAuthToken",
+      success: true,
+    });
+    // eslint-disable-next-line no-unused-vars
+  } catch (_err) {
+    api.send(_connection_id, _response_id, {
+      message: "Error on get token",
+      event_type: "responseAuthToken",
+      success: false,
+    });
+  }
 };
 
 module.exports = request;

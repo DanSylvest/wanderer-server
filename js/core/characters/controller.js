@@ -2,17 +2,17 @@
  * Created by Aleksey Chichenkov <cublakhan257@gmail.com> on 5/21/20.
  */
 
-const Emitter = require('./../../env/_new/tools/emitter');
-const Character = require('./character');
-const CustomPromise = require('./../../env/promise');
-const DBController = require('./../../core/dbController');
-const NodeCache = require('node-cache');
-const log = require("./../../utils/log");
+const NodeCache = require("node-cache");
+const Emitter = require("../../env/_new/tools/emitter");
+const Character = require("./character");
+const CustomPromise = require("../../env/promise");
+const DBController = require("../dbController");
+const log = require("../../utils/log");
 
 // const SEARCH_LIMIT = 12;
 
-class Controller extends Emitter{
-  constructor () {
+class Controller extends Emitter {
+  constructor() {
     super();
 
     this._characters = Object.create(null);
@@ -23,7 +23,7 @@ class Controller extends Emitter{
     });
   }
 
-  has (_characterId) {
+  has(_characterId) {
     return !!this._characters[_characterId];
   }
 
@@ -32,11 +32,14 @@ class Controller extends Emitter{
    * @param _characterId
    * @returns {Character}
    */
-  get (_characterId) {
+  get(_characterId) {
     if (_characterId === undefined) {
-      log(log.ERR, '-------------------');
-      log(log.ERR, 'Character ID could not be undefined. Debbug it in "characters/controller.js:35"');
-      log(log.ERR, '-------------------');
+      log(log.ERR, "-------------------");
+      log(
+        log.ERR,
+        'Character ID could not be undefined. Debbug it in "characters/controller.js:35"',
+      );
+      log(log.ERR, "-------------------");
     }
 
     if (!this.has(_characterId)) {
@@ -46,17 +49,17 @@ class Controller extends Emitter{
     return this._characters[_characterId];
   }
 
-  remove (_characterId) {
+  remove(_characterId) {
     this._characters[_characterId].destructor();
     delete this._characters[_characterId];
   }
 
-  _add (_characterId, _characterInstance) {
+  _add(_characterId, _characterInstance) {
     this._characters[_characterId] = _characterInstance;
   }
 
-  connectionBreak (_connectionId) {
-    for (var characterId in this._characters) {
+  connectionBreak(_connectionId) {
+    for (const characterId in this._characters) {
       this._characters[characterId].connectionBreak(_connectionId);
     }
   }
@@ -77,14 +80,13 @@ class Controller extends Emitter{
    *     raceId {number}
    * }>}
    */
-  async getPublicCharacterInfo (characterId) {
+  async getPublicCharacterInfo(characterId) {
     if (this.infoCache.has(characterId)) {
       return this.infoCache.get(characterId);
-    } else {
-      let info = await core.esiApi.characters.info(characterId);
-      this.infoCache.set(characterId, info);
-      return info;
     }
+    const info = await core.esiApi.characters.info(characterId);
+    this.infoCache.set(characterId, info);
+    return info;
   }
 
   /**
@@ -92,24 +94,31 @@ class Controller extends Emitter{
    * @param _characterId
    * @returns {Promise<{name: string, addDate: Date}>}
    */
-  async getProtectedCharacterInfo (_characterId) {
-    const { name, addDate } = await core.dbController.charactersDB.get(_characterId, ['name', 'addDate']);
+  async getProtectedCharacterInfo(_characterId) {
+    const { name, addDate } = await core.dbController.charactersDB.get(
+      _characterId,
+      ["name", "addDate"],
+    );
     return { name, addDate };
   }
 
-  async searchInEve (_match) {
+  async searchInEve(_match) {
     let result = Object.create(null);
 
     try {
-      result = await core.esiApi.search(['character'], _match);
+      result = await core.esiApi.search(["character"], _match);
+      // eslint-disable-next-line no-unused-vars
     } catch (e) {
       return [];
     }
 
-    let characterIds = result.character && result.character.slice(0, 15) || [];
-    let infoArr = await Promise.all(characterIds.map(x => this.getPublicCharacterInfo(x)));
+    const characterIds =
+      (result.character && result.character.slice(0, 15)) || [];
+    const infoArr = await Promise.all(
+      characterIds.map((x) => this.getPublicCharacterInfo(x)),
+    );
 
-    let out = infoArr.map((x, index) => ({
+    const out = infoArr.map((x, index) => ({
       id: characterIds[index],
       name: x.name,
     }));
@@ -119,11 +128,11 @@ class Controller extends Emitter{
     return out;
   }
 
-  fastSearch (_options) {
+  fastSearch(_options) {
     switch (_options.type) {
-      case 'byAll':
+      case "byAll":
         return this.searchInEve(_options.match);
-      case 'byUser':
+      case "byUser":
         break;
     }
   }
@@ -135,31 +144,42 @@ class Controller extends Emitter{
    * @param _characterId
    * @returns {Promise<unknown>}
    */
-  async removeCharacter (_userId, _characterId) {
-    var pr = new CustomPromise();
+  async removeCharacter(_userId, _characterId) {
+    const pr = new CustomPromise();
 
     try {
       // найти в каких группах этот персонаж участвует, и оповестить карты, что его нужно убрать с отслеживания
       // найти все группы
 
-      var condition = [
-        { name: 'characterId', operator: '=', value: _characterId },
-        { name: 'track', operator: '=', value: true },
+      const condition = [
+        { name: "characterId", operator: "=", value: _characterId },
+        { name: "track", operator: "=", value: true },
       ];
 
-      var result = await core.dbController.groupToCharacterTable.getByCondition(condition, ['groupId']);
+      const result =
+        await core.dbController.groupToCharacterTable.getByCondition(
+          condition,
+          ["groupId"],
+        );
 
-      var groups = Object.create(null);
-      for (var a = 0; a < result.length; a++) {
-        var groupId = result[a].groupId;
+      const groups = Object.create(null);
+      for (let a = 0; a < result.length; a++) {
+        const { groupId } = result[a];
         groups[groupId] = [_characterId];
       }
 
-      var filteredMaps = await core.mapController.getMapsByGroupsWithCharacters(groups);
+      const filteredMaps =
+        await core.mapController.getMapsByGroupsWithCharacters(groups);
 
-      var prarr = [];
-      for (var mapId in filteredMaps) {
-        prarr.push(core.mapController.removeCharactersFromObserve(_userId, mapId, filteredMaps[mapId]));
+      const prarr = [];
+      for (const mapId in filteredMaps) {
+        prarr.push(
+          core.mapController.removeCharactersFromObserve(
+            _userId,
+            mapId,
+            filteredMaps[mapId],
+          ),
+        );
       }
 
       // дождемся когда все персонажи будут отключены
@@ -169,17 +189,30 @@ class Controller extends Emitter{
         this.remove(_characterId);
       }
 
-      var ltCondition = [
-        { name: 'type', operator: '=', value: DBController.linksTableTypes.userToCharacter },
-        { name: 'first', operator: '=', value: _userId },
-        { name: 'second', operator: '=', value: _characterId },
+      const ltCondition = [
+        {
+          name: "type",
+          operator: "=",
+          value: DBController.linksTableTypes.userToCharacter,
+        },
+        { name: "first", operator: "=", value: _userId },
+        { name: "second", operator: "=", value: _characterId },
       ];
-      var gtCondition = [{ name: 'characterId', operator: '=', value: _characterId }];
+      const gtCondition = [
+        { name: "characterId", operator: "=", value: _characterId },
+      ];
 
-      var trArr = [];
+      const trArr = [];
       trArr.push(core.dbController.charactersDB.remove(_characterId, true));
-      trArr.push(core.dbController.linksTable.removeByCondition(ltCondition, true));
-      trArr.push(core.dbController.groupToCharacterTable.removeByCondition(gtCondition, true));
+      trArr.push(
+        core.dbController.linksTable.removeByCondition(ltCondition, true),
+      );
+      trArr.push(
+        core.dbController.groupToCharacterTable.removeByCondition(
+          gtCondition,
+          true,
+        ),
+      );
 
       await core.dbController.db.transaction(trArr);
 
@@ -188,22 +221,20 @@ class Controller extends Emitter{
       pr.reject(_err);
     }
 
-
     return pr.native;
   }
 
-  serverStatusOffline () {
-    for (let id in this._characters) {
+  serverStatusOffline() {
+    for (const id in this._characters) {
       this._characters[id].serverStatusOffline();
     }
   }
 
-  serverStatusOnline () {
-    for (let id in this._characters) {
+  serverStatusOnline() {
+    for (const id in this._characters) {
       this._characters[id].serverStatusOnline();
     }
   }
 }
-
 
 module.exports = Controller;

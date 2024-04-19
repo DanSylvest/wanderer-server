@@ -3,7 +3,7 @@
  */
 
 module.exports = {
-    solarSystemInfo : require("./solarSystemInfo.js"),
-    shipInfo : require("./shipInfo.js"),
-    staticData : require("./staticData.js"),
+  solarSystemInfo: require("./solarSystemInfo"),
+  shipInfo: require("./shipInfo"),
+  staticData: require("./staticData"),
 };

@@ -1,6 +1,6 @@
 module.exports = {
-    addHub           : require("./addHub"),
-    removeHub        : require("./removeHub"),
-    subscribeHubs    : require("./subscribeHubs"),
-    getRoutes        : require("./getRoutes"),
+  addHub: require("./addHub"),
+  removeHub: require("./removeHub"),
+  subscribeHubs: require("./subscribeHubs"),
+  getRoutes: require("./getRoutes"),
 };

@@ -5,25 +5,23 @@
 global.projectPath = __dirname;
 require("./env/tools/standardTypeExtend");
 
-var ConfReader = require("./utils/configReader");
+const ConfReader = require("./utils/configReader");
+
 global.config = new ConfReader("conf").build();
 
-var handlers   = require("./api/_dir");
-var Api        = require("./api");
-var Controller = require("./core/controller");
+const handlers = require("./api/_dir");
+const Api = require("./api");
+const Controller = require("./core/controller");
 
+const main = async function () {
+  global.core = new Controller();
+  await global.core.init();
 
-var main = async function () {
+  global.api = new Api({
+    handlers,
+  });
 
-    global.core = new Controller();
-    await global.core.init();
-
-    global.api = new Api({
-        handlers: handlers
-    });
-
-    global.core.postInit();
-
+  global.core.postInit();
 };
 
 main();

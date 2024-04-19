@@ -1,6 +1,7 @@
-const helpers = require('./../../../utils/helpers.js');
-const responseName = 'responseSolarSystemInfo';
-const solarSystemSql = require('./../../../core/maps/sql/solarSystemSql');
+const helpers = require("../../../utils/helpers");
+
+const responseName = "responseSolarSystemInfo";
+const solarSystemSql = require("../../../core/maps/sql/solarSystemSql");
 
 /**
  *
@@ -17,7 +18,13 @@ const request = async function (_connectionId, _responseId, _event) {
 
   // when token is undefined - it means what you have no rights
   if (token === undefined) {
-    helpers.errResponse(_connectionId, _responseId, responseName, 'You not authorized or token was expired', { code: 1 });
+    helpers.errResponse(
+      _connectionId,
+      _responseId,
+      responseName,
+      "You not authorized or token was expired",
+      { code: 1 },
+    );
     return;
   }
 
@@ -33,17 +40,27 @@ const request = async function (_connectionId, _responseId, _event) {
         eventType: responseName,
       });
     } else {
-      helpers.errResponse(_connectionId, _responseId, responseName, `Solar system [${ _event.solarSystemId }] is not exists.`, {
-        code: 0,
-      });
+      helpers.errResponse(
+        _connectionId,
+        _responseId,
+        responseName,
+        `Solar system [${_event.solarSystemId}] is not exists.`,
+        {
+          code: 0,
+        },
+      );
     }
-
-
   } catch (err) {
-    helpers.errResponse(_connectionId, _responseId, responseName, 'Error on getting map info', {
-      code: 0,
-      handledError: err,
-    });
+    helpers.errResponse(
+      _connectionId,
+      _responseId,
+      responseName,
+      "Error on getting map info",
+      {
+        code: 0,
+        handledError: err,
+      },
+    );
   }
 };
 

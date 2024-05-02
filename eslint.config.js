@@ -1,8 +1,14 @@
-import babelEslint from "@babel/eslint-parser";
-import js from "@eslint/js";
+// import babelEslint from "@babel/eslint-parser";
+// import js from "@eslint/js";
+//
+// import prettierPlugin from "eslint-plugin-prettier";
+// import eslintConfigPrettier from "eslint-config-prettier";
 
-import prettierPlugin from "eslint-plugin-prettier";
-import eslintConfigPrettier from "eslint-config-prettier";
+const babelEslint = require("@babel/eslint-parser");
+const js = require("@eslint/js");
+
+const prettierPlugin = require("eslint-plugin-prettier");
+const eslintConfigPrettier = require("eslint-config-prettier");
 
 // import { FlatCompat } from "@eslint/eslintrc";
 // import globals from "globals";
@@ -15,7 +21,7 @@ import eslintConfigPrettier from "eslint-config-prettier";
 //   resolvePluginsRelativeTo: __dirname, // optional
 // });
 
-export default [
+module.exports = [
   {
     languageOptions: {
       parser: babelEslint,

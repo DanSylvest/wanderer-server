@@ -84,9 +84,16 @@ class Controller extends Emitter {
     if (this.infoCache.has(characterId)) {
       return this.infoCache.get(characterId);
     }
-    const info = await core.esiApi.characters.info(characterId);
-    this.infoCache.set(characterId, info);
-    return info;
+
+    try {
+      // TODO here call a characterInfo
+      const info = await core.esiApi.characters.info(characterId);
+      this.infoCache.set(characterId, info);
+      return info;
+      // eslint-disable-next-line no-unused-vars
+    } catch (e) {
+      return null;
+    }
   }
 
   /**
@@ -114,18 +121,16 @@ class Controller extends Emitter {
 
     const characterIds =
       (result.character && result.character.slice(0, 15)) || [];
+
     const infoArr = await Promise.all(
       characterIds.map((x) => this.getPublicCharacterInfo(x)),
     );
 
-    const out = infoArr.map((x, index) => ({
-      id: characterIds[index],
-      name: x.name,
-    }));
-
-    out.sort((a, b) => (a.name > b.name ? 1 : a.name < b.name ? -1 : 0));
-
-    return out;
+    return infoArr
+      .map((x, i) => ({ id: characterIds[i], data: x }))
+      .filter((x) => x.data !== null)
+      .map(({ id, data }) => ({ id, name: data.name }))
+      .sort((a, b) => (a.name > b.name ? 1 : a.name < b.name ? -1 : 0));
   }
 
   fastSearch(_options) {

@@ -420,6 +420,10 @@ class MapController extends Emitter {
       shareForAlliance,
     } = data;
 
+    /*
+     * Here character is fresh we not necessary to be sure that one was removed from game
+     * */
+
     const [corporationId, allianceId] = await Promise.all([
       ...(shareForCorporation ? [getCorporationId(characterId)] : []),
       ...(shareForAlliance ? [getAllianceId(characterId)] : []),

@@ -465,6 +465,47 @@ async function countOnlineCharactersByLocations(locations) {
   }
 }
 
+async function exportMap(mapId) {
+  const systems = await core.dbController.mapSystemsTable.getByCondition(
+    [{ name: "mapId", operator: "=", value: mapId }],
+    core.dbController.mapSystemsTable.attributes(),
+  );
+  const links = await getLinks(mapId);
+  const connections = await Promise.all(
+    links.map((x) => getLinkInfo(mapId, x)),
+  );
+  const hubs = await core.dbController.mapsDB.get(mapId, "hubs");
+
+  return {
+    connections: connections.map((x) => ({
+      id: x.id,
+      // mapId: x.mapId,
+      source: x.solarSystemSource,
+      target: x.solarSystemTarget,
+      mass_status: x.massStatus,
+      time_status: x.timeStatus,
+      ship_size_type: x.shipSizeType,
+      // wormholeType: x.wormholeType,
+      // countOfPassage: x.countOfPassage,
+      // created: x.created,
+      // updated: x.updated,
+    })),
+    hubs: hubs,
+    systems: systems.map((x) => ({
+      id: x.id,
+      locked: x.isLocked,
+      name: x.userName || x.name,
+      description: x.description,
+      tag: x.tag || null,
+      labels: x.labels || null,
+      status: x.status || 0,
+      signatures: x.signatures,
+      visible: x.visible,
+      position: x.position,
+    })),
+  };
+}
+
 module.exports = {
   linkRemove,
   getLinksBySystem,
@@ -495,4 +536,5 @@ module.exports = {
   changeSystemVisibility,
   isSystemExistsAndVisible,
   countOnlineCharactersByLocations,
+  exportMap,
 };
